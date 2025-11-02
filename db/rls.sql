@@ -1,6 +1,21 @@
 -- Row Level Security Policies for Chem IRL
 -- Based on Security Pack v1 and Functional Spec v3
 
+-- Drop existing policies if they exist (allows re-running this script)
+DO $$
+DECLARE
+    r RECORD;
+BEGIN
+    FOR r IN (
+        SELECT schemaname, tablename, policyname 
+        FROM pg_policies 
+        WHERE schemaname = 'public'
+    ) LOOP
+        EXECUTE format('DROP POLICY IF EXISTS %I ON %I.%I', 
+                       r.policyname, r.schemaname, r.tablename);
+    END LOOP;
+END $$;
+
 -- Enable RLS on all tables
 ALTER TABLE users ENABLE ROW LEVEL SECURITY;
 ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
@@ -191,6 +206,7 @@ CREATE POLICY "Moderators can manage enforcements" ON enforcements
 CREATE OR REPLACE FUNCTION get_user_matches(user_uuid UUID)
 RETURNS TABLE(match_id UUID, other_user_id UUID, other_user_email TEXT, created_at TIMESTAMPTZ)
 LANGUAGE SQL SECURITY DEFINER
+SET search_path = public
 AS $$
   SELECT 
     m.match_id,
@@ -214,6 +230,7 @@ $$;
 CREATE OR REPLACE FUNCTION are_users_matched(user_a UUID, user_b UUID)
 RETURNS BOOLEAN
 LANGUAGE SQL SECURITY DEFINER
+SET search_path = public
 AS $$
   SELECT EXISTS (
     SELECT 1 FROM matches 
@@ -226,6 +243,7 @@ $$;
 CREATE OR REPLACE FUNCTION get_user_action_speed(user_uuid UUID)
 RETURNS INTEGER
 LANGUAGE SQL SECURITY DEFINER
+SET search_path = public
 AS $$
   SELECT COALESCE(
     (SELECT action_speed FROM scores_daily 

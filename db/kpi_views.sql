@@ -2,7 +2,8 @@
 -- Based on Data Pack v1 metrics definitions
 
 -- Proposal-Confirm within 24h rate (last 7 days)
-CREATE OR REPLACE VIEW proposal_confirm_24h AS
+CREATE OR REPLACE VIEW proposal_confirm_24h
+WITH (security_invoker=true) AS
 WITH props AS (
   SELECT 
     p.proposal_id, 
@@ -25,7 +26,8 @@ SELECT
 FROM agg;
 
 -- Confirm-Show rate (last 30 days)
-CREATE OR REPLACE VIEW confirm_show_rate AS
+CREATE OR REPLACE VIEW confirm_show_rate
+WITH (security_invoker=true) AS
 SELECT 
   COUNT(*) FILTER (WHERE s1.went AND s2.went)::DECIMAL / NULLIF(COUNT(*), 0) AS show_rate,
   COUNT(*) FILTER (WHERE s1.went AND s2.went) AS confirmed_shows,
@@ -40,7 +42,8 @@ JOIN surveys s2 USING (match_id)
 WHERE s1.user_id <> s2.user_id;
 
 -- Median Time-to-Date (days)
-CREATE OR REPLACE VIEW median_ttd AS
+CREATE OR REPLACE VIEW median_ttd
+WITH (security_invoker=true) AS
 WITH dates AS (
   SELECT 
     m.match_id,
@@ -58,7 +61,8 @@ SELECT
 FROM dates;
 
 -- Payer share & ARPPU (30d)
-CREATE OR REPLACE VIEW payer_metrics AS
+CREATE OR REPLACE VIEW payer_metrics
+WITH (security_invoker=true) AS
 WITH payers AS (
   SELECT DISTINCT user_id
   FROM purchases
@@ -74,11 +78,13 @@ revenue AS (
 active AS (
   SELECT COUNT(DISTINCT user_id) AS mau
   FROM (
-    SELECT user_id FROM matches WHERE created_at >= NOW() - INTERVAL '30 days'
+    SELECT user_a AS user_id FROM matches WHERE created_at >= NOW() - INTERVAL '30 days'
     UNION ALL 
-    SELECT user_id FROM proposals WHERE created_at >= NOW() - INTERVAL '30 days'
+    SELECT user_b AS user_id FROM matches WHERE created_at >= NOW() - INTERVAL '30 days'
     UNION ALL 
-    SELECT user_id FROM confirms WHERE created_at >= NOW() - INTERVAL '30 days'
+    SELECT sender_id AS user_id FROM proposals WHERE created_at >= NOW() - INTERVAL '30 days'
+    UNION ALL 
+    SELECT confirmer_id AS user_id FROM confirms WHERE created_at >= NOW() - INTERVAL '30 days'
     UNION ALL 
     SELECT user_id FROM purchases WHERE created_at >= NOW() - INTERVAL '30 days'
   ) u
@@ -92,7 +98,8 @@ SELECT
 FROM active, revenue;
 
 -- Reopen-Confirm rate (48h)
-CREATE OR REPLACE VIEW reopen_confirm_rate AS
+CREATE OR REPLACE VIEW reopen_confirm_rate
+WITH (security_invoker=true) AS
 WITH ro AS (
   SELECT 
     proposal_id, 
@@ -114,15 +121,18 @@ FROM ro
 LEFT JOIN co USING (proposal_id);
 
 -- Confirmed dates per WAU (north star metric)
-CREATE OR REPLACE VIEW confirmed_dates_per_wau AS
+CREATE OR REPLACE VIEW confirmed_dates_per_wau
+WITH (security_invoker=true) AS
 WITH weekly_active AS (
   SELECT COUNT(DISTINCT user_id) AS wau
   FROM (
-    SELECT user_id FROM matches WHERE created_at >= NOW() - INTERVAL '7 days'
+    SELECT user_a AS user_id FROM matches WHERE created_at >= NOW() - INTERVAL '7 days'
     UNION ALL 
-    SELECT user_id FROM proposals WHERE created_at >= NOW() - INTERVAL '7 days'
+    SELECT user_b AS user_id FROM matches WHERE created_at >= NOW() - INTERVAL '7 days'
     UNION ALL 
-    SELECT user_id FROM confirms WHERE created_at >= NOW() - INTERVAL '7 days'
+    SELECT sender_id AS user_id FROM proposals WHERE created_at >= NOW() - INTERVAL '7 days'
+    UNION ALL 
+    SELECT confirmer_id AS user_id FROM confirms WHERE created_at >= NOW() - INTERVAL '7 days'
     UNION ALL 
     SELECT user_id FROM purchases WHERE created_at >= NOW() - INTERVAL '7 days'
   ) u
@@ -142,15 +152,18 @@ SELECT
 FROM confirmed_dates, weekly_active;
 
 -- Report rate per 1k WAU
-CREATE OR REPLACE VIEW report_metrics AS
+CREATE OR REPLACE VIEW report_metrics
+WITH (security_invoker=true) AS
 WITH weekly_active AS (
   SELECT COUNT(DISTINCT user_id) AS wau
   FROM (
-    SELECT user_id FROM matches WHERE created_at >= NOW() - INTERVAL '7 days'
+    SELECT user_a AS user_id FROM matches WHERE created_at >= NOW() - INTERVAL '7 days'
     UNION ALL 
-    SELECT user_id FROM proposals WHERE created_at >= NOW() - INTERVAL '7 days'
+    SELECT user_b AS user_id FROM matches WHERE created_at >= NOW() - INTERVAL '7 days'
     UNION ALL 
-    SELECT user_id FROM confirms WHERE created_at >= NOW() - INTERVAL '7 days'
+    SELECT sender_id AS user_id FROM proposals WHERE created_at >= NOW() - INTERVAL '7 days'
+    UNION ALL 
+    SELECT confirmer_id AS user_id FROM confirms WHERE created_at >= NOW() - INTERVAL '7 days'
     UNION ALL 
     SELECT user_id FROM purchases WHERE created_at >= NOW() - INTERVAL '7 days'
   ) u
@@ -167,17 +180,20 @@ SELECT
 FROM reports_7d, weekly_active;
 
 -- Moderation SLA hit rate
-CREATE OR REPLACE VIEW moderation_sla AS
+CREATE OR REPLACE VIEW moderation_sla
+WITH (security_invoker=true) AS
 SELECT 
-  COUNT(*) FILTER (WHERE created_at <= sla_deadline)::DECIMAL / NULLIF(COUNT(*), 0) AS sla_hit_rate,
-  COUNT(*) FILTER (WHERE created_at <= sla_deadline) AS resolved_on_time,
+  COUNT(*) FILTER (WHERE e.created_at <= r.sla_deadline)::DECIMAL / NULLIF(COUNT(*), 0) AS sla_hit_rate,
+  COUNT(*) FILTER (WHERE e.created_at <= r.sla_deadline) AS resolved_on_time,
   COUNT(*) AS total_reports,
-  AVG(EXTRACT(EPOCH FROM (COALESCE(updated_at, NOW()) - created_at)) / 3600) AS avg_resolution_hours
-FROM reports
-WHERE created_at >= NOW() - INTERVAL '30 days';
+  AVG(EXTRACT(EPOCH FROM (COALESCE(e.created_at, NOW()) - r.created_at)) / 3600) AS avg_resolution_hours
+FROM reports r
+LEFT JOIN enforcements e ON r.case_id = e.case_id
+WHERE r.created_at >= NOW() - INTERVAL '30 days';
 
 -- Daily KPI summary view
-CREATE OR REPLACE VIEW daily_kpi_summary AS
+CREATE OR REPLACE VIEW daily_kpi_summary
+WITH (security_invoker=true) AS
 SELECT 
   CURRENT_DATE AS date,
   (SELECT rate_24h FROM proposal_confirm_24h) AS proposal_confirm_24h_rate,
@@ -193,6 +209,7 @@ SELECT
 CREATE OR REPLACE FUNCTION refresh_daily_kpis()
 RETURNS VOID
 LANGUAGE SQL
+SET search_path = public
 AS $$
   -- This function can be called by pg_cron to refresh materialized views
   -- or update daily summary tables
