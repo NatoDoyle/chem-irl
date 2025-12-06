@@ -1,4 +1,4 @@
-import { BRAND, BRAND_COLORS, BRAND_MESSAGES } from "@/config/brand";
+import { BRAND, BRAND_COLORS } from "@/config/brand";
 
 export default function Home() {
   return (
@@ -13,13 +13,22 @@ export default function Home() {
             {BRAND.description}
           </p>
           
-          {/* CTA Button */}
-          <button 
-            className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-4 px-8 rounded-full text-lg transition-colors"
-            style={{ backgroundColor: BRAND_COLORS.primary }}
-          >
-            Join the Dublin Beta
-          </button>
+          {/* CTA Buttons */}
+          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+            <a
+              href="/download"
+              className="inline-block bg-blue-600 hover:bg-blue-700 text-white font-semibold py-4 px-8 rounded-full text-lg transition-colors"
+              style={{ backgroundColor: BRAND_COLORS.primary }}
+            >
+              Download the App
+            </a>
+            <a
+              href="/how-it-works"
+              className="inline-block border-2 border-blue-600 text-blue-600 font-semibold py-4 px-8 rounded-full text-lg transition-colors hover:bg-blue-50"
+            >
+              Learn More
+            </a>
+          </div>
         </div>
 
         {/* How it Works Section */}
@@ -34,7 +43,7 @@ export default function Home() {
                 <span className="text-2xl font-bold text-blue-600">1</span>
               </div>
               <h3 className="text-xl font-semibold text-slate-900 mb-2">Like to Match</h3>
-              <p className="text-slate-600">Swipe right on profiles you're interested in</p>
+              <p className="text-slate-600">Swipe right on profiles you&apos;re interested in</p>
             </div>
             
             <div className="text-center">
@@ -58,7 +67,7 @@ export default function Home() {
                 <span className="text-2xl font-bold text-blue-600">4</span>
               </div>
               <h3 className="text-xl font-semibold text-slate-900 mb-2">Meet & Mark</h3>
-              <p className="text-slate-600">Chat unlocks after confirm. Meet. Mark "went."</p>
+              <p className="text-slate-600">Chat unlocks after confirm. Meet. Mark &quot;went.&quot;</p>
             </div>
           </div>
         </div>

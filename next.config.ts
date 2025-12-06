@@ -1,39 +1,12 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  // Security headers
-  async headers() {
-    return [
-      {
-        source: '/(.*)',
-        headers: [
-          {
-            key: 'Content-Security-Policy',
-            value: [
-              "default-src 'self'",
-              "script-src 'self' 'unsafe-inline' vercel-insights.com",
-              "style-src 'self' 'unsafe-inline'",
-              "img-src 'self' data: blob: cdn.supabase.co",
-              "connect-src 'self' *.supabase.co *.posthog.com *.vercel-insights.com",
-              "frame-ancestors 'none'",
-              "base-uri 'self'",
-              "form-action 'self'"
-            ].join('; ')
-          }
-        ]
-      }
-    ];
-  },
+  // Static export for marketing site
+  output: 'export',
   
-  // Image optimization
+  // Image optimization (unoptimized for static export)
   images: {
-    domains: ['cdn.supabase.co'],
-    formats: ['image/webp', 'image/avif'],
-  },
-  
-  // Performance optimizations
-  experimental: {
-    optimizeCss: true,
+    unoptimized: true,
   },
   
   // Environment variables
@@ -42,16 +15,8 @@ const nextConfig: NextConfig = {
     NEXT_PUBLIC_DOMAIN: process.env.NEXT_PUBLIC_DOMAIN || 'chemirl.app',
   },
   
-  // Redirects for SEO
-  async redirects() {
-    return [
-      {
-        source: '/home',
-        destination: '/',
-        permanent: true,
-      },
-    ];
-  },
+  // Exclude API routes from static export (they'll be deployed separately)
+  // Note: Webhooks and cron jobs should be deployed as separate serverless functions
 };
 
 export default nextConfig;

@@ -253,6 +253,118 @@ AS $$
   );
 $$;
 
+-- Discovery feed helper (security definer ensures feed access while respecting business rules)
+CREATE OR REPLACE FUNCTION get_discovery_feed(p_viewer UUID, p_limit INTEGER DEFAULT 20)
+RETURNS TABLE (
+  user_id UUID,
+  headline TEXT,
+  bio TEXT,
+  availability_summary TEXT,
+  action_speed INTEGER,
+  profile_quality INTEGER,
+  reliability INTEGER
+)
+LANGUAGE SQL SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT
+    p.user_id,
+    COALESCE(p.prompts ->> 'headline', '') AS headline,
+    COALESCE(p.prompts ->> 'bio', '') AS bio,
+    COALESCE(p.availability ->> 'summary', '') AS availability_summary,
+    COALESCE(s.action_speed, 50) AS action_speed,
+    COALESCE(s.profile_quality, 50) AS profile_quality,
+    COALESCE(s.reliability, 70) AS reliability
+  FROM profiles p
+  LEFT JOIN scores_daily s ON s.user_id = p.user_id AND s.day = CURRENT_DATE
+  WHERE p.user_id <> p_viewer
+    AND p.completion_pct >= 80
+    -- Exclude users already liked or matched
+    AND NOT EXISTS (
+      SELECT 1 FROM likes l 
+      WHERE l.liker_id = p_viewer AND l.likee_id = p.user_id
+    )
+    AND NOT EXISTS (
+      SELECT 1 FROM matches m 
+      WHERE (m.user_a = p_viewer AND m.user_b = p.user_id) 
+         OR (m.user_a = p.user_id AND m.user_b = p_viewer)
+      AND m.status = 'open'
+    )
+  ORDER BY
+    COALESCE(s.action_speed, 50) DESC,
+    COALESCE(s.profile_quality, 50) DESC,
+    COALESCE(s.reliability, 70) DESC,
+    p.updated_at DESC
+  LIMIT p_limit;
+$$;
+
+-- Like and match detection function
+CREATE OR REPLACE FUNCTION create_like_and_check_match(p_liker UUID, p_likee UUID)
+RETURNS JSONB
+LANGUAGE plpgsql SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_like_id UUID;
+  v_mutual_like_exists BOOLEAN;
+  v_match_id UUID;
+  v_result JSONB;
+BEGIN
+  -- Insert like (ignore if duplicate due to UNIQUE constraint)
+  INSERT INTO likes (liker_id, likee_id)
+  VALUES (p_liker, p_likee)
+  ON CONFLICT (liker_id, likee_id) DO NOTHING
+  RETURNING like_id INTO v_like_id;
+
+  -- If no like was inserted (duplicate), return existing state
+  IF v_like_id IS NULL THEN
+    SELECT like_id INTO v_like_id FROM likes WHERE liker_id = p_liker AND likee_id = p_likee;
+    SELECT EXISTS (
+      SELECT 1 FROM matches 
+      WHERE ((user_a = p_liker AND user_b = p_likee) OR (user_a = p_likee AND user_b = p_liker))
+        AND status = 'open'
+    ) INTO v_mutual_like_exists;
+    
+    RETURN jsonb_build_object(
+      'like_id', v_like_id,
+      'matched', v_mutual_like_exists,
+      'match_id', NULL
+    );
+  END IF;
+
+  -- Check for mutual like
+  SELECT EXISTS (
+    SELECT 1 FROM likes 
+    WHERE liker_id = p_likee AND likee_id = p_liker
+  ) INTO v_mutual_like_exists;
+
+  -- If mutual like, create match
+  IF v_mutual_like_exists THEN
+    INSERT INTO matches (user_a, user_b, status)
+    VALUES (
+      LEAST(p_liker, p_likee),
+      GREATEST(p_liker, p_likee),
+      'open'
+    )
+    ON CONFLICT (user_a, user_b) DO UPDATE SET status = 'open'
+    RETURNING match_id INTO v_match_id;
+
+    RETURN jsonb_build_object(
+      'like_id', v_like_id,
+      'matched', true,
+      'match_id', v_match_id
+    );
+  END IF;
+
+  -- No match yet
+  RETURN jsonb_build_object(
+    'like_id', v_like_id,
+    'matched', false,
+    'match_id', NULL
+  );
+END;
+$$;
+
 
 
 
