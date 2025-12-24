@@ -27,6 +27,7 @@ Use this checklist when deploying to production.
 ### 2) Database (BLOCKING: staging → production)
 #### 2.1 Staging dry-run (required)
 - [ ] Apply SQL in staging (in this order):
+  - [ ] Apply SQL exactly in the order listed here (this checklist is the source of truth).
   - [ ] `db/schema.sql`
   - [ ] `db/rls.sql`
   - [ ] `db/kpi_views.sql`
@@ -46,14 +47,16 @@ Use this checklist when deploying to production.
 - [ ] Confirm no cross-user reads/writes are possible via RPC paths intended to be scoped
 
 #### 2.3 Automation verification (required)
-- [ ] Confirm the scheduling mechanism is enabled:
-  - [ ] pg_cron extension is enabled (check: `SELECT * FROM pg_extension WHERE extname = 'pg_cron';`)
-  - [ ] Scheduled jobs are visible in `cron.job` table (query: `SELECT * FROM cron.job WHERE jobname IN ('expire_proposals_hourly', 'daily_scoring_midnight');`)
+- [ ] Confirm the scheduling mechanism used by `db/automation.sql` is enabled and jobs are visible in the appropriate place:
+  - [ ] If using `pg_cron`:
+    - [ ] `SELECT * FROM pg_extension WHERE extname = 'pg_cron';`
+    - [ ] `SELECT * FROM cron.job;` (confirm the expected jobs exist)
+  - [ ] If using Scheduled Edge Functions:
+    - [ ] Confirm the schedules exist in the Supabase Dashboard (Edge Functions → Schedules)
 - [ ] Confirm proposal expiry is enforced server-side (not only UI):
   - [ ] Create a test proposal, set `expires_at` into the past, verify it becomes expired after the automation run
 - [ ] Confirm daily scoring runs server-side:
   - [ ] Run the manual test queries from `AUTOMATION.md`
-- [ ] Confirm scheduled jobs exist and are active (as installed by `db/automation.sql`)
 
 #### 2.4 Production apply (required)
 - [ ] Take a production DB backup/snapshot (or confirm your backup process)
@@ -192,7 +195,7 @@ Optional / only if implemented and referenced in code:
 If payments are implemented:
 * [ ] Stripe Checkout opens
 * [ ] Test payment succeeds
-* [ ] Webhook receives events
+* [ ] If webhook handlers are implemented: verify webhook receives events
 * [ ] Credits added to account
 * [ ] Subscription recorded
 
