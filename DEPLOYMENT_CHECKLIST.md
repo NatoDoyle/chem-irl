@@ -46,6 +46,9 @@ Use this checklist when deploying to production.
 - [ ] Confirm no cross-user reads/writes are possible via RPC paths intended to be scoped
 
 #### 2.3 Automation verification (required)
+- [ ] Confirm the scheduling mechanism is enabled:
+  - [ ] pg_cron extension is enabled (check: `SELECT * FROM pg_extension WHERE extname = 'pg_cron';`)
+  - [ ] Scheduled jobs are visible in `cron.job` table (query: `SELECT * FROM cron.job WHERE jobname IN ('expire_proposals_hourly', 'daily_scoring_midnight');`)
 - [ ] Confirm proposal expiry is enforced server-side (not only UI):
   - [ ] Create a test proposal, set `expires_at` into the past, verify it becomes expired after the automation run
 - [ ] Confirm daily scoring runs server-side:
@@ -94,7 +97,7 @@ Optional / only if implemented and referenced in code:
 
 ### 5) Supabase Production
 - [ ] Production project created
-- [ ] Region: Europe (Ireland) for GDPR
+- [ ] Region: EU (choose the closest EU region your Supabase plan supports for GDPR)
 - [ ] Auth settings configured:
   - [ ] Site URL: `https://chemirl.app`
   - [ ] Redirect URLs include:
@@ -146,6 +149,15 @@ Optional / only if implemented and referenced in code:
    * [ ] Health check: `https://chemirl.app/api/health` (only if this endpoint exists)
    * [ ] Login flow works (web, if supported)
 
+4. **Mobile Release (if applicable)**
+
+   * [ ] Mobile app builds pass (EAS Build or local builds)
+   * [ ] iOS TestFlight/App Store release (if applicable)
+   * [ ] Android Play Store release (if applicable)
+   * [ ] Deep linking tested (magic link authentication)
+   * [ ] Environment variables configured for mobile app builds
+   * Note: Mobile releases are typically handled separately from web deployments
+
 ## Post-Deployment Verification
 
 ### Core Flows (must pass)
@@ -177,6 +189,7 @@ Optional / only if implemented and referenced in code:
 
 ### Payments (DEFERRED unless implemented)
 
+If payments are implemented:
 * [ ] Stripe Checkout opens
 * [ ] Test payment succeeds
 * [ ] Webhook receives events
