@@ -651,8 +651,8 @@ $$;
 
 ### Adding a New Database Table
 
-1. Add table to `web/db/schema.sql`
-2. Add RLS policies to `web/db/rls.sql`
+1. Add table to `db/schema.sql`
+2. Add RLS policies to `db/rls.sql`
 3. Run migrations in Supabase
 4. Update TypeScript types in `mobile/src/lib/types.ts`
 

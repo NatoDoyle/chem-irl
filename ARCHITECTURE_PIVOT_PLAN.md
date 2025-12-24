@@ -86,7 +86,7 @@
 │  │  - get_discovery_feed()                           │  │
 │  │  - create_like_and_check_match()                  │  │
 │  │  - get_user_matches()                             │  │
-│  │  - update_action_speed()                          │  │
+│  │  - update_daily_action_speed()                    │  │
 │  │  - update_profile_quality()                       │  │
 │  │  - update_reliability()                           │  │
 │  └──────────────────────────────────────────────────┘  │
@@ -494,9 +494,9 @@
 - `get_user_matches(p_user_id UUID)`
 - `are_users_matched(p_user_a UUID, p_user_b UUID)`
 - `get_user_action_speed(p_user_id UUID)`
-- `update_action_speed(p_user_id UUID, p_event_type TEXT, p_metadata JSONB)`
-- `update_profile_quality(p_user_id UUID, p_event_type TEXT, p_metadata JSONB)`
-- `update_reliability(p_user_id UUID, p_event_type TEXT, p_metadata JSONB)`
+- `apply_action_speed_bonus(p_user_id UUID, p_bonus INTEGER, p_event_type TEXT)` - Apply event bonus to action speed
+- `update_profile_quality(p_user_id UUID)` - Update profile quality (Bayesian MAR)
+- `update_reliability(p_user_id UUID, p_event_type TEXT, p_value NUMERIC DEFAULT 0)` - Update reliability score
 
 **Auth** (Supabase Auth - JWT tokens)
 - Magic link for email (works on mobile via deep links)
@@ -791,7 +791,7 @@ return () => {
 
 **Current Implementation:**
 - Already in database: `proposals`, `confirms`, `scores_daily`
-- RPC functions: `update_action_speed`, `update_profile_quality`, `update_reliability`
+- RPC functions: `update_daily_action_speed()`, `apply_action_speed_bonus()`, `update_profile_quality()`, `update_reliability()`
 - Cron job: Daily scoring updates
 
 **Mobile App Integration:**
@@ -852,11 +852,12 @@ chem-irl/
    - Keep webhooks/cron routes (still needed)
 
 4. **Files to Keep:**
-   - ✅ `web/db/*.sql` (database migrations)
+   - ✅ `db/*.sql` (database migrations at root)
    - ✅ `web/src/lib/supabase/*` (can copy to mobile)
    - ✅ `web/src/lib/entitlements.ts` (can copy to mobile)
    - ✅ `web/src/lib/errors.ts` (can copy to mobile)
-   - ✅ `web/src/config/brand.ts` (can copy to mobile)
+   - ✅ `mobile/src/config/brand.ts` - Brand constants (mobile app)
+   - ✅ `web/src/config/brand.ts` - Brand constants (web site)
    - ✅ `web/src/app/api/webhooks/*` (keep for webhooks)
    - ✅ `web/src/app/api/scoring/*` (keep for cron)
    - ✅ `web/src/app/api/reminders/*` (keep for cron)

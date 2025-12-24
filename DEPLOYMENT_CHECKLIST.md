@@ -61,10 +61,15 @@ Use this checklist when deploying to production.
   - [ ] 50 Credits pack (€4.99)
   - [ ] 120 Credits pack (€9.99)
   - [ ] 260 Credits pack (€19.99)
-- [ ] Webhook endpoint configured:
-  - [ ] URL: `https://chemirl.app/api/webhooks/stripe`
-  - [ ] Events: `checkout.session.completed`, `invoice.payment_succeeded`, `customer.subscription.updated`
-  - [ ] Webhook secret copied to Vercel env vars
+### Stripe Webhooks (Deferred)
+- ⚠️ Webhook handlers are NOT implemented (deferred until needed)
+- When needed, implement as:
+  - Supabase Edge Function, OR
+  - External serverless function (Vercel, AWS Lambda, etc.)
+- Required events:
+  - `checkout.session.completed` - Process payments
+  - `invoice.payment_succeeded` - Handle subscription renewals
+  - `customer.subscription.updated` - Update subscription status
 
 ### Postmark
 - [ ] Production server created
@@ -72,10 +77,15 @@ Use this checklist when deploying to production.
 - [ ] Domain verified (if using custom domain)
 - [ ] API token copied to Vercel
 
-### Cron Jobs (Vercel)
-- [ ] `/api/reminders/send` scheduled hourly
-- [ ] `/api/scoring/daily` scheduled daily at midnight
-- [ ] `CRON_SECRET` set in environment variables
+### Cron Jobs (Deferred)
+- ⚠️ Cron jobs are NOT implemented (deferred until needed)
+- When needed, implement as:
+  - Supabase Edge Functions scheduled via pg_cron, OR
+  - External serverless functions (Vercel Cron, AWS Lambda, etc.)
+- Required jobs:
+  - Daily scoring: Call `update_daily_action_speed()` function
+  - Proposal expiry: Update expired proposals status
+  - Email reminders: Send proposal/confirm reminders
 
 ## Deployment Steps
 

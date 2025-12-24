@@ -53,7 +53,7 @@ web/
 ## Notes
 
 - `web/src/lib/` files are kept for reference (may be useful for future Edge Functions)
-- Database migrations in `web/db/` are kept (shared with mobile app)
+- Database migrations in `db/` at root (shared with mobile app)
 - All product functionality is now in `mobile/` directory
 
 ---

@@ -60,7 +60,7 @@ See [ARCHITECTURE_PIVOT_PLAN.md](./ARCHITECTURE_PIVOT_PLAN.md) for detailed arch
 Dating App/
 ├── mobile/          # React Native app (primary product)
 ├── web/             # Static marketing site
-├── web/db/          # Database migrations
+├── db/              # Database migrations (shared)
 └── docs/            # Documentation
 ```
 

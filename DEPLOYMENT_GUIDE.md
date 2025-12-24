@@ -182,10 +182,10 @@ Before testing, ensure database is set up:
 
 1. Go to Supabase SQL Editor
 2. Run migrations in order:
-   - `web/db/schema.sql`
-   - `web/db/rls.sql`
-   - `web/db/kpi_views.sql`
-   - `web/db/scoring.sql`
+   - `db/schema.sql`
+   - `db/rls.sql`
+   - `db/kpi_views.sql`
+   - `db/scoring.sql`
 
 See `web/DATABASE_SETUP.md` for details.
 

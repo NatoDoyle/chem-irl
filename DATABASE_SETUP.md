@@ -24,7 +24,7 @@ You need to run 3 SQL files in Supabase to set up your database:
 ### Step 2: Run schema.sql (Creates Tables)
 
 1. Click **"New query"** button (top right)
-2. Open the file `web/db/schema.sql` on your computer
+2. Open the file `db/schema.sql` on your computer
 3. Copy the **entire contents** of `schema.sql`
 4. Paste it into the Supabase SQL Editor
 5. Click **"Run"** button (or press Ctrl+Enter / Cmd+Enter)
@@ -40,7 +40,7 @@ You need to run 3 SQL files in Supabase to set up your database:
 ### Step 3: Run rls.sql (Row Level Security)
 
 1. Click **"New query"** button again
-2. Open the file `web/db/rls.sql` on your computer
+2. Open the file `db/rls.sql` on your computer
 3. Copy the **entire contents** of `rls.sql`
 4. Paste into a new SQL Editor tab
 5. Click **"Run"**
@@ -55,7 +55,7 @@ You need to run 3 SQL files in Supabase to set up your database:
 ### Step 4: Run kpi_views.sql (KPI Views)
 
 1. Click **"New query"** button again
-2. Open the file `web/db/kpi_views.sql` on your computer
+2. Open the file `db/kpi_views.sql` on your computer
 3. Copy the **entire contents** of `kpi_views.sql`
 4. Paste into a new SQL Editor tab
 5. Click **"Run"**
@@ -162,9 +162,9 @@ Run policies table by table:
 ## Quick Reference
 
 **Files to Run (in order):**
-1. `web/db/schema.sql` → Creates database structure
-2. `web/db/rls.sql` → Adds security
-3. `web/db/kpi_views.sql` → Adds analytics
+1. `db/schema.sql` → Creates database structure
+2. `db/rls.sql` → Adds security
+3. `db/kpi_views.sql` → Adds analytics
 
 **Where to Run:**
 - Supabase Dashboard → SQL Editor

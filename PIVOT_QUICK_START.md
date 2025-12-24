@@ -145,7 +145,7 @@ const nextConfig = {
 ## What to Keep vs Remove
 
 ### Keep ✅
-- All database schema (`web/db/*.sql`)
+- All database schema (`db/*.sql`)
 - All RPC functions (work as-is)
 - Webhook API routes (`/api/webhooks/stripe`)
 - Cron API routes (`/api/scoring/daily`, `/api/reminders/send`)
