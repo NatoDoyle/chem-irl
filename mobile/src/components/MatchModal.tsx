@@ -1,0 +1,114 @@
+import { Modal, View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
+import { BRAND_COLORS } from '../config/brand';
+
+interface MatchModalProps {
+  visible: boolean;
+  matchId: string | null;
+  onClose: () => void;
+}
+
+export default function MatchModal({ visible, matchId, onClose }: MatchModalProps) {
+  const navigation = useNavigation();
+
+  const handleViewMatch = () => {
+    onClose();
+    if (matchId) {
+      navigation.navigate('MatchesStack' as never, {
+        screen: 'MatchDetail',
+        params: { matchId },
+      } as never);
+    }
+  };
+
+  return (
+    <Modal
+      visible={visible}
+      transparent
+      animationType="fade"
+      onRequestClose={onClose}
+    >
+      <View style={styles.overlay}>
+        <View style={styles.modal}>
+          <Text style={styles.title}>🎉 It's a Match!</Text>
+          <Text style={styles.message}>
+            You both liked each other. Start a conversation and propose a time to meet!
+          </Text>
+          <View style={styles.buttonContainer}>
+            <TouchableOpacity
+              style={[styles.button, styles.secondaryButton]}
+              onPress={onClose}
+            >
+              <Text style={styles.secondaryButtonText}>Continue Browsing</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.button}
+              onPress={handleViewMatch}
+            >
+              <Text style={styles.buttonText}>View Match</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </View>
+    </Modal>
+  );
+}
+
+const styles = StyleSheet.create({
+  overlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 24,
+  },
+  modal: {
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 24,
+    alignItems: 'center',
+    maxWidth: 320,
+    width: '100%',
+  },
+  title: {
+    fontSize: 32,
+    fontWeight: 'bold',
+    color: BRAND_COLORS.text[900],
+    marginBottom: 16,
+  },
+  message: {
+    fontSize: 16,
+    color: BRAND_COLORS.text[600],
+    textAlign: 'center',
+    marginBottom: 24,
+    lineHeight: 22,
+  },
+  buttonContainer: {
+    width: '100%',
+    gap: 12,
+  },
+  button: {
+    backgroundColor: BRAND_COLORS.primary,
+    paddingVertical: 14,
+    paddingHorizontal: 32,
+    borderRadius: 8,
+    width: '100%',
+    alignItems: 'center',
+  },
+  secondaryButton: {
+    backgroundColor: 'transparent',
+    borderWidth: 2,
+    borderColor: BRAND_COLORS.primary,
+  },
+  buttonText: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: '600',
+  },
+  secondaryButtonText: {
+    color: BRAND_COLORS.primary,
+    fontSize: 18,
+    fontWeight: '600',
+  },
+});
+

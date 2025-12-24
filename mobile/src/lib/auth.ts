@@ -1,0 +1,58 @@
+import { supabase } from './supabase/client';
+import * as Linking from 'expo-linking';
+
+/**
+ * Handle deep link for magic link authentication
+ * Call this when app opens from a magic link
+ */
+export async function handleMagicLink(url: string) {
+  try {
+    // Extract token from URL
+    const parsedUrl = Linking.parse(url);
+    const accessToken = parsedUrl.queryParams?.access_token as string;
+    const refreshToken = parsedUrl.queryParams?.refresh_token as string;
+
+    if (accessToken && refreshToken) {
+      // Set session with tokens
+      const { data, error } = await supabase.auth.setSession({
+        access_token: accessToken,
+        refresh_token: refreshToken,
+      });
+
+      if (error) {
+        console.error('Error setting session:', error);
+        return { success: false, error };
+      }
+
+      return { success: true, session: data.session };
+    }
+
+    return { success: false, error: 'No tokens in URL' };
+  } catch (error) {
+    console.error('Error handling magic link:', error);
+    return { success: false, error };
+  }
+}
+
+/**
+ * Send magic link to email
+ */
+export async function sendMagicLink(email: string) {
+  try {
+    const { data, error } = await supabase.auth.signInWithOtp({
+      email: email.trim().toLowerCase(),
+      options: {
+        emailRedirectTo: Linking.createURL('/auth/callback'),
+      },
+    });
+
+    if (error) {
+      return { success: false, error: error.message };
+    }
+
+    return { success: true };
+  } catch (error: any) {
+    return { success: false, error: error.message || 'Failed to send magic link' };
+  }
+}
+
