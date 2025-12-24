@@ -1,0 +1,267 @@
+Development Plan — Web-first ? Native, €200/mo Pre?Revenue (v1)
+0) Constraints and intent
+? Solo founder. One city. Web app first. Native app as soon as viable.
+
+? Budget until revenue: €200/month all?in. Reinvest 100% of profit into hiring and native build.
+
+? Core loop and scoring: per Functional Spec — App Flow & Pricing (v3). This plan focuses on execution.
+
+
+1) Objectives and success gates
+Product
+? Median time?to?confirm ? 24h, median TTD ? 7 days.
+
+? Conversion: match?proposal ? 40%, proposal?confirm ? 55%, confirm?show ? 80%.
+
+Monetisation (web)
+? Payer share ? 6% MAU by week 8 of public beta.
+
+? ARPPU ? €12/month web?only (subs + credits).
+
+Ops/Safety
+? Verification pass?rate ? 70% of active users (phased; see costs).
+
+? Moderation SLA ? 24h (manual at start).
+
+Go?native trigger (start RN build ASAP once met for 14 days)
+? MAU ? 1,000 and confirmed dates/WAU ? 0.15 or daily reminder reach < 35% due to lack of push.
+
+? EBITDA ? €2k/month (post tools and founder salary if any; pre?revenue this is 0).
+
+
+2) Budget guardrails (€200/mo pre?revenue)
+Must?haves (target ? €150/mo):
+? Hosting: Vercel Hobby (free) ? upgrade when needed.
+
+? DB/Auth/Realtime/Storage: Supabase Pro Small ~€25/mo (or free tier until crossed).
+
+? Email: Postmark €15/mo (10k emails). Alternative: SES ~€0.10/1k + minimal infra.
+
+? SMS: MessageBird/Twilio pay?as?you?go[1][2][3]. Cap €20/mo.
+
+? Analytics: PostHog Cloud Free or Amplitude Free (10M events/mo free).
+
+? Monitoring/Errors: Sentry Free.
+
+? Moderation: start with manual review + basic URL/image rules (cost €0). Add provider later.
+
+? Domain + privacy: €2/mo (annual domain ~€20). CDN included with Vercel.
+
+Nice?to?adds at revenue:
+? Video liveness (Persona/Onfido): budget €2–3/verification. Start with photo verification + selfie pose[4] until revenue.
+
+? Image moderation API: €25–75/mo later.
+
+Cap runtime at €200 until revenue. Defer paid experiments and SMS where possible.
+
+3) Architecture (lean)
+? Frontend: Next.js (App Router) + React + TypeScript + Tailwind. Mobile?first. PWA optional later.
+
+? Backend: Supabase (Postgres + Auth + RLS + Realtime + Storage + pg_cron + Edge Functions).
+
+? Payments: Stripe Checkout + Webhooks (subs + credits).
+
+? Email/SMS: Postmark + MessageBird/Twilio (fallback only). ICS attachments via server.
+
+? Analytics/Flags: PostHog + simple env flags (flip to GrowthBook after revenue).
+
+? Moderation: manual queue, blocklists, rate limits. Add API later.
+
+? Observability: Sentry; simple health pings; DB logs.
+
+
+4) MVP scope freeze (web)
+? Onboarding with email; optional phone. Age gate. Photo + selfie pose check (no liveness SDK yet).
+
+? Profile with prompts, photos, “I’m usually free…” availability and lead?time.
+
+? Discovery feed + like; match.
+
+? Propose 2–3 times; receiver Confirm or None suits ? 2–3 times.
+
+? Reminders email?first; ICS calendar add.
+
+? Chat unlocks only after confirm.
+
+? Post?date 15s survey ? scores.
+
+? Expired?Reopen (receiver?paid) with credits.
+
+? Pricing: Momentum+ + Credits (per Functional Spec).
+
+? Safety: block/report; manual moderation queue; visible SLA timer text.
+
+Out of MVP (defer): native push, voice intros, low?anxiety mode, heavy moderation API, maps/venues.
+
+5) Build plan (solo) — weeks 1–8
+Week 1 — Project + Auth + Data
+? Repo, CI (Vercel). Supabase project. RLS baseline.
+
+? Tables: users, profiles, likes, matches, messages, proposals, confirmations, closes, surveys, scores_daily, entitlements, transactions, reports.
+
+? File upload to Storage with signed URLs. Basic photo checks.
+
+Week 2 — Profiles + Feed + Like/Match
+? Profile CRUD, prompts, photos, availability bands.
+
+? Feed endpoint + basic rank using Action Speed baseline + Profile Quality prior.
+
+? Like/match flows. Event logging to PostHog.
+
+Week 3 — Propose/Confirm/None?suits
+? Proposal sheet (2–3 slots). Confirm, None suits ? 2–3.
+
+? Expiry in 72h; proposal reminders at 24/48h.
+
+? ICS generator. Timezone handling.
+
+Week 4 — Messaging + Reminders
+? Realtime chat on confirm. Pre?date reminders T?24/T?2.
+
+? Manual report/block + moderation queue UI.
+
+Week 5 — Scoring + Pricing
+? Implement Action Speed engine (likes/day, first?action bonuses, turn?based penalties as per spec). Inactivity floor 50.
+
+? Implement Profile Quality MAR and Reliability events.
+
+? Stripe Checkout: Momentum+ + credits; entitlements; receipts.
+
+Week 6 — Safety + Compliance + SEO
+? TOS/Privacy, consent, deletion/export endpoints.
+
+? Report SLA clock UI. Basic CSAM/URL keyword filters.
+
+? Landing page + waitlist + city gating.
+
+Week 7 — QA + Load + Beta Setup
+? Playwright E2E: signup?match?propose?confirm?chat?survey?reopen.
+
+? k6 load for feed and messaging.
+
+? Seed closed beta cohort (balanced by gender/age). Creator tracking links.
+
+Week 8 — Closed Beta ? Public Waitlist
+? Run a city?limited beta (100–300 users). Fix criticals. Measure funnels.
+
+? Open public waitlist while keeping city gating.
+
+
+6) Post?MVP roadmap (weeks 9–16)
+? Week 9–10: payment polish, refunds, downgrade flow, credit ledger export; spam heuristics.
+
+? Week 11–12: availability?driven smart suggestions; transparency “why this match”.
+
+? Week 13–14: verification upgrade (add liveness if revenue allows). Image moderation API.
+
+? Week 15–16: referral programme, creator dashboards, outcome learning v1.
+
+
+7) Reinvestment and hiring ("as soon as possible")
+Policy: 100% EBITDA ? product, growth, trust & safety. Keep buffer ? one month of fixed burn.
+Earliest hires (contract ? FTE), start when monthly revenue ? €1,500 and funnels healthy:
+1. Part?time Moderator (10 h/wk). €400–600/mo. Frees founder time.
+
+2. Freelance Brand/UGC Editor (10 h/wk). €400–600/mo. Improves asset quality.
+
+Native app push — hire ASAP once any one is true:
+? Monthly net revenue ? €4k, or
+
+? MAU ? 1,000 with confirm?to?show ? 75% and email reminder reach < 40%, or
+
+? Creator demand requires store presence.
+
+Role: React Native Engineer (contract 8–10 weeks)
+? Scope: RN app (Expo), auth, profiles, feed, propose/confirm, chat, push, IAP parity, deletion.
+
+? Cost: €8–12k total contract. Fund via reinvested profit.
+
+Then: Product Designer (T?shaped), Backend/Data contractor. Sequence hires as revenue allows; never drop below 1?month buffer.
+
+8) Native app plan (parallel, ASAP once funded)
+? Week 0: set up monorepo. Shared types and business logic. API unchanged.
+
+? Week 1–2: RN shell, auth/profile/feed/match.
+
+? Week 3–4: propose/confirm/none?suits, chat, push (FCM/APNS), background reminders.
+
+? Week 5–6: IAP (Apple/Google), entitlements sync, verification SDK, block/report.
+
+? Week 7–8: QA, crash reporting, ASO assets, legal (delete in?app), staged rollout.
+
+
+9) Security, privacy, compliance (lean)
+? RLS on all tables; owner/match scoping.
+
+? PII encryption at rest. Signed URLs. 2FA on admin.
+
+? GDPR: consent log; DSAR export/delete; data retention policy (delete 30d after account deletion).
+
+? Payments: clear auto?renew terms; web cancel; receipts.
+
+
+10) Observability and KPIs
+? Tech: p95 API < 300 ms; message RTT < 500 ms; uptime ? 99.5%.
+
+? Funnel: match?proposal, proposal?confirm (?24h), confirm?show, median TTD.
+
+? Marketplace: verification %, ghost?rate, report rate, moderation SLA.
+
+? Revenue: payer share, ARPPU, credits share, refunds.
+
+Dashboards in PostHog. Daily email digests. Alerts on 5xx spikes and job failures.
+
+11) Growth on €200/mo
+? Zero?paid ads. Use:
+
+? Creator partnerships on rev?share or CPA?per?confirmed?date.
+
+? Referral credits on shows.
+
+? Waitlist with city pick; email drips to convert.
+
+? Content: one landing, three SEO pages (“meet faster”, “how it works”, city page). Use free tools.
+
+? Street teams and micro?events later once revenue exists.
+
+
+12) Risk controls
+? Cold start: city?only, invite cohorts, seed both sides evenly.
+
+? Inaction: strict proposal expiry, harsh turn penalties, reopen paid.
+
+? Spam/safety: manual mod + block lists; throttle velocity; verification upgrade at revenue.
+
+? Cost creep: SMS caps; image compression; verification only at confirm stage in beta.
+
+
+13) Checklists
+Pre?launch: RLS tests, consent text, email templates, ICS validation, refund logic, DSAR endpoints, mod queue macros.
+Launch week: seed cohort, monitor funnels hourly, fix top 5 issues only, publish status page.
+Post?launch weekly: Mon funnel + reliability review; Wed experiment readouts; Fri cash snapshot + reinvestment decisions.
+
+14) Cut?line if over budget
+? Drop SMS; email only.
+
+? Switch Postmark?SES.
+
+? Defer paid verification; keep selfie pose + manual check.
+
+? Pause paid creators; referral only.
+
+
+15) What to do today
+? Create Supabase project and tables; set RLS.
+
+? Scaffold Next.js app; profile + availability.
+
+? Implement propose/confirm/none?suits; 72h expiry; reminders.
+
+? Add Stripe Checkout for credits + Momentum+.
+
+? Ship closed beta to 50–100 users in one city.
+
+What's this for?
+Oh right, phone number verification.
+sms notifications but i think i'll leave it out
+Is this DIY verification?

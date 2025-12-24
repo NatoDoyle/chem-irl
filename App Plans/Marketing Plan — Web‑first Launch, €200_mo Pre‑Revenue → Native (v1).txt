@@ -1,0 +1,216 @@
+Marketing Plan — Web?first Launch, €200/mo Pre?Revenue ? Native (v1)
+1) Objectives and north?star
+? North?star: confirmed dates/WAU ? 0.15 and median TTD ? 7 days.
+
+? Acquisition: CAC?to?confirmed?date ? €25 in paid tests; organic first.
+
+? Monetisation: payer share ? 6% MAU by Week 8 of public beta; ARPPU ? €12.
+
+? Supply balance: female confirm?in?24h ? 35% for 14 days before scaling male acquisition.
+
+? Trust: verification ? 70% of active users by Month 2; moderation SLA ? 24h.
+
+2) Positioning and message
+? Promise: Spend less time texting. Meet faster.
+
+? Why believe: structured proposals, 72h expiry, receiver?paid reopen, speed scoring, reliability.
+
+? Taglines:
+
+? "Meet in days, not months."
+
+? "Propose two times, get one confirmed."
+
+? "Real dates > infinite chats."
+
+? Proof assets: live counters (city TTD median), anonymised success stories, transparent safety SLA timer screenshots.
+
+? Voice: clear, direct, non?sappy. No romance clichés. Outcome?driven.
+
+3) Ideal customer profiles (ICP) and first city rollout
+? City 1: Dublin (Leinster). One?city gating until funnels stable.
+
+? ICP?A (women 22–32): safety?first, low patience for chat. Channels: TikTok/IG Reels, creator UGC, WhatsApp circles.
+
+? ICP?B (men 24–34): time?constrained professionals. Channels: TikTok/IG, Reddit subs (r/ireland, r/dating_advice within rules), LinkedIn founder content.
+
+4) Funnel architecture (AARRR)
+? Awareness: TikTok/IG UGC, founder content, micro?PR, Reddit organic, referral stories.
+
+? Acquisition: waitlist landing (city gate), QR codes, creator links, referral links.
+
+? Activation: verification + availability + first 8 likes within 48h ? Speed=100.
+
+? Retention: reminders, reopen mechanic, outcome credits, Momentum+ trial for under?supplied cohorts.
+
+? Referral: credits or Momentum+ month when both mark “went.”
+
+5) Low?budget channel plan (?€200/mo pre?revenue)
+Primary (cost ? time):
+1. UGC engine (TikTok/IG Reels) — 3–5 short videos/week.
+
+? Formats: Proposal in 20s, Texting vs Proposals, 72h expiry explained, Date confirmed in 30s, Women’s inbox triage.
+
+? CTA: “Dublin only. Meet faster.”
+
+2. Founder?led LinkedIn/Twitter — build in public weekly: metrics, learnings, transparency on safety.
+
+3. Reddit participation — authentic comments, no spam; link to a neutral explainer page.
+
+4. Referral on shows — post?date screen makes share easy; credits unlock Fast Pass/slots.
+
+Secondary (light €):
+ 5) Creator rev?share tests — 2–3 micro?creators (3–15k followers). Compensation €5 per confirmed date capped at €50/creator/mo pre?revenue.
+ 6) Campus/office ambassadors (unpaid perks) — codes earn credits; monthly leaderboard inside app.
+ 7) Flyer/QR in cafes/gyms (printing €20–40 once). Minimal copy, trust cues.
+6) Creators & ambassadors (CPA?per?confirmed?date)
+? Offer: €5 per confirmed date (both verified, confirmed within 7 days of sign?up via the creator link). Hard cap per creator per month in pre?rev.
+
+? Tracking: unique referral code + UTM + in?app attribution. Dashboard: installs, verifications, confirms, CPA?date.
+
+? Brief: 3 hooks
+
+1. “Two time windows. One tap confirm. Done.”
+
+2. “Stop texting strangers for weeks.”
+
+3. “Dates confirmed in 24h challenge.”
+
+? Disclosure: #ad, ASA compliance. Provide caption kit and B?roll of the flow.
+
+7) Referral program (outcome?linked)
+? Trigger: award when both mark “went.”
+
+? Reward: referrer +40 credits; referee +20 credits; double for under?supplied cohort during seeding.
+
+? Fraud controls: both verified; device/IP checks; 30?day lock before credit cash use on reopens/slots.
+
+? Loops: in?app share cards after confirm and after show; email prompt next morning.
+
+8) Lifecycle messaging map
+Channels: email primary, SMS fallback, in?app banners.
+? D0 Welcome: verify + availability + 8 likes in 48h ? Speed 100. Subject: “Ready to meet this week?”
+
+? D1 Nudge: “Propose 2–3 times to your top match.”
+
+? Proposal sent (24/48h): to receiver: “Pick one or send 2–3.”
+
+? Confirmed (T?24/T?2): reminders + ICS.
+
+? Expired: sender sees “Expired.”; receiver sees “Reopen & propose 2–3 times.”
+
+? Post?date: survey + referral share + credits recap.
+
+? Dormant 7d: “Your Speed holds at 50. Send 4 likes today to re?enter discovery.”
+
+9) Content system (3 months)
+? Pillars:
+
+1. Meet faster education (how the flow works).
+
+2. Safety & respect (SLA, reliability, anti?ghosting).
+
+3. Social proof (anonymised wins, median TTD in Dublin).
+
+? Cadence: 3–5 Reels/TikToks/week; 1 LinkedIn founder post/week; 1 blog post/fortnight (SEO: “first date Dublin”, “how to ask for dates fast”, “72?hour rule dating”).
+
+? Templates: subtitle style, hook in 1s, on?screen steps, CTA.
+
+10) Landing + SEO
+? Pages: Home, How it Works, Safety, Pricing, Dublin hub (“date ideas”, “best coffee for first date”), Explainer blog.
+
+? CTAs: city gate ? email capture ? app.
+
+? Schema: FAQ, HowTo for proposal flow, LocalBusiness for city page.
+
+? Lead magnets: “20 one?line proposals that work.”
+
+11) Measurement and experimentation
+? Event taxonomy: page_view, signup_started, verified, availability_set, like_sent, match, proposal_sent, confirm, none_suits, reopen, expired, show_marked, referral_share, purchase.
+
+? Dashboards: AARRR, proposal?confirm ?24h, confirm?show, reopen?confirm, credits usage, payer share.
+
+? Cadence: weekly experiment slate (max 2). 7?day reads. Stop if no signal.
+
+? Sample tests:
+
+? Hook video A/B (flow vs social proof).
+
+? Referral copy: credits vs Momentum+ month.
+
+? Creator CPA caps €30 vs €50.
+
+? Women’s 2× credit window on shows (on/off).
+
+12) Budgeting and scale rules
+? Pre?rev €200/mo cap: email + domain + minimal SMS + one?off print + creator CPA tests (tiny caps).
+
+? Reinvest rule: once net revenue > €0, push 30% of EBITDA into growth weekly until CAC?date ? €25 is saturated.
+
+? Scale gates: spend ? only if week’s CAC?date ? target and retention ? target (payer share ? 6%, show?rate ? 75%).
+
+13) City seeding playbook (Dublin)
+? Phase 0 (2 weeks): 150–300 waitlist via UGC + creator microtests. Verify ?70%.
+
+? Phase 1 (2–4 weeks): closed beta 100–300, balance cohorts. Track confirm ?24h.
+
+? Phase 2: open to waitlist; cap new male sign?ups if female confirm?in?24h falls <35% for 7 days; increase women creator budget.
+
+14) Community without offline ops
+? Interest hubs: coffee, walks, climbing, board games; in?app only; weekly prompts.
+
+? Discord optional: rules: no meetups arranged by us; peer?led only; link back to proposals.
+
+? UGC prompts: “Drop two times you’re free this week.”
+
+15) Legal and claims
+? No deterministic claims (“will get a date”). Use city medians and confidence intervals. Disclose paid creator content. Clear terms on credits and non?refundability of reopens. GDPR?compliant email/SMS consent.
+
+16) Risk and mitigations
+? Receiver overload: inbound governor; queue; women?first credits.
+
+? Spam optics: caps and structured proposals; no pay?to?spray.
+
+? Scam/bot: verification at confirm; manual mod until API.
+
+? PR backlash: publish safety policy and enforcement transparency; fast takedowns.
+
+17) Timeline
+? Week 0: landing + waitlist + UGC cadence start.
+
+? Week 1–2: creator outreach; first three creator posts; referral set live.
+
+? Week 3–4: closed beta launch; social proof content from real confirms.
+
+? Week 5–8: open to waitlist; double down on winning creators; small paid tests if revenue.
+
+? Month 3: prepare native announcement funnel.
+
+18) Asset checklist
+? Logo/wordmark; color tokens; Reel/TikTok templates; landing hero, safety visuals; step cards of proposal/confirm; referral share cards; creator brief; one?pager for partners; status page screenshot; FAQ.
+
+19) Scripts and creative briefs
+? UGC hook lines:
+
+? “Dating apps are slow. This one makes you propose two times.”
+
+? “The 72?hour rule that ends ghosting.”
+
+? “We got a date confirmed in 37 seconds.”
+
+? Explainer video beats (30–45s): problem ? our loop ? confirm in?app ? calendar pop ? post?date survey ? credits ? CTA.
+
+20) KPIs and weekly review
+? Acquisition: installs, verifies, CAC?date.
+
+? Activation: matches, proposal rate, confirm ?24h.
+
+? Retention: weekly active, shows, payer share.
+
+? Monetisation: ARPPU, credits spend split, refunds.
+
+? WOM: referral rate/post?date, K?factor.
+
+21) Scale beyond Dublin (later)
+? Clone the playbook in city 2 after 4 weeks of target metrics. Localise content, creators, and SEO hubs. Maintain city gating until each market shows healthy funnels.
+

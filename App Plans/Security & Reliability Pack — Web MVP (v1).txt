@@ -1,0 +1,308 @@
+Security & Reliability Pack — Web MVP (v1)
+Scope: web?first MVP on Vercel + Supabase + Stripe + PostHog + Postmark + Twilio/MessageBird. Budget ? €200/mo pre?revenue. Timezone: Europe/Dublin. Solo on?call until hiring.
+1) Objectives, SLAs, SLOs
+? Availability SLO: 99.5% monthly (?3h 39m downtime). Error budget ? 0.5% of minutes.
+
+? Latency SLO: p95 API < 300 ms; p99 < 800 ms. Chat RTT < 500 ms p95.
+
+? Data protection: no plaintext PII logs; encryption in transit (TLS 1.2+) and at rest (provider defaults) + row?level security.
+
+? Incident response SLAs:
+
+? Sev?0 (security breach/CSAM/credentials leaked): acknowledge ? 15 min; mitigate ? 60 min; notify per GDPR if applicable within 72 h.
+
+? Sev?1 (auth/DB outage, message failure global): acknowledge ? 30 min; mitigate ? 2 h.
+
+? Sev?2 (degraded features, city?limited): acknowledge ? 2 h; mitigate ? 24 h.
+
+2) Architecture hardening (baseline)
+? Frontend: Next.js (SSR/ISR), strict TypeScript, React 18. CSP, HSTS, SRI for third?party scripts, SameSite=Lax cookies, CSRF tokens for state?changing POSTs.
+
+? Backend: Supabase Postgres (RLS on by default), Edge Functions for privileged ops, pg_cron for scheduled jobs.
+
+? Auth: Supabase Auth w/ email magic links; optional phone later. Admin routes behind Vercel IP allowlist + OAuth SSO when available.
+
+? Storage: Supabase Storage buckets with signed URLs; public images served via CDN with transformation and cache.
+
+? Payments: Stripe Checkout + Webhooks (verify signature, idempotency keys).
+
+? Comms: Postmark transactional emails; Twilio/MessageBird SMS fallback (rate?limited, opt?in).
+
+3) Identity & access management (IAM)
+? Principle of least privilege: separate service roles: anon, user, mod, admin.
+
+? Admin access: SSO preferred. If not, long random passwords + TOTP 2FA. Admin dashboard only from allowlisted IPs. No shared accounts.
+
+? API keys: scoped per environment. No prod keys in dev.
+
+4) Authorization model (RLS + checks)
+? Tables with RLS: users, profiles, likes, matches, proposals, confirms, messages, surveys, reports, enforcements, purchases, credits_ledger, scores_daily.
+
+? Policy pattern: owner or matched?party.
+
+Example (messages):
+ALTER TABLE messages ENABLE ROW LEVEL SECURITY;
+CREATE POLICY msg_owner_or_match
+ON messages FOR SELECT USING (
+  EXISTS (
+    SELECT 1 FROM matches m
+    WHERE m.match_id = messages.match_id
+      AND (m.user_a = auth.uid() OR m.user_b = auth.uid())
+  )
+);
+CREATE POLICY msg_insert
+ON messages FOR INSERT WITH CHECK (
+  EXISTS (
+    SELECT 1 FROM matches m
+    WHERE m.match_id = match_id
+      AND (m.user_a = auth.uid() OR m.user_b = auth.uid())
+  )
+);
+
+Example (profiles):
+ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
+CREATE POLICY profile_owner_select ON profiles FOR SELECT USING (user_id = auth.uid());
+CREATE POLICY profile_owner_update ON profiles FOR UPDATE USING (user_id = auth.uid());
+
+5) Secrets & key management
+? Use Vercel Secrets for client and server env vars. Rotate Stripe, Postmark, Twilio keys every 90 days or on exposure.
+
+? Store Supabase service role keys only in Edge Functions; never in client.
+
+? No secrets in logs. Redact with middleware.
+
+6) Data encryption & privacy
+? TLS everywhere. HSTS max-age=15552000; includeSubDomains; preload once stable.
+
+? Provider?managed encryption at rest (Supabase Postgres + Storage, Stripe, Postmark). Optional column?level encryption for sensitive attributes (e.g., phone) using pgcrypto.
+
+? PII minimisation: do not log message bodies; store sizes only. Redact contact handles pre?confirm.
+
+7) Network & platform security
+? Vercel: limit regions to EU where possible. Disable serverless function public files.
+
+? Supabase: restrict anon API to public schema; database network egress minimal; webhooks sign/verify.
+
+? CORS: allow only app origin(s).
+
+? Rate limit per IP and per user (see §12).
+
+8) Application security controls
+? Headers: CSP, HSTS, X?Frame?Options: DENY, X?Content?Type?Options: nosniff, Referrer?Policy: strict?origin?when?cross?origin.
+
+? CSP (starter):
+
+Content-Security-Policy:
+ default-src 'self';
+ script-src 'self' vercel-insights.com 'sha256-…';
+ style-src 'self' 'unsafe-inline';
+ img-src 'self' data: blob: cdn.supabase.co;
+ connect-src 'self' *.supabase.co *.posthog.com;
+ frame-ancestors 'none';
+ base-uri 'self';
+ form-action 'self';
+
+? CSRF: double?submit cookie + header on POST/PUT/DELETE.
+
+? XSS: escape all user content; no dangerouslySetInnerHTML; use strict Content Sanitiser for rich text (if ever added).
+
+? SSRF: no server?side fetch to user?provided URLs.
+
+? File uploads: accept images only; MIME sniff; size limit; virus scan later; strip EXIF.
+
+9) Dependency & build security
+? Lockfiles committed. Use Renovate bot weekly.
+
+? Run npm audit in CI; block high?severity vulns unless ignored with justification.
+
+? Type?safe DB (Zod/TypeScript).
+
+? Build artifacts via Vercel; no secrets baked into client bundles.
+
+10) Observability & alerting
+? Metrics: p50/p95 latency, error rate, 5xx by route, DB connections, job queue lag, email/SMS delivery, Stripe webhook failures.
+
+? Tools: PostHog (events), Sentry (errors), Supabase logs, Stripe dashboard alerts, Postmark bounces.
+
+? Alerts:
+
+? 5xx > 2% for 5 min.
+
+? DB connection saturation > 80% for 5 min.
+
+? Job failures > 5 in 10 min.
+
+? Email bounce > 10% hourly; SMS failure > 10%.
+
+? Stripe webhook failures > 1%.
+
+11) Rate limiting & abuse prevention
+? Global: 60 req/min/IP; burst 120; 429 with Retry?After.
+
+? Auth: signup 3/hour/IP; login link 5/hour/email.
+
+? Proposal composer: max 1/min; 10/hour; 40/day; per?recipient cooldown 72h enforced server?side.
+
+? Likes: count for speed score but rate?limit to 1/30s for points; raw like actions 1/sec.
+
+? Messaging: 10/minute per match; exponential backoff if flagged.
+
+? Uploads: 10 images/day/user; 5 MB each.
+
+? Automation detection: identical notes, perfect intervals ? temp challenge (selfie pose) + throttle.
+
+12) Job safety (cron) & idempotency
+? All scheduled tasks (expiry closures, score recompute, digests) run at 02:00 Europe/Dublin via pg_cron.
+
+? Idempotent design: jobs keep a cursor per day; ON CONFLICT DO NOTHING on materialized rows.
+
+? Long?running jobs time out at 2 min and retry with jitter. Dead?letter table for manual inspection.
+
+13) Backups & restore
+? Supabase Postgres: daily full backup retained 7 days + point?in?time if plan allows. Export weekly logical dumps to object storage (encrypted).
+
+? Storage: enable object versioning; 30?day retention for deletions.
+
+? Restore drills: monthly restore to a staging project; run smoke tests (auth, match?propose?confirm path) before deleting.
+
+? RPO: 24 h. RTO: 4 h.
+
+14) Disaster recovery
+? Loss of Vercel region: redeploy to alternative EU region; DNS TTL 300s; failover playbook.
+
+? Supabase outage: read?only mode banner; queue writes client?side; resume after recovery. If prolonged, failover to standby project (manual step) with last backup.
+
+? Email/SMS provider outage: switch to SES/Twilio fallback toggles; queue messages.
+
+15) Incident response runbook
+? Who: solo founder on?call. Use phone alerts. Template comms ready.
+
+? Steps: detect ? classify severity ? announce in status block on site ? mitigate ? post?mortem in 48 h with action items.
+
+? Security incident (PII leak): isolate keys, rotate secrets, block tokens, export audit logs, assess GDPR threshold, notify DPC/users if required.
+
+16) Change management & releases
+? Feature flags for risky changes.
+
+? Rollout ladder: 5% ? 25% ? 50% ? 100% or rollback.
+
+? Block releases if error rate > 2% or key KPIs drop > 5pp in the last 2 h.
+
+? Keep a CHANGELOG; tag releases; automatic revert button in Vercel.
+
+17) Performance & capacity
+? Budgets: HTML < 100 KB; JS < 250 KB initial; images < 500 KB total per profile view.
+
+? DB: aim < 10k RPS peak; indexes on foreign keys; partial indexes for active proposals.
+
+? Caching: stale?while?revalidate for feed; CDN for images; ETag on profile fetch.
+
+? k6 load tests: login, feed scroll, like, propose, confirm, chat.
+
+18) Testing & QA (security focus)
+? Automated: unit tests for RLS (forbidden access), auth flows, scoring math, Stripe webhook signature verification, idempotency.
+
+? E2E (Playwright): signup?verify?like?match?propose?confirm?chat?survey; report/ban path.
+
+? Fuzz: input sanitation on notes and messages; block HTML/URLs pre?confirm.
+
+? Accessibility: WCAG 2.1 AA lint; keyboard nav; focus traps; color contrast.
+
+19) Environments & data
+? Isolation: dev, staging, prod. No prod data in dev.
+
+? Secrets: per?env. Rotate on staff change.
+
+? Migrations: run via Supabase migrations; backward?compatible; reversible.
+
+20) Vendors & DPAs
+? Keep list of processors and DPAs (see Legal Pack). Review quarterly. Run sub?processor change log and user notice where required.
+
+21) Training & SOPs (solo phase)
+? 30?min quarterly review of incident runbook and restore drill.
+
+? Phishing awareness for admin email. Use hardware key if possible for admin.
+
+22) Checklists
+Pre?launch
+? RLS enabled and tests pass for every table.
+
+? CSP/HSTS in place; CORS restricted; CSRF tokens wired.
+
+? Stripe webhooks verified with secret; idempotency keys used.
+
+? Backups tested; restore drill executed once.
+
+? Admin routes behind allowlist; 2FA on all admin accounts.
+
+? Rate limits configured and tested.
+
+? Error and latency alerts firing in test.
+
+Weekly
+? Review alerts and error top 10.
+
+? Library updates via Renovate.
+
+? Backups successful confirmation.
+
+Monthly
+? Restore drill to staging.
+
+? Secret rotation plan review; rotate if exposure suspected.
+
+? Posture review: headers, CSP hashes, third?party scripts.
+
+23) Runbooks (abridged)
+A. DB connection exhaustion
+? Symptom: 5xx spikes; pool at 100%.
+
+? Actions: scale DB plan temporarily; reduce pool size per client; kill idle in transaction; add index if slow query identified.
+
+B. Stripe webhook backlog
+? Symptom: purchases not reflected; dashboard shows retries.
+
+? Actions: check signature secret; replay events; ensure idempotency; backfill entitlements from charges API.
+
+C. Email failures spike
+? Symptom: Postmark bounce rate > 10%.
+
+? Actions: verify domain/DKIM; pause non?essential sends; switch to SES fallback; warm up IPs slowly.
+
+D. Spam/automation wave
+? Symptom: identical notes, high velocity, many reports.
+
+? Actions: raise velocity penalties; enable signup CAPTCHA; require selfie challenge; temporarily lower daily caps.
+
+E. Data breach suspicion
+? Actions: freeze admin accounts; rotate all secrets; revoke auth tokens; pull access logs; contact DPC if threshold met; notify users as required.
+
+24) Appendices
+A. Example CSP (tighten per domains actually used)
+Content-Security-Policy:
+ default-src 'self';
+ script-src 'self' 'unsafe-inline' vercel-insights.com;
+ style-src 'self' 'unsafe-inline';
+ img-src 'self' data: blob: cdn.supabase.co;
+ connect-src 'self' https://*.supabase.co https://*.posthog.com https://api.postmarkapp.com;
+ frame-ancestors 'none';
+ base-uri 'self';
+ form-action 'self';
+
+B. k6 outline
+import http from 'k6/http';
+import { sleep } from 'k6';
+export const options = { vus: 50, duration: '5m' };
+export default function() {
+  http.get('https://APP/feed');
+  sleep(1);
+}
+
+C. RLS test example (pseudo)
+it('user cannot read others messages', async () => {
+  const a = clientAs(userA); const b = clientAs(userB);
+  const { data } = await b.select('messages').eq('match_id', matchWithA);
+  expect(data.every(m => m.user_id === userB || m.user_id === userA)).toBe(true);
+});
+
+

@@ -1,0 +1,307 @@
+Legal & Compliance Pack — EU/Ireland MVP (v1)
+This is an operational legal kit for the Dublin web?first MVP. It is not legal advice. Replace placeholders in ALL?CAPS. Keep this updated as features evolve.
+0) Company + scope
+? Controller / Provider: COMPANY LEGAL NAME, LTD ("we","us").
+
+? Registered address: ADDRESS, CITY, IRELAND, EIRCODE.
+
+? Contact for users: support@DOMAIN.
+
+? GDPR contact / DPO (if appointed): privacy@DOMAIN / NAME.
+
+? Lead supervisory authority: Data Protection Commission (Ireland).
+
+? Service: online dating platform that prioritises time?to?date via proposals, confirmations, expiries, and credits.
+
+
+1) Terms of Service (web) — template
+Effective date: DD MONTH YYYY
+1. Eligibility
+? 18+ only. One account per person. Accounts are personal and non?transferable.
+
+? We may require identity verification (photo/selfie; later liveness). Failure ? limited access or suspension.
+
+2. Account & safety
+? You are responsible for safeguarding login credentials.
+
+? Use the in?app tools: block, report, unmatch; do not share contact details before a confirm.
+
+3. Platform rules
+? No harassment, discrimination, threats, hate, or illegal activity. No spam or scams. No explicit nudity on profiles. No minors.
+
+? Authenticity: no impersonation, catfishing, or misleading content.
+
+4. Core features (summary)
+? Matches arise from mutual likes. Proposals contain 2–3 time windows within 7 days. Confirm 1 time or tap “None of these suit me” and propose 2–3 alternatives.
+
+? Expiry: proposals expire after 72 hours. Expired items can be reopened by the receiver by paying credits and proposing 2–3 new times.
+
+? Chat unlocks only after a confirm. We do not organise venues.
+
+5. Paid services
+? Subscriptions (Momentum+): features and limits listed in?app. Auto?renews monthly until cancelled. You can cancel anytime effective at the next period end. Partial period refunds are not provided unless required by law.
+
+? Credits (virtual items): sold in bundles. Non?refundable and not redeemable for cash. Used for features such as Fast Pass, Extra Chat Slot (24h), Stack Pass, and Reopen (receiver?paid).
+
+? Bonds: where offered, a temporary charge to deter no?shows. Refunded when both parties mark the date as happened; kept on no?show.
+
+? Prices include applicable taxes unless stated. We may adjust pricing; changes apply to future purchases/renewals.
+
+6. Refunds & cooling?off
+? Under EU consumer rules, the 14?day right of withdrawal for digital content may not apply if you consent to immediate delivery and acknowledge loss of the right to withdraw. We obtain this consent at purchase for credits and immediate?start subscriptions.
+
+? If a purchase was not delivered or was defective (e.g., duplicate charge), contact support@DOMAIN within 14 days; we will review and remedy if appropriate.
+
+7. Enforcement
+? We may remove content, limit features, suspend, or terminate accounts for violations. Appeals allowed once per action within 7 days with new evidence.
+
+8. User content & licence
+? You retain your content. You grant us a non?exclusive, worldwide, royalty?free licence to host and display your content to provide the service.
+
+? You represent that you own or have rights to the content you post.
+
+9. Disclaimers & liability
+? We do not screen every user. We do not guarantee matches or dates.
+
+? The service is provided “as is.” To the maximum extent permitted by law, we exclude implied warranties. We are not liable for indirect or consequential losses. Our aggregate liability is limited to the amounts you paid in the 12 months preceding the claim.
+
+10. Governing law & disputes
+? Irish law governs. Courts of Ireland have exclusive jurisdiction.
+
+? EU ODR info: consumers may access the Online Dispute Resolution platform; we do not commit to using ADR unless required.
+
+11. Changes
+? We may update these terms. We will notify you of material changes at least 14 days before they take effect.
+
+12. Contact
+? support@DOMAIN
+
+
+2) Privacy Policy (GDPR) — template
+Effective date: DD MONTH YYYY
+1. Who we are
+? COMPANY LEGAL NAME, LTD is the controller for your personal data.
+
+? Contact: privacy@DOMAIN; postal address above. DPO (if appointed): NAME, CONTACT.
+
+2. What we collect
+? Account: email, phone (optional), age, gender, orientation, preferences, availability bands, profile prompts, photos, verification selfies.
+
+? Usage: device, IP, logs, events (likes, matches, proposals, confirms, reopens, messages, surveys), payments (via Stripe tokens; we do not store full card data).
+
+? Safety: reports, blocks, enforcement actions, signals (keyword/URL flags, velocity, duplicates).
+
+? Optional: location at city/region granularity (no precise GPS), voice snippets if enabled.
+
+3. Why we process & legal bases
+? Provide the service (create account, discovery, proposals, chat after confirm): Art. 6(1)(b) contract.
+
+? Payments (subscriptions/credits): contract; legal obligations for tax records.
+
+? Safety & moderation (block/report, fraud/scam detection, reopen abuse checks): legitimate interests Art. 6(1)(f); we run a Legitimate Interests Assessment (LIA).
+
+? Communications (transactional emails/SMS like confirmations, reminders): contract; marketing emails: consent Art. 6(1)(a).
+
+? Analytics & A/B tests (product improvement): legitimate interests; we minimise and aggregate where possible.
+
+? Legal compliance (record?keeping, responding to lawful requests): legal obligation Art. 6(1)(c).
+
+? Automated ranking/scoring (Action Speed, Profile Quality, Reliability): legitimate interests; no legal or similarly significant effects. You may contact us to contest or request human review of decisions that materially affect you.
+
+4. Sharing & recipients
+? Processors: hosting (Vercel), database/auth/storage (Supabase), email (Postmark/SES), SMS (MessageBird/Twilio), analytics (PostHog/Amplitude), payments (Stripe), error logging (Sentry), moderation providers (when added). See Sub?processors list.
+
+? Other disclosures: law enforcement when legally required; in a merger/acquisition, as permitted by law.
+
+5. International transfers
+? Data may be processed outside the EEA/UK by our processors. We use EU?based data centres where possible and rely on Standard Contractual Clauses (SCCs) and the UK Addendum where applicable. We assess transfer risks.
+
+6. Retention
+? Account data: for your account lifetime; delete 30 days after closure.
+
+? Messages & proposals: 18 months; summaries retained for anti?abuse for up to 24 months.
+
+? Reports & enforcement logs: 24 months; CSAM evidence retained per law.
+
+? Payment records: 7 years (tax).
+
+7. Your rights
+? Access, rectification, erasure, restriction, portability, objection, and withdrawal of consent where applicable.
+
+? Exercise rights via privacy@DOMAIN. We respond within one month.
+
+? You may complain to the DPC: https://www.dataprotection.ie/.
+
+8. Security
+? Role?based access, RLS policies, encryption in transit and at rest, audit logs, least privilege, regular reviews.
+
+9. Children
+? Our service is 18+. We delete accounts suspected to be under 18.
+
+10. Changes
+? We will notify you of material changes.
+
+
+3) Cookie & Tracking Policy — template
+? Consent banner: prior consent for non?essential cookies (analytics/ads). Provide Accept all / Reject non?essential / Manage. Record consent with timestamp, country, and version.
+
+? Categories:
+
+? Strictly necessary: auth/session, CSRF, load balancing.
+
+? Analytics: PostHog/Amplitude.
+
+? Functional: preference tokens.
+
+? Identifiers used: cookie IDs, device IDs (hashed), IP (short?retained for security).
+
+? Manage cookies: link to browser help; CMP panel to withdraw consent anytime.
+
+? Retention: list each provider’s cookie name, purpose, expiry (fill table before launch).
+
+
+4) Digital Services Act (EU) — lightweight compliance
+? Single point of contact: legal@DOMAIN (users and authorities).
+
+? Notice & action: in?app report tool with categories and evidence; email fallback. Acknowledge receipt, provide status, and give reasons for action/no action.
+
+? Terms clarity: plain?language rules on illegal content, nudity, scams, harassment, and how our recommender (ranking signals) works.
+
+? Transparency report: publish aggregate report quarterly: number of notices, actions, average response time, appeals outcomes.
+
+? Recommender transparency: explain key ranking parameters (Action Speed > Profile Quality > Reliability) and user controls (e.g., intent strictness slider when shipped).
+
+? No dark patterns: clear pricing, no bait?and?switch, easy cancellation.
+
+
+5) DPIA (outline)
+1. Processing description: dating profiles, proposals, messaging post?confirm, safety signals, ranking.
+
+2. Necessity & proportionality: scoring needed to reduce harassment and ghosting and to meet core goal (time?to?date). Minimal data used (no precise location; only city?level).
+
+3. Risks: stalking, impersonation, image misuse, profiling fairness, data breach, minors lying about age.
+
+4. Measures: verification, RLS, encryption, report tools, moderations SLAs, rate limits, transparent ranking, age gate, staff training.
+
+5. Residual risk & decision: acceptable with controls; review with DPO/legal before public launch.
+
+6. Consultation: if high risk remains, consult the DPC.
+
+7. Review: repeat DPIA on native app launch and new features (voice, liveness).
+
+
+6) Record of Processing Activities (RoPA) — template
+ProcessingCategories of dataLegal basisRecipientsTransfersRetentionAccount & profileIdentifiers, demographics, photos, availabilityContractSupabase, VercelSCCs as neededLife of account + 30dDiscovery & rankingEvents, scores, preferencesLegitimate interestsInternal onlyN/ARolling 18m (events), scores recalculatedMessaging after confirmMessages, metadataContractSupabaseSCCs as needed18mPaymentsTokens, receipts, VAT IDsContract/legalStripeSCCs7ySafety & moderationReports, evidence, enforcementLegitimate interests/legalInternal, moderation toolsSCCs24mMarketing commsEmail, consent statusConsentPostmark/SESSCCsUntil withdrawal
+7) Lawful basis matrix (quick reference)
+? Contract: account creation, discovery, proposals, confirms, chat, purchases.
+
+? Legitimate interests: safety/fraud, analytics, ranking, A/B tests (with minimisation and opt?out for non?essential analytics where feasible).
+
+? Consent: marketing emails/SMS, analytics cookies.
+
+? Legal obligation: tax and accounting records; responding to lawful requests.
+
+
+8) Data retention schedule — template
+Data classRetentionRationaleAccount & profileLife of account + 30dAllow reactivation windowPhotos & verification selfiesLife of account + 30dAudit + appealsLikes/matches/proposals/confirms18mDispute resolution, ranking qualityMessages18mSafety, harassment evidenceSurveys & scores24mOutcome learning, abuse detectionReports & enforcement24mSafety audits, repeat offender detectionPayment records7yVAT compliance
+9) Sub?processors (fill before launch)
+? Hosting/CDN: Vercel (EU region where available)
+
+? DB/Auth/Storage: Supabase (EU region)
+
+? Email: Postmark/SES
+
+? SMS: MessageBird/Twilio
+
+? Analytics: PostHog/Amplitude
+
+? Payments: Stripe
+
+? Error logging: Sentry
+
+? (Later) Verification: Persona/Onfido; Moderation: Hive/Unwavering, etc.
+
+Publish this list with purposes, locations, and DPA links. Maintain change log with 30?day notice where required.
+
+10) Data subject rights SOP (GDPR)
+? Intake via privacy@DOMAIN or in?app form. Verify identity (email challenge; for deletion, selfie + photo match if reasonable).
+
+? Log request; assign ticket; deadline 1 month; extensions documented.
+
+? Export format: machine?readable (JSON/CSV). Exclude others’ messages unless consented or legally required; provide context where possible.
+
+? Deletion: soft?delete immediately; hard?delete on 30th day; retain enforcement logs as allowed.
+
+? Objection to profiling: offer a human review path for material ranking actions (explain limits: we cannot guarantee outcomes).
+
+
+11) Consumer law, pricing, and payments
+? Price transparency: show total price incl. VAT and billing cadence; no hidden fees; list feature limits.
+
+? Auto?renew: show renewal date, provide in?product cancellation path; send reminder email 3–7 days before renewal where required.
+
+? Credits: display as virtual items, non?refundable; show unit value and usage examples; no expiry earlier than 12 months unless legally permitted.
+
+? Refund policy (sample): credits and delivered features are non?refundable; duplicate charges or failed delivery ? refund or credit; local consumer rights honoured.
+
+? Chargebacks: we may suspend accounts that abuse chargebacks; appeal path available.
+
+? VAT: enrol in EU OSS for cross?border sales; store evidence of location; show VAT on invoices.
+
+
+12) Security + breach notification (legal aspects)
+? Maintain incident response plan. Assess breaches under GDPR; notify DPC within 72 hours when required; notify affected users without undue delay if high risk.
+
+? Keep records of all breaches and decisions.
+
+
+13) Age gate & verification
+? Declare 18+ at signup; date of birth field with age check; prevent under?18.
+
+? Photo/selfie pose check; liveness later. Re?verification triggers on risk events.
+
+? Immediate removal on minor indicators; preserve evidence for authorities if applicable.
+
+
+14) Moderation & transparency (legal hooks)
+? Publish Community Guidelines; explain enforcement ladder and appeals.
+
+? Provide status to reporters and respondents; include reasons with policy citations.
+
+? Quarterly transparency report (counts; response times; appeals outcomes).
+
+
+15) Native apps (prepare)
+? In?app deletion and export flows (Apple/Google rules).
+
+? IAP terms mirrored to web; price parity disclosures; receipts via stores.
+
+? Privacy Nutrition Labels and Data Safety forms consistent with this policy.
+
+
+16) Launch checklist (legal)
+? Terms, Privacy, Cookies live and linked in footer and key flows.
+
+? Cookie banner + CMP configured; consent records stored.
+
+? DPAs signed with all processors; sub?processor list published.
+
+? RoPA and DPIA completed; LIA documented for safety/ranking.
+
+? Age gate in place; report & appeals flows working; SLA timers visible.
+
+? VAT OSS configured; invoices show VAT and company details.
+
+? Incident response plan, breach log template, and on?call list.
+
+
+17) Quarterly maintenance
+? Refresh sub?processor list; send notices if adding/replacing.
+
+? Publish DSA transparency report. Review enforcement metrics.
+
+? Review DPIA on any new feature (voice, liveness, FOF discovery).
+
+? Audit consent logs, auto?renew notices, and refund cases for compliance.
+
+

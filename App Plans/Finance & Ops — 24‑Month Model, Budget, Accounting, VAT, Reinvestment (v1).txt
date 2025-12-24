@@ -1,0 +1,305 @@
+Finance & Ops — 24?Month Model, Budget, Accounting, VAT, Reinvestment (v1)
+Web?first MVP in Dublin with €200/mo pre?revenue cap. Reinvest 100% of profit to hire and build native apps ASAP. Founder target salary €40,000/yr once triggers are met. This pack defines pricing, unit economics, forecasting structure, cash controls, VAT, refunds, procurement, and the monthly close.
+
+0) Policy and scope
+? Currency: EUR. Prices: VAT?inclusive for consumers.
+
+? Reinvestment rule: 100% of monthly EBITDA (post VAT and refunds) ? hiring, verification, creator CPA, and native app build until we reach stable profitability for 3 months.
+
+? Founder salary: €40,000/yr (?€3,333/mo) starts when either (a) net revenue ? €6,000/mo for 2 consecutive months or (b) cash buffer ? 3 months of forward burn. Until then, salary is €0 and accrues as founder debt (optional).
+
+? City gating: forecast per?city. Do not scale spend until guardrails hold.
+
+
+1) Pricing architecture and revenue streams
+Subscriptions (Momentum+)
+? €14.99/mo, VAT?incl. Includes: unlimited outbound proposals, concurrent chats, smart reminders, queue lift, Stack Pass allowance, Reopen allowance (if specified in promo), transparency perks.
+
+Credits (virtual items; VAT?incl)
+? Packs: €4.99?50, €9.99?120, €19.99?260.
+
+? Effective credit value (blended): assume €0.085/credit (mix weighted).
+
+? Feature pricing (launch):
+
+? Reopen (receiver?paid): 10 credits base, +5 per extra reopen within 30 days for the same pair.
+
+? Fast Pass (next proposal priority): 15 credits.
+
+? Extra Chat Slot (24h): 10 credits.
+
+? Stack Pass (>1 date/day): 20 credits.
+
+? Bonds (where offered): refundable, held via Stripe; not revenue unless forfeited.
+
+Other
+? Refunds: rare and policy?bound (see Legal Pack).
+
+? Promotions: referral credits on bilateral “went”; creator campaign codes (no cash discounts).
+
+Revenue recognition
+? Subscriptions: straight?line over the service period.
+
+? Credits: cash received ? Deferred revenue; recognise upon consumption or expiry (?12 months).
+
+? Bonds: liability until released or forfeited.
+
+
+2) Unit economics (city?level)
+Key conversion rails (targets from Data Pack):
+? Proposal?Confirm ?24h: 55%
+
+? Confirm?Show: 80%
+
+? Payer share (30d): ? 6% of MAU
+
+? ARPPU (30d): ? €12
+
+? Share of revenue by stream (launch assumption): Credits 55% / Subs 45%
+
+Per?confirmed?date revenue model (illustrative):
+? Let E = expired proposals/WAU per week; ? = % receivers who pay to Reopen; c = credits per Reopen (10 ? 15 with steps); €cr = € per credit (0.085); p = payer share of users who also subscribe.
+
+? Reopen revenue/week ? E × ? × c × €cr.
+
+? Subscription revenue/month ? MAU × p × €14.99 (pro?rated for active days).
+
+? Fast/Stack/Chat add a tail. Assume +20–35% on top of Reopen revenue once engagement grows.
+
+? Per confirmed date revenue rises when Reopen?Confirm conversion is strong. Track Reopen?Confirm (48h) as a driver.
+
+Creator CPA ceiling
+? With €5 per confirmed date creator payout (marketing pack), ensure (Revenue per confirmed date ? variable costs) ? €5 before scaling creator budgets.
+
+
+3) Cost model (OPEX + COGS)
+Pre?revenue fixed (cap €200/mo)
+? Vercel (Hobby) €0; Supabase (Pro Small) ~€25; Postmark €15; SMS €?20; Sentry €0; PostHog Free; Domain €2; Misc buffer €50–€100.
+
+Variable (per unit)
+? Verification: photo/selfie manual €0; later liveness €2–€3/verification.
+
+? SMS: €0.03–€0.07 per SMS delivered (MessageBird IE).
+
+? Email overages: marginal.
+
+? Payment fees (Stripe): ~1.4% + €0.25 (EU cards) web; 3%+ for wallets; app stores later ~15%.
+
+? Creator CPA: €5 per confirmed date (capped pre?rev).
+
+? Refunds/chargebacks: budget 2–5% of GMV early; aim <2%.
+
+Post?revenue step?ups
+? Founder salary: €40,000/yr once trigger hits.
+
+? Moderator (part?time): €400–€600/mo after ?1,000 MAU or report volume threshold.
+
+? Brand/UGC freelance: €400–€600/mo.
+
+? Verification API: as needed.
+
+? React Native contractor: €8–€12k over 8–10 weeks (one?off), timed when monthly EBITDA ? €8k or cash buffer covers 3 months.
+
+
+4) Forecast structure (24 months)
+Tabs (Sheets/XLSX): Assumptions, Traffic, Conversion, Revenue, Costs, P&L, Cash, Cohorts, VAT, KPIs.
+A) Assumptions
+? Start city MAU M1 (e.g., 200); MoM growth % by scenario; payer share path; ARPPU path; average credits/user; expired proposals/WAU; reopen propensity; reopen?confirm; refund rate; store fees (later); payroll start month; creator CPA per date; verification mix.
+
+B) Traffic & conversion
+? Derive WAU/MAU from signups × activation rate × retention.
+
+? Events per user: likes ? matches ? proposals ? confirms ? shows.
+
+C) Revenue
+? Subscriptions:
+
+? New subs = MAU × payer_share_new
+
+? Churn = prior_subs × churn_rate
+
+? MRR_subs = active_subs × 14.99 / (1+VAT)
+
+? Credits:
+
+? Credit revenue = credits_sold × avg_price_per_credit / (1+VAT)
+
+? Recognised revenue = min(consumed, sold + prior_deferred) × price; rest ? deferred
+
+? Other: bonds forfeited (rare), fees.
+
+D) Costs
+? COGS: payment fees, creator CPA, verification API, SMS/email overages, app store fees (later).
+
+? OPEX fixed: infra, tools, accounting, legal, insurance later.
+
+? Payroll: founder salary from trigger month; contractors.
+
+E) P&L and Cash
+? P&L: Revenue – COGS – OPEX – Payroll = EBITDA.
+
+? Cash: Opening + cash_from_sales ? fees ? refunds ? OPEX ? Payroll ? CAPEX (RN build).
+
+? Maintain cash buffer ? 1 month of next month burn.
+
+F) VAT (EU OSS)
+? Compute VAT due = VAT_inclusive_revenue × VAT_rate / (1+VAT_rate) per country.
+
+? File quarterly; set aside cash monthly.
+
+
+5) Scenarios (wireframes)
+Conservative
+? MAU starts 200 ? +15% MoM; payer share 3%?5%; ARPPU €9?€11; credits 50% of rev.
+
+? Reach break?even ~M10–M12. Founder salary starts M12.
+
+Base
+? MAU 200 ? +25% MoM; payer share 4%?7%; ARPPU €10?€13; credits 55%.
+
+? Break?even ~M7–M9. Salary starts M8.
+
+Upside
+? MAU 300 ? +35% MoM; payer share 6%?9%; ARPPU €12?€16; credits 60%.
+
+? Break?even ~M5–M6. Salary starts M6; RN contractor M7–M8.
+
+Use the same cost curves. Stress test refund 5% and app?store fee 15% from Month 13.
+
+6) Example month build (first 6 months, Base)
+(Numbers illustrate flow. Replace with your actuals.)
+Assumptions: VAT 23% (IE), payer share starts 4% ? +0.3pp/mo; ARPPU €10?€13; credits share 55%; creator CPA €5/date; Stripe fee 1.4% + €0.25.
+MonthMAUPayer %PayersARPPURevenue (ex?VAT)Infra OPEXVar (fees+SMS)Creator CPAEBITDA pre?salary12004.0%810.0€1,301€120€40€0€1,14122504.3%1110.3€1,832€150€60€25€1,59733104.6%1410.7€2,526€170€80€45€2,23143904.9%1911.1€3,381€190€110€70€3,01154905.2%2611.6€4,555€220€150€95€4,09066105.5%3412.0€5,968€260€190€120€5,398If salary trigger met in M6 (net rev ? €6k): add €3,333 payroll from M7. Set aside VAT monthly: VAT = revenue_inc_VAT ? revenue_ex_VAT. E.g., at 23% VAT, ex?VAT €5,968 ? inc?VAT €7,342; VAT due ? €1,374 (quarterly filing).
+
+7) Accounting workflow (monthly close)
+Tools: Stripe, bank, Google Sheets (pre?rev), later Xero/Zoho.
+ Day 1–3:
+1. Export Stripe charges/refunds/fees; reconcile to bank deposits.
+
+2. Postmark/SMS cost pull; Supabase usage billing.
+
+3. Creator CPA ledger: confirmed dates × €5 (from Data Pack metrics).
+
+4. Deferred revenue roll?forward for credits (open + sold ? recognised = close).
+
+5. VAT calc and accrual.
+
+6. P&L and Cash update.
+
+7. Email Finance snapshot: Revenue, EBITDA, cash runway, VAT set?aside, refunds, chargebacks.
+
+Quarterly: OSS VAT filing; sub?processor review; safety transparency report aligns with costs.
+
+8) Controls & fraud
+? Chargebacks: track by cohort; auto?suspend on dispute; evidence via usage logs; cap reopen refunds.
+
+? Credit abuse: throttle reopens with low confirm%, pause ability for 7 days; no refunds.
+
+? Promo abuse: device/IP limits; referral requires bilateral “went.”
+
+? Creator fraud: pay only on confirmed dates via their link; cap €/creator/month.
+
+
+9) Procurement policy (solo)
+? Vendor tiers: Essential (infra, payments, email) vs Discretionary (creative tools).
+
+? Pre?rev: new recurring spend requires (a) KPI improvement hypothesis and (b) fit into €200 cap.
+
+? Post?rev: any new recurring > €200/mo must show impact on north?star or cost reduction; trial first; cancel if no signal in 30 days.
+
+
+10) Hiring finance plan
+? Sequence: Moderator (10 h/wk €400–€600), UGC editor (€400–€600), RN contractor (€8–€12k/8–10 wks), then PT designer/dev as revenue allows.
+
+? Keep 1 month cash buffer post?payroll. Delay hires if buffer dips.
+
+
+11) Reporting & governance
+? Weekly finance email with KPIs (Data Pack) + cash snapshot.
+
+? Monthly close with P&L, cash, VAT accrual, and variance vs plan.
+
+? Quarterly scenario refresh; adjust reinvestment and hiring.
+
+
+12) Risks & mitigations
+? High refunds/chargebacks: tighter refund policy, stronger purchase UX, proof screens, SCA tuned.
+
+? Store fees shock (native): price parity policy; steer heavy purchases to web where allowed.
+
+? Verification costs spike: put verification behind confirm gate until revenue supports earlier checks.
+
+? Creator under?performance: cut budgets fast; switch to referral credits; test new creators monthly.
+
+? VAT complexity: EU OSS; use a bookkeeper once revenue > €5k/mo.
+
+
+13) Checklists
+Pre?launch
+? Stripe products (subs & credits) live; test webhooks; refund flow documented.
+
+? Tax/VAT settings; test OSS report in sandbox.
+
+? Credit liability tracking built.
+
+? Finance sheet templates created; daily KPI email wired.
+
+Monthly close
+? Stripe/bank reconciliation
+
+? Deferred revenue roll?forward
+
+? VAT accrual
+
+? CPA payouts calculated
+
+? P&L/Cash updated
+
+? Snapshot email sent
+
+Before native build
+? Cash buffer ? 3 mo forward burn
+
+? EBITDA ? €8k/mo or earmarked budget for RN (€8–€12k)
+
+? Push notification need validated (email reach < 40%)
+
+
+14) Formulas (paste?ready for Sheets)
+# Subscriptions
+NewSubs_m = MAU_m * PayerRateNew_m
+ChurnedSubs_m = ActiveSubs_{m-1} * Churn_m
+ActiveSubs_m = ActiveSubs_{m-1} + NewSubs_m - ChurnedSubs_m
+MRRSubs_exVAT_m = ActiveSubs_m * 14.99 / (1+VAT)
+
+# Credits
+CreditsSold_exVAT_m = CreditsUnits_m * AvgPricePerCredit / (1+VAT)
+DeferredClose_m = DeferredOpen_{m-1} + CreditsSold_exVAT_m - CreditsRecognised_exVAT_m
+
+# Revenue
+Revenue_exVAT_m = MRRSubs_exVAT_m + CreditsRecognised_exVAT_m
+
+# Costs
+PaymentFees_m = 0.014*Revenue_incVAT_m + 0.25*Count(Charges_m)
+CreatorCPA_m = ConfirmedDates_m * 5
+
+# P&L
+EBITDA_m = Revenue_exVAT_m - (COGS_m + OPEX_m + Payroll_m)
+
+# Cash
+CashClose_m = CashOpen_{m-1} + Revenue_incVAT_m - Fees_m - Refunds_m - OPEX_m - Payroll_m - CAPEX_m - VATSetAside_m
+
+
+15) What to do next
+? Fill the Assumptions tab with city?specific numbers.
+
+? Wire daily KPI email and a weekly finance snapshot.
+
+? Define salary trigger preference (date?based vs performance?based).
+
+? Build the 24?month sheet from the structure above; copy Base scenario first, then Conservative/Upside.
+
+? Add a “Native app” toggle that injects store fees and RN contractor cost from Month X.
+
+
+

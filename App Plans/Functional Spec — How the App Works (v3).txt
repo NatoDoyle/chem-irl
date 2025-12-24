@@ -1,0 +1,312 @@
+Functional Spec — How the App Works (v3)
+Live document. Edit directly. I’ll apply structure and resolve conflicts on request.
+Core goal
+Optimise time-to-date. Lift: match?proposal, proposal?confirm, confirm?show.
+Core loop
+1. Match
+
+2. Propose 2–3 times (next 7 days) + first-date type + one-line note
+
+3. Receiver: Confirm one time, or None of these suit me ? must suggest 2–3 times
+
+4. Reminders (email first, SMS fallback),  remainder flow, and maybe calender feature
+
+5. Meet ? 15?second survey ? Momentum & Reliability update
+
+Free vs paid throughput
+? Free: 1 active outbound proposal at a time. Unlimited chats. While active, user is internally busy (hidden): removed from discovery and can’t start new proposals. They can still Confirm / Reschedule / Decline inbound proposals. No one sees they’re busy.
+
+? Momentum+ (paid): unlimited active outbound proposals and concurrent chats; smart reminders; “change?time” tokens; queue lift; **Stack Pass;**Reopen expired proposals**
+
+? Credits (paid): extra 24?hour chat slot; Fast Pass for next proposal; Stack Pass for >1 date/day; Reopen expired proposals (receiver?paid).
+
+Proposals
+? Structure required: exactly 2–3 distinct times within 7 days, plus first?date type and one?line note.
+
+? Per?recipient cooldown: 1 proposal / 72h.
+
+? Expiry: 72h. Expired items don’t hurt either side.
+
+? Receiver options on any proposal: Confirm, Suggest times (forces 2–3), Decline politely.
+
+Confirmation
+? One?tap on a proposed time.
+
+? Chat unlocks on confirm. Venue decided later in chat.
+
+? Express confirm allowed.
+
+“None of these suit me”
+? Visible on proposals.
+
+? If tapped, receiver must propose 2–3 alternatives in the same flow. No free?text loops.
+
+Availability: “I’m usually free…”
+? Profile field with broad bands (e.g., Weeknights 18–21; Sat mornings) and lead?time preference.
+
+? Used to auto?suggest overlaps in the picker for both sides.
+
+? Optional, privacy?safe.
+
+Chats
+Unlocked once date and time confirmed through proposal
+Expired ? Reopen (receiver?paid)
+? At 72h, a proposal expires.
+
+? Sender view: shows “Expired.” No reason. No actions. Re?propose cooldown to that match: 72h.
+
+? Receiver view: may Reopen & propose 2–3 times for credits (or use Momentum+ allowance), or Ignore, or Decline.
+
+? Unlimited reopens
+
+? No refunds on reopen credits (ever).
+
+? Price ladder: 10 credits base, +5 for each additional reopen to the same pair within 30 days (resets on confirm or after 30 days).
+
+Internal “busy” (hidden)
+? Free user who sends an outbound proposal becomes internally busy until it resolves (confirm/decline/expire).
+
+? Internally busy users can still Confirm / Reschedule / Decline inbound proposals anytime.
+
+? Senders never see status; only “Proposal sent — awaiting reply” with a 72h countdown.
+
+Reminders and nudges
+? Proposal reminders to receivers at 24h and 48h.
+
+? Pre?date reminders at T?24h and T?2h after confirm.
+
+? Quiet hours respected; email first; SMS fallback if email bounces/ignored.
+
+Post?date survey
+? “Did you meet?”
+
+? “Would meet again?”
+
+? vibe 1–5?
+
+? safety 1–5?
+
+? were they on time?
+
+? Credits awarded on bilateral “went.”
+
+? Reliability updates on show/no?show and honest reschedules.
+
+Hidden scoring systems
+1) Action Speed Score (priority)
+? Purpose: reward fast movement from match to confirmed time. Primary ranking key.
+
+? Scale: 0–100. Not shown numerically. Inactivity floor 50. Below 50 only from inbound neglect or expiries. No decay. Score changes only via the daily engine and event points below.
+
+2) Profile Quality Score
+? Purpose: reflect how attractive/clear the profile is based on match acceptance rate.
+
+? Primary metric: Match Acceptance Rate (MAR) = matches formed ÷ (likes on you + your likes shown to others), Bayesian?smoothed with a prior.
+
+? Stabilisation: sample?size buckets and priors to avoid volatility on low exposure. Recent updates weighted more in the last 14 days.
+
+? Effects: secondary rank boost and pre?match exposure lift; acts as tiebreaker when Action Speed is similar.
+
+3) Reliability Score (least important)
+? Purpose: reflect showed?up behaviour and respectful coordination.
+
+? Inputs: decayed show?rate, cancellation honesty (gave notice + rescheduled), bilateral “would meet again”, and unresolved safety reports (negative).
+
+? Window & decay: rolling 30 days; 10?day half?life on shows; heavier decay on old no?shows.
+
+? Effects: gate and light boost only. Cannot outweigh poor Action Speed or Profile Quality. Low Reliability suppresses paid lifts and Fast Pass.
+
+Scoring scales & update rules
+Scale: all internal scores are 0–100. Shown to users only as badges. Scores clamp to 0–100 and decay over time.
+Initialization (new users)
+? Action Speed: start 50 plus pre?match readiness tokens (max +20) until the first match; tokens expire after 14 days or on the first missed pledge.
+
+? Profile Quality: prior set to 50 using a Bayesian prior until at least 30 exposures.
+
+? Reliability: start 70 after verification.
+
+? Reliability gating is off until a user has at least one date outcome.
+
+Action Speed Score (0–100)
+Daily engine
+? Base: ?8/day at local midnight.
+
+? Likes: +2 per right?swipe, capped +16/day from likes.
+
+? Floor on inactivity: daily decrement stops at 50. Scores drop below 50 only from inbound neglect or expiry penalties listed below.
+
+? Clamp daily net change (all sources) to [?30, +30]. Overall clamp 0–100.
+
+Event bonuses (match?date actions)
+ Apply in addition to the daily engine when the event happens.
+1. After a match, first outbound proposal (sender) — measure from match time
+
+? <12h: +12
+
+? 12–24h: +6
+
+? 24–48h: 0
+
+? 48–72h: ?8
+
+? >72h (match expires): ?10 and the match moves to Expired (receiver can pay to Reopen)
+
+2. On receiving a proposal, first response (receiver) — confirm or “None suits” with 2–3 alternatives; measure from proposal time
+
+? <12h: +12
+
+? 12–24h: +6
+
+? 24–48h: 0
+
+? 48–72h: ?12
+
+? >72h (proposal expires): ?15
+
+3. Turn-based response scoring (harsher, shorter windows) — measure from the last counterparty qualifying action
+
+Qualifying actions: Any action taken after either sending a proposal or the intial action when responding to a proposal
+Per-turn score (first qualifying action only):
+? <1h: +2
+
+? 1–3h: +1
+
+? 3–6h: 0
+
+? 6–12h: -1
+
+? 12–24h: -2
+
+? 24–36h: ?4
+
+? 36–48h: ?8
+
+? 48–60h: ?16
+
+? 60–72h: ?32
+
+? >72h (expires): ?64 and the item moves to Expired (receiver can pay to Reopen)
+
+Caps to prevent inflation:
+? Per?match lifecycle positive cap: +24 total from turn scores (resets after close or unmatch).
+
+? Per?match per?day positive cap: +12.
+
+? Per?user per?day positive cap from turn scores: +24.
+
+? Global daily net clamp remains [+30] across all sources.
+
+Inbound neglect penalties** (only way to go below 50 without expiry):**
+? Ignore a received proposal or match for >24h: ?10 at 24h; ?18 at 48h if still no action.
+
+Notes
+? Only the first qualifying action per turn yields points; message floods or repeated taps don’t stack.
+
+? Likes remain the maintenance path (daily ?8 offset by +2 per right?swipe, cap +16).
+
+? Expired items always move to Expired; only the receiver can Reopen by paying and proposing 2–3 new times.
+
+Profile Quality Score (0–100) (0–100)
+Based on Bayesian?smoothed Match Acceptance Rate (MAR) over 60 days.
+? Prior: alpha0=8, beta0=12 (40% prior acceptance).
+
+? Exposures: likes on you displayed + your likes that were shown.
+
+? Estimator: MAR_hat = (alpha0 + matches) / (alpha0 + beta0 + exposures). Score = round(100 * MAR_hat).
+
+? Stabilisation: until ?30 exposures, the prior dominates. Last 14 days count double.
+
+? Profile completion bonuses: verified +3; ?4 photos +2; prompts completed +2 (never above 100). Reports do not change this score; they affect Report Risk.
+
+Reliability Score (0–100)
+Event?driven with asymmetric decay.
+? Bilateral “went” +5
+
+? Both “would meet again” +5
+
+? Honest cancel + reschedule within 7 days: notice ?24h ?1; <24h ?5
+
+? Cancel without reschedule (7 days) ?8
+
+? No?show ?30
+
+? Late arrival >15 min (confirmed by both) ?2
+
+? Safety report (unresolved) ?10; restored on clear but not above the level before the report
+
+? Decay: positives half?life 20 days; negatives half?life 14 days
+
+? Bounds and gates: floor 20, ceiling 100; features like Fast Pass require Reliability ? 60
+
+Report Risk (0–1)
+Severity?weighted index of recent, unresolved reports; used only as a subtraction in ranking. Decays with a 21?day half?life.
+Lexicographic ranking order
+Pre-filters (hard gates):
+? Distance/age/intent must pass.
+
+? Unresolved high-severity safety reports may exclude a user from delivery.
+
+? Optional: verification required for top exposure.
+
+Sort key (descending):
+1. Action Speed Score (0–100). Use integer-rounded value; treat values within ±1 as a tie bucket.
+
+2. Profile Quality Score (0–100).
+
+3. Reliability Score (0–100).
+
+Tie?breakers applied only when all three are equal (or in the same tie bucket):
+? Freshness: most recent meaningful activity (proposal, confirm) wins.
+
+? Diversity dampener: small penalty if the candidate was shown recently to this viewer to avoid repeats.
+
+? PrefMatchBoost: tiny boost for tighter preference alignment (intent/age/distance) after hard gates.
+
+? Random jitter: ±0.5 rank units per request to prevent deterministic stalls.
+
+Report Risk: used as an exclusion (for severe) or a post?sort demotion; never a positive.
+Example: Two users with Action=84 tie; the one with Profile=72 ranks over Profile=68. If both 72, Reliability decides; remaining ties break on freshness ? diversity ? jitter.
+Scores used for ranking
+Lexicographic order:
+1. Action Speed (Momentum) — primary key.
+
+2. Profile Quality — secondary key.
+
+3. Reliability — tertiary key (least weight), plus feature gates.
+
+Modifiers:
+? Report risk is a gate/demotion only.
+
+? PrefMatchBoost, freshness, diversity, jitter are tie?breakers, not main signals.
+
+Supply shaping (non?discriminatory) (non?discriminatory) (non?discriminatory) (non?discriminatory)
+? 2× credits on shows for under?supplied cohorts during city seeding.
+
+? Safety pack defaults: verification+, report priority, moderation SLA, one free reschedule/month.
+
+? Soft inbound governor: caps daily proposals displayed to high?load receivers; overflow queues.
+
+Edge cases
+? Both internally busy: either can still Confirm inbound; first confirm wins; others expire normally.
+
+? Reschedule: quick path sends 2–3 new times; Reliability preserved with reason tags.
+
+? Running late: +5/+10/+15 chips in chat.
+
+? Unmatch: final; blocks future reopens; new encounter requires rematch via discovery.
+
+Pricing summary
+? Momentum+ ~€14.99/mo.
+
+? Credits packs: e.g., €4.99?50, €9.99?120, €19.99?260.
+
+? Fast Pass: 15 credits.
+
+? Reopen (receiver): 10 credits base, +5 step?ups within 30 days
+
+Success metrics
+? Proposal?confirm ?24h; median TTD; confirm?show; reopen?confirm; ARPU from reopens/slots; women’s verification and confirm rates; sender acceptance time with 1?proposal rule.
+
+? 
+
+

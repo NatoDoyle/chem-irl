@@ -1,0 +1,171 @@
+Trust & Safety Pack — Policies, SOPs, and Flows (v1)
+0) Purpose and scope
+Protect users, maximise show?up reliability, and keep the marketplace clean. Applies to web MVP and native.
+1) Safety principles
+? User control: block, report, decline, unmatch available in one tap.
+
+? Minimum data: no precise location; broad availability only.
+
+? Fast, visible action: moderation timers and outcomes shown in?app.
+
+? Evidence first: decisions logged with artifacts and reviewer id.
+
+? Proportionality: laddered enforcement; permanent bans for severe harm.
+
+2) User?facing policies (summaries)
+Community Guidelines
+? Be respectful. No harassment, threats, hate, slurs.
+
+? No minors (must be 18+). No sexualised content of minors. Zero tolerance.
+
+? No illegal activity, scams, or solicitation for money.
+
+? No explicit nudity in profile photos. No weapons imagery intended to intimidate.
+
+? Honest intent. No fake profiles, catfishing, or impersonation.
+
+? Consent for off?app moves. Share contacts only after confirm.
+
+Safety features
+? Block (instant, silent). Unmatch (final). Report (categorized with evidence upload).
+
+? Safety center with resources, date checklists, and reporting flow.
+
+? Visible moderation SLA timer for each report.
+
+Verification policy (MVP ? later)
+? MVP: photo verification + pose prompt + face consistency check.
+
+? Triggers for re?verification: burst reports, device change, profile image swap, reopen spam, show?rate anomaly.
+
+? Later: liveness (video) and periodic re?checks.
+
+3) Moderation SOP
+Intake channels
+? In?app report, email support, automated flags (keyword/URL, velocity, similarity).
+
+Severity classes and SLAs
+? S0 Critical (CSAM, credible threats, doxxing, coercion): action ? 1h; immediate quarantine; law?enforcement escalation.
+
+? S1 High (fraud, impersonation, hate/harassment with threat, adult?service solicitations, stalking): action ? 12h.
+
+? S2 Medium (spam, scams/links, ban evasion, obscene content without minors, repeated ghosting patterns): action ? 24h.
+
+? S3 Low (profile quality violations, light rudeness, low?effort spam): action ? 48h.
+
+Workflow
+1. Create case with reporter id, accused id, type, evidence, timestamps.
+
+2. Auto?mute messaging between parties for S0/S1 during review.
+
+3. Review artifacts; run quick searches (linked devices, prior cases).
+
+4. Decide action from Enforcement Matrix (below).
+
+5. Notify reporter (status + SLA timer), and accused (where appropriate) with policy citation.
+
+6. Log decision, reviewer, rationale, and evidence hashes. Close case.
+
+Appeals
+? 7?day window. Single appeal per action. New evidence required. Different reviewer. Decisions logged.
+
+4) Enforcement matrix (summary)
+BehaviorActionTTLNotesCSAM, minor sexualizationPermanent ban, evidence preservation, law?enforcement referralIndefiniteZero toleranceCredible violence threat, doxxing, coercionPermanent banIndefiniteS0Fraud/scam, payment solicitationBan 30–? days; device ban on repeat30d/?Remove contentHate/threatening harassmentBan 7–30 days; permaban on repeat7–30d/?Impersonation/catfishRemoval + verify required; ban 7–30d if refused7–30dExplicit nudity in profileContent removal; warning ? 7d ban on repeat0/7dSpam/automation7–30d ban; device ban if repeated7–30dLink/contact sharing pre?confirmMessage removal; 24h read?only on repeat0/24hReopen abuse (farming)Pause reopen ability 7d; refund lock7dTriggered by low conversionChronic no?showReliability drop; queue throttle; optional 7d match freeze7d5) Automated detection (MVP)
+? Keyword/URL filters: scam terms, crypto, payment handles, contact handles; remove or hold.
+
+? Image checks: NSFW heuristic, face consistency (profile vs selfie), duplicate image hash.
+
+? Velocity/behavior: like/proposal/message bursts, identical notes, sub?minute intervals ? throttle + liveness challenge.
+
+? Similarity/cluster: shared device/IP, re?used photos ? ban evasion flags.
+
+? Marketplace abuse: reopen attempts with <10% confirm in last 20 reopens ? pause.
+
+6) Anti?ghosting and reliability
+? 72h proposal expiry; harsh turn?based penalties after first action.
+
+? Inbound neglect penalties applied at 24h/48h.
+
+? Reopen is receiver?paid, non?refundable, requires 2–3 times.
+
+? Reliability gates boosts (Fast Pass, queue lift) and paid visibility features.
+
+7) Transparency features
+? Report status widget: New ? Under review ? Actioned/No action; SLA countdown visible.
+
+? Case outcomes feed (anonymized aggregates): removals, bans, average SLA.
+
+? Safety policy and enforcement page, updated monthly.
+
+8) Data handling for safety
+? Legal basis: legitimate interests for safety; consent for comms.
+
+? Retention: reports and enforcement logs 24 months; CSAM evidence retained per law; audit logs 24 months.
+
+? Access controls: least privilege; reviewer actions logged; dual control for S0.
+
+? PII minimization: redact non?essential content in exports; blur images in internal tools by default.
+
+9) Incident response runbook (abridged)
+? CSAM/minors: lock account, preserve evidence, escalate to hotline/law enforcement; do not view more than necessary; manager approval required.
+
+? Threats/stalking: collect logs, block, inform reporter with safety steps; escalate if imminent.
+
+? Fraud rings: device ban, cluster queries, refund lock, notify payment provider if needed.
+
+? Platform outage impacting safety: post status, pause paid flows, extend expiries by 24h.
+
+10) Roles, permissions, tooling
+? Reviewer: triage, enforce S2–S3, propose S1.
+
+? Senior reviewer: enforce S1, approve device bans, handle appeals.
+
+? Manager: S0 approvals, law?enforcement liaison.
+
+? Tooling: mod console with queues, filters, evidence viewer, action templates, SLA timers, audit trail.
+
+11) Safety copy (paste?ready)
+? Report categories: Spam/Scam · Fake/Impersonation · Harassment/Hate · Threat/Coercion · Nudity · Minor · Off?platform solicitation · Other.
+
+? Reporter receipts: “We’re reviewing your report. Typical response: 24h. You’ll see updates here.”
+
+? Accused notice (non?severe): “We removed content that violates our Guidelines. Next time may lead to suspension.”
+
+? Ban notice: “Your account violated our Guidelines. You may appeal within 7 days.”
+
+12) KPIs and thresholds
+? Moderation SLA hit?rate by severity. Target: S0 100%, S1 95%, S2 90%, S3 85%.
+
+? Report rate per 1k sessions; unique reporter rate.
+
+? False?positive rate on automation < 5% (spot?checks).
+
+? Reliability distribution; no?show rate; reopen?abuse rate.
+
+? Time to first moderator touch.
+
+13) Launch checklist (MVP)
+? Report UI with uploads and categories.
+
+? Mod console with SLA timers, audit trail, action templates.
+
+? Keyword/URL filters live; link redaction pre?confirm.
+
+? Photo verification with pose prompts.
+
+? Safety center page + in?app links.
+
+? Legal text for Guidelines and policy references.
+
+14) Roadmap upgrades
+? Liveness SDK + periodic re?checks.
+
+? Image moderation API; OCR on images.
+
+? Friend?of?friend flagging and community vouch.
+
+? Automated reopen?abuse scorer (precision?first).
+
+? Public monthly safety report and enforcement transparency log.
+
+

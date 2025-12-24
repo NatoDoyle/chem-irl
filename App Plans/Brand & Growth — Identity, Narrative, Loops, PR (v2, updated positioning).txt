@@ -1,0 +1,320 @@
+Brand & Growth — Identity, Narrative, Loops, PR (v2, updated positioning)
+Web?first MVP in Dublin. €200/mo pre?revenue. Outcome promise: spend less time texting, test chemistry face to face. Use with Marketing, Legal, and Safety packs.
+
+1) Brand foundation
+Name
+? Working name: [APP NAME]. Short, easy to say. .com or .app preferred. Legal check before launch.
+
+Positioning
+? For people tired of wasting time texting strangers,
+
+? [APP NAME] gets you face to face fast so you can test real chemistry and vibe,
+
+? because chemistry can’t be figured out through a screen and we reward people who take action with proposals, 72?hour expiries, and reliability signals.
+
+Promise
+? Spend less time texting. More time seeing if there’s real chemistry, face to face.
+
+Reasons to believe
+? 2–3 times per proposal. 72h expiry. Receiver?paid reopen. Speed scoring. Reliability.
+
+Values
+? Clarity (no games) · Respect (opt?outs, safe tools) · Momentum (bias to action) · Honesty (transparent pricing and moderation).
+
+Brand pillars
+? Fast (short paths). Fair (transparent). Safe (tools and SLAs). Simple (one screen, one choice).
+
+Taglines
+? "Spend less time texting. Test chemistry IRL."
+
+? "Chemistry and vibe aren’t on a screen."
+
+? "We weren’t meant to date through a screen. Meet face to face."
+
+? "Sick of ghosting? We reward action."
+
+Lexicon
+? Match · Propose · Confirm · None suits · Expired · Reopen · Fast Pass · Stack Pass · Momentum+ · Credits · Speed/Quality/Reliability.
+
+
+2) Voice & editorial rules
+Tone
+? Direct, neutral, outcome?driven. No fluff. Short sentences.
+
+Do
+? “Pick one time or propose two.”
+
+? “Expired.”
+
+? “Reopen & propose 2–3 times.”
+
+Don’t
+? “Soulmates,” “perfect match,” romance clichés.
+
+Accessibility
+? Plain language (B1). High contrast. Announce errors to screen readers. 24?hour time. Avoid emojis in key flows.
+
+
+3) Visual identity (lean tokens)
+Color tokens (WCAG AA for text on white):
+? --brand-600 #1453FF (primary actions)
+
+? --brand-800 #0B2B8F (hover/active)
+
+? --text-900 #0F172A
+
+? --text-600 #475569
+
+? --success-600 #059669
+
+? --warn-600 #D97706
+
+? --danger-600 #DC2626
+
+? --bg-50 #F8FAFC
+
+? --card-0 #FFFFFF
+
+Type
+? Headings: Inter or SF Pro. Body: Inter 14–16px.
+
+? Scale: 32/24/20/16/14/12.
+
+? Weight: 700/600 for headings; 400/500 for body/buttons.
+
+Layout & motion
+? 8?pt grid. Components with 16–24px padding. Cards rounded 16px.
+
+? Motion: fast, 150–200ms; enter from bottom, fade. No bouncy easing.
+
+Imagery
+? Real people in everyday settings. No stock romance clichés. Phone UI overlays demonstrating confirm flow. City?specific backdrops.
+
+Logo
+? Wordmark + minimal bolt/clock glyph. Keep clear?space = 1× height. Single?color for MVP.
+
+
+4) Creative system & assets
+Templates
+? Landing hero (headline + 3 bullets + CTA).
+
+? Explainer cards: Match ? Propose ? Confirm.
+
+? Safety card with SLA timer UI.
+
+? Reel/TikTok lower?thirds and captions.
+
+? Referral share card (after “went”).
+
+File kit
+? /brand/logo (SVG/PNG), /brand/tokens.json, /brand/figma.fig, /brand/templates/*.afdesign, /press/one?pager.pdf.
+
+Ad specs
+? Reels/TikTok: 1080×1920, 9–15s and 30–45s.
+
+? IG stills: 1080×1350.
+
+? Web cover: 1440×960.
+
+
+5) Narrative library (use verbatim in assets)
+Home hero
+? H1: Spend less time texting. More time seeing if there’s real chemistry.
+
+? Bullets: Chemistry isn’t on a screen • Propose 2–3 times • Confirm in one tap • We reward action, not endless chat
+
+? CTA: Join the Dublin beta.
+
+How it works
+? Step 1: Like to match.
+
+? Step 2: Propose 2–3 times within 7 days.
+
+? Step 3: They confirm one—or send 2–3 back.
+
+? Step 4: Chat unlocks after confirm. Meet. Mark “went.”
+
+Safety
+? Report tools, verification, and visible moderation timers.
+
+Pricing
+? Free to match. Pay only for momentum.
+
+? Reopen expired (receiver?paid). Credits never refunded.
+
+Creator brief line
+? Show a real confirm in under 30 seconds. Emphasise that chemistry is tested IRL, not in chat.
+
+
+6) Growth loops
+A. Referral on shows
+? Trigger: both mark “went.”
+
+? Reward: referrer +40 credits, referee +20.
+
+? Anti?fraud: both verified; device/IP checks; 30?day credit?spend lock.
+
+B. Creator CPA?per?confirmed?date
+? Offer: €5 per confirmed date via unique link; capped pre?rev.
+
+? Assets: screen recordings of proposal?confirm; captions kit; #ad disclosure.
+
+? Measurement: installs ? verifications ? confirms ? CPA/date.
+
+C. Reopen economy
+? Expired ? receiver can Reopen for credits. Ladder pricing.
+
+? Measure Reopen?Confirm (48h) and ensure it adds to confirms, not just revenue.
+
+D. Speed onramp
+? Speed=100 when profile complete + 8 likes. Lifecycle nudges steer to first proposals.
+
+E. WOM prompts
+? After confirm and after show, show share cards with city stats. Focus on outcomes, not swipes.
+
+
+7) Creator & ambassador ops
+Creators (3–15k followers)
+? Comp: €5/confirmed date, cap €50/mo until revenue.
+
+? Brief: Two times. One tap confirm. Provide B?roll of UI.
+
+? Tracking: UTM + in?app code. Dashboard with confirms.
+
+Ambassadors (campus/office)
+? Perks: credits + leaderboard.
+
+? Playbook: QR flyers, WhatsApp circles, “two times this week” challenge.
+
+? Guardrails: no events organised by us; community?led only.
+
+
+8) Campaigns (first 8 weeks)
+1. “Two Times”
+
+? Creative: split?screen texting slog vs propose?confirm.[1]
+
+? KPI: proposal?confirm ?24h.
+
+2. “72?Hour Rule[2]”
+
+? Explains expiry and reopen.
+
+? KPI: expired/WAU down.
+
+3. “Date Confirmed in 30s”
+
+? Real screen capture with consent.
+
+? KPI: installs, verifications.
+
+4. “Safety Clock”
+
+? Shows moderation SLA timer UI.
+
+? KPI: trust survey uplift.
+
+
+9) PR & comms
+Press one?pager
+? Problem: endless chat, ghosting.
+
+? Solution: proposals, expiry, reopen.
+
+? Evidence: city median TTD[3], confirm?24h rate, safety transparency.
+
+? Founder bio: 3 lines.
+
+? Contact: press@DOMAIN.
+
+Stories to pitch
+? “Chemistry isn’t on a screen: Dublin’s action?first dating app”
+
+? “The 72?hour dating rule”
+
+? “Why we pay creators per confirmed date, not views”
+
+Policy
+? No deterministic promises. Publish monthly safety/enforcement stats. Fast corrections if metrics were misread.
+
+
+10) Brand safety & crisis
+? Topics to avoid: sex tips, minors, explicit content, politics.
+
+? Creator guardrails: no screenshots of other apps, no impersonations, no unverified claims.
+
+? Crisis playbook:
+
+1. Acknowledge within 2h on owned channels.
+
+2. State facts and actions.
+
+3. Move to Safety/Legal page for details.
+
+4. Weekly post?mortem summary.
+
+
+11) Measurement
+? Brand KPIs: unaided awareness (poll), trust score (1–5), reason to believe (agree %) in surveys, share of positive mentions.
+
+? Growth KPIs: installs, verifies, proposal rate, confirm?24h, confirm?show, expired/WAU, payer share, ARPPU.
+
+? Creator KPIs: CPA per confirmed date, retention of referred users, report rate of referred users vs baseline.
+
+
+12) Governance
+? Single source of truth: /brand repo folder.
+
+? Approvals: safety copy and pricing require checklist sign?off.
+
+? Change log: version tokens and templates; publish changes monthly.
+
+? Rights: secure releases for UGC and creator content. Store in /rights.
+
+
+13) Expansion (after Dublin)
+? Localise tagline and examples; keep same core promise.
+
+? Sign 3–5 micro?creators per city; copy the CPA/date model.
+
+? City hub pages for SEO[4] (date ideas, how it works).
+
+? Preserve city gating until funnels stable.
+
+
+14) Checklists
+Before launch
+? Logo/wordmark + tokens
+
+? Landing hero + How it Works + Safety + Pricing
+
+? Reel/TikTok templates
+
+? Press one?pager
+
+? Referral share cards
+
+? Creator brief + contracts + tracking links
+
+Weekly
+? 3–5 UGC posts
+
+? KPI review
+
+? Creator check?in
+
+? Update social proof counters
+
+Monthly
+? Safety transparency post
+
+? Brand tracker survey
+
+? Asset refresh (best?performing hooks)
+
+? 
+
+Really like the contrast here
+72hours.com ??
+Really like this metric
+Like this??

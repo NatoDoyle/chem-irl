@@ -1,0 +1,256 @@
+Product Ops — QA, Support, Copy, Releases (v1)
+Lean, solo?friendly operating system for building, testing, shipping, supporting, and improving the product. Aligned to the Functional Spec, Development Plan, Marketing Plan, Legal, and Security packs.
+0) Goals and principles
+? Optimise time?to?confirm ? 24h and TTD ? 7 days.
+
+? Ship small, reversible changes behind flags. Prove impact with data.
+
+? Keep ops lightweight: one source of truth, one queue, one cadence.
+
+
+1) Roles, rituals, and artefacts (solo cadence)
+Cadence
+? Mon 09:00: KPI + incident review (30m).
+
+? Wed 09:00: experiment decisions, enable/disable flags (30m).
+
+? Fri 16:00: release cut + post?mortems + backlog grooming (60m).
+
+Boards (Kanban, three lanes):
+? Now (in progress ? 3 cards), Next, Later. Separate Hotfix swimlane.
+
+Prioritisation (RICE simplified to outcome?first):
+? Impact on Proposal?Confirm ?24h and Confirm?Show (0,1,2,3).
+
+? Confidence (0.2,0.5,0.8,1.0).
+
+? Effort (S,M,L = 1,2,3). Score = (Impact×Confidence)/Effort. Tie?break with risk.
+
+Definition of Ready (DOR)
+? Problem, user story, acceptance criteria, event tracking plan, rollout plan, success metric, rollback criteria.
+
+Definition of Done (DOD)
+? Code merged, tests pass, event logged, help text updated, changelog entry, dashboards checked, on?call notified if needed.
+
+
+2) Backlog templates
+User story
+? As a [role], I want [capability] so that [outcome].
+
+Acceptance criteria (Gherkin)
+Given [state]
+When  [action]
+Then  [observable outcome]
+
+Rollout note
+? Flag: exp_...
+
+? Exposure: % and cohort
+
+? Success: metric + threshold
+
+? Rollback: condition + steps
+
+
+3) Release process
+1. Branch, PR, review checklist.
+
+2. Staging deploy; Playwright E2E; manual UAT on mobile Safari + Chrome.
+
+3. Feature flag default off.
+
+4. Cut release Friday 16:00; deploy; enable to 5% Monday morning.
+
+5. Watch guardrails 2h; then 25% ? 50% ? 100% per Data Pack.
+
+6. Write release notes (internal + public changelog).
+
+Hotfix path: patch branch, targeted deploy, post?mortem within 48h.
+
+4) QA strategy
+Test pyramid
+? Unit (logic and scoring math), integration (API + DB + RLS), E2E (critical flows), manual UAT (edge cases).
+
+Supported environments
+? Mobile Safari (iOS latest?1), Mobile Chrome (Android latest?1), Desktop Chrome/Firefox/Safari/Edge latest?1.
+
+? Viewports: 360×640, 390×844, 768×1024, 1280×800.
+
+Performance budgets
+? LCP < 2.5s 3G Fast; JS ? 250 KB initial; images/profile view ? 500 KB total.
+
+Critical E2E flows (must pass before every release)
+1. Signup ? age gate ? email login ? profile create ? photo upload ? availability set ? verification submit.
+
+2. Feed ? like ? match ? propose 2–3 ? receiver confirm ? chat unlock ? ICS add.
+
+3. None suits ? propose 2–3 alts ? confirm.
+
+4. Expiry 72h ? receiver reopen (credits) ? propose 2–3 ? confirm.
+
+5. Pre?date reminders (T?24/T?2) send; deliverability seen in logs.
+
+6. Post?date survey (both) ? Reliability/credits award.
+
+7. Purchase credits ? spend on reopen; purchase Momentum+; entitlement applied.
+
+8. Report/block ? moderation queue ? action ? user notified.
+
+9. Delete account ? email confirmation ? data removed per policy.
+
+Edge?case tests
+? Daylight?saving boundary; timezones mismatch; leap year; profile with missing photos; high?latency network; duplicate likes; reschedule windows; back?to?back same?day dates (Stack Pass).
+
+Accessibility (WCAG 2.1 AA)
+? Keyboard reachable, focus visible, aria labels, form errors announced, contrast ? 4.5:1, motion reduced.
+
+
+5) Bug/incident triage
+Severity
+? S0: data breach, auth broken, purchases failing globally ? stop?the?world, hotfix, status page.
+
+? S1: critical flow broken (propose/confirm/chat) for many ? hotfix within 2h.
+
+? S2: feature degraded, city?limited ? fix next release.
+
+? S3: cosmetic or low?impact ? backlog.
+
+Intake
+? One queue (GitHub Issues or Linear). Templates for bug, incident, request.
+
+? Minimum fields: env, steps, expected/actual, screenshots, logs, user_id if consented.
+
+SLA
+? S0 acknowledge ?15m; S1 ?30m; S2 ?24h; S3 ?72h.
+
+Post?mortem (S0/S1)
+? 5 whys, blast radius, timeline, contributing factors, fixes, follow?ups with owners/dates.
+
+
+6) Copy & content ops
+Tone: clear, neutral, outcome?driven. No fluff.
+Copy bank (snippets)
+? Proposal composer error: “Pick 2–3 different times within the next 7 days.”
+
+? Busy throttle: “You’re at today’s proposal limit. Improve acceptance to raise it.”
+
+? Expired (sender): “Expired.”
+
+? Expired (receiver): “Reopen & propose 2–3 times.”
+
+? Reminder 24h: “Pick one or send 2–3 times.”
+
+? Dormant: “Your Speed holds at 50. Send 4 likes today to re?enter discovery.”
+
+? Report receipt: “We’re reviewing your report. Typical response: 24h.”
+
+Email/SMS templates (transactional)
+? Verify email, login link, proposal received, proposal reminder 24/48h, confirm reminder T?24/T?2, expired, reopen available, purchase receipt, refund notice, moderation outcome. Keep under 120 characters for SMS.
+
+Help center outline
+1. Getting started (verification, availability, first 8 likes)
+
+2. Proposals & confirms (72h rule, None suits, reschedule)
+
+3. Scoring & visibility (Action Speed, Profile Quality, Reliability)
+
+4. Payments & credits (Momentum+, credits, bonds, refunds)
+
+5. Safety & reporting (Guidelines, blocks, appeals)
+
+6. Privacy & data (deletion/export)
+
+
+7) Support ops (email?first)
+? Channel: support@DOMAIN. Auto?ack + ticket ID.
+
+? Macros: verification help, refund request, reopen policy, report follow?up, account deletion, chargeback guidance.
+
+? SLAs: S1 12h, S2 24h, S3 72h. Escalate safety to moderation immediately.
+
+? Tools: shared inbox (Gmail + labels); Help Center on site.
+
+? Data requests: route to privacy@DOMAIN with identity verification steps (see Legal Pack).
+
+
+8) Analytics & instrumentation ops
+? Every shipped feature has an event plan and a dashboard check. See Data Pack taxonomy.
+
+? Naming: verb_object events; include user_id, city_id, platform, user_tz.
+
+? QA: validate events in staging and first day in prod; reconcile DB vs PostHog counts (±3%).
+
+
+9) Experimentation ops
+? Create experiment brief (hypothesis, metrics, exposure, stop rule). Register in repo.
+
+? Assign users deterministically; only analyse exposed users.
+
+? Guardrails: report rate, error rate, expired/WAU.
+
+? Read after ?7 days or MSS achieved. Publish decision with links to SQL.
+
+
+10) Internationalisation (later)
+? en?IE first. Prepare for i18n: no hard?coded strings; use ICU message format; right?to?left safe.
+
+? Dates/times via user_tz and locale; avoid ambiguous formats; 24?hour time.
+
+
+11) Legal & privacy hooks
+? Cookie banner + consent logging; unsubscribe links in emails; GDPR DSAR pipeline ready.
+
+? In?app explanations of ranking (Action > Profile > Reliability). Link to Safety and Legal pages.
+
+
+12) Operational checklists
+Pre?launch
+? All critical E2E flows pass.
+
+? RLS tests green; CSP/HSTS set; Stripe webhooks verified.
+
+? Email/SMS templates proofed; DKIM/SPF okay.
+
+? Help center live; report flow works.
+
+? KPI dashboards live; daily digest email working.
+
+Pre?release (each cut)
+? E2E suite green; performance budget respected.
+
+? Events validate; dashboard charts unchanged or improved.
+
+? Feature flag plan documented; rollback tested.
+
+Post?release
+? Guardrails stable for 2h.
+
+? Announce in changelog.
+
+? Create follow?up tasks from issues or feedback.
+
+
+13) Data quality & backups in ops
+? Nightly job recomputes daily scores and KPIs; failures alert.
+
+? Weekly data export snapshot (anonymised) for offline analysis.
+
+? Monthly restore drill to staging and smoke test core flows.
+
+
+14) Asset governance
+? Central Figma file for components and templates. Versioned.
+
+? Image guidelines: JPG at 85%, max width 1440; avatars 512×512; strip EXIF.
+
+? Content review: sensitive copy (pricing, safety) requires checklist sign?off before publish.
+
+
+15) Vendor ops
+? Keep sub?processor list in Legal Pack. Review quarterly. Establish change log and 30?day user notice where required.
+
+
+16) Success metrics for Product Ops
+? Release frequency (target weekly), change failure rate (<15%), mean time to restore (<2h), experiment cycle time (<2 weeks), support first response time (<12h), moderation SLA hit?rate (per Safety Pack), and data freshness (daily jobs on time 99%).
+
+
