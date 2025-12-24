@@ -1,6 +1,6 @@
 // Supabase client for server-side usage (API routes, server components)
-// NOTE: This is a placeholder. The web site is a static marketing site (output: 'export') and does not use Supabase.
-// This file exists only to prevent import errors if referenced in documentation.
+// NOTE: The web site is a static marketing site (output: 'export') and does not currently use Supabase.
+// This file exists to prevent import errors if referenced in documentation.
 // Server-side functionality (webhooks, cron) should be implemented as Supabase Edge Functions, not Next.js API routes.
 
 import { createClient as createSupabaseClient } from '@supabase/supabase-js';
@@ -14,10 +14,7 @@ export async function createClient() {
   const key = serviceRoleKey || anonKey;
 
   if (!url || !key) {
-    throw new Error(
-      'Missing NEXT_PUBLIC_SUPABASE_URL or Supabase key. ' +
-        'Note: The web site is a static marketing site and does not require Supabase.'
-    );
+    throw new Error('Missing NEXT_PUBLIC_SUPABASE_URL or Supabase key');
   }
 
   return createSupabaseClient(url, key, {
