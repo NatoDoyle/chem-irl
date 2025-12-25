@@ -8,7 +8,7 @@ import { MatchesStackParamList } from '../navigation/MainNavigator';
 import { BRAND_COLORS } from '../config/brand';
 
 type NavigationProp = CompositeNavigationProp<
-  BottomTabNavigationProp<MainTabParamList>,
+  BottomTabNavigationProp<MainTabParamList, 'MatchesStack'>,
   NativeStackNavigationProp<MatchesStackParamList>
 >;
 

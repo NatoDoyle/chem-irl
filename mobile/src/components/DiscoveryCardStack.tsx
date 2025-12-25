@@ -64,7 +64,7 @@ export default function DiscoveryCardStack({
     Animated.timing(position, {
       toValue: { x: -SCREEN_WIDTH, y: 0 },
       duration: 300,
-      useNativeDriver: false as boolean,
+      useNativeDriver: false,
     }).start(() => {
       onPass(feed[currentIndex].user_id);
       setCurrentIndex(currentIndex + 1);

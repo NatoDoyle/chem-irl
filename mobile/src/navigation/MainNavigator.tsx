@@ -9,7 +9,10 @@ import ProfileScreen from '../screens/profile/ProfileScreen';
 
 export type MainTabParamList = {
   Discover: undefined;
-  MatchesStack: undefined;
+  MatchesStack: {
+    screen: keyof MatchesStackParamList;
+    params?: MatchesStackParamList[keyof MatchesStackParamList];
+  };
   Profile: undefined;
 };
 
