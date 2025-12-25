@@ -4,6 +4,12 @@ const nextConfig: NextConfig = {
   // Static export for marketing site
   output: 'export',
   
+  // Pin Turbopack root to web/ directory to avoid lockfile warning
+  // (Turbopack infers workspace root when it sees multiple lockfiles in repo)
+  turbopack: {
+    root: __dirname,
+  },
+  
   // Image optimization (unoptimized for static export)
   images: {
     unoptimized: true,
