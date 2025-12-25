@@ -1,6 +1,16 @@
 import { Modal, View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
+import { CompositeNavigationProp } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
+import { MainTabParamList } from '../navigation/MainNavigator';
+import { MatchesStackParamList } from '../navigation/MainNavigator';
 import { BRAND_COLORS } from '../config/brand';
+
+type NavigationProp = CompositeNavigationProp<
+  BottomTabNavigationProp<MainTabParamList>,
+  NativeStackNavigationProp<MatchesStackParamList>
+>;
 
 interface MatchModalProps {
   visible: boolean;
@@ -9,15 +19,15 @@ interface MatchModalProps {
 }
 
 export default function MatchModal({ visible, matchId, onClose }: MatchModalProps) {
-  const navigation = useNavigation();
+  const navigation = useNavigation<NavigationProp>();
 
   const handleViewMatch = () => {
     onClose();
     if (matchId) {
-      navigation.navigate('MatchesStack' as never, {
+      navigation.navigate('MatchesStack', {
         screen: 'MatchDetail',
         params: { matchId },
-      } as never);
+      });
     }
   };
 
