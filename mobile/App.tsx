@@ -3,16 +3,12 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, View } from 'react-native';
 import * as Linking from 'expo-linking';
-import { enableScreens } from 'react-native-screens';
 import { supabase } from './src/lib/supabase/client';
 import { Session } from '@supabase/supabase-js';
 import { handleMagicLink } from './src/lib/auth';
 import AuthNavigator from './src/navigation/AuthNavigator';
 import OnboardingNavigator from './src/navigation/OnboardingNavigator';
 import MainNavigator from './src/navigation/MainNavigator';
-
-// Enable native screens with proper configuration for new architecture
-enableScreens(true);
 
 const Stack = createNativeStackNavigator();
 
