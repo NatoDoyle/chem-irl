@@ -133,8 +133,7 @@ export default function App() {
     );
   }
 
-  // Ensure all boolean props are actual booleans (not strings) for new architecture
-  const screenOptions = { headerShown: false as boolean };
+  const screenOptions = { headerShown: false };
 
   return (
     <NavigationContainer>

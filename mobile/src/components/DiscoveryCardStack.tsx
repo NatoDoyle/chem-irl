@@ -23,7 +23,7 @@ export default function DiscoveryCardStack({
   const [position] = useState(new Animated.ValueXY());
 
   const panResponder = PanResponder.create({
-    onStartShouldSetPanResponder: () => true as boolean,
+    onStartShouldSetPanResponder: () => true,
     onPanResponderMove: (_, gesture) => {
       position.setValue({ x: gesture.dx, y: gesture.dy });
     },
@@ -38,7 +38,7 @@ export default function DiscoveryCardStack({
         // Return to center
         Animated.spring(position, {
           toValue: { x: 0, y: 0 },
-          useNativeDriver: false as boolean,
+          useNativeDriver: false,
         }).start();
       }
     },
@@ -50,7 +50,7 @@ export default function DiscoveryCardStack({
     Animated.timing(position, {
       toValue: { x: SCREEN_WIDTH, y: 0 },
       duration: 300,
-      useNativeDriver: false as boolean,
+      useNativeDriver: false,
     }).start(() => {
       onLike(feed[currentIndex].user_id);
       setCurrentIndex(currentIndex + 1);
