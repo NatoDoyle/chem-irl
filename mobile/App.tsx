@@ -104,9 +104,12 @@ export default function App() {
     );
   }
 
+  // Ensure all boolean props are actual booleans (not strings) for new architecture
+  const screenOptions = { headerShown: false as boolean };
+
   return (
     <NavigationContainer>
-      <Stack.Navigator screenOptions={{ headerShown: false }}>
+      <Stack.Navigator screenOptions={screenOptions}>
         {!session ? (
           <Stack.Screen name="Auth" component={AuthNavigator} />
         ) : !profileComplete ? (

@@ -24,7 +24,7 @@ export default function MatchModal({ visible, matchId, onClose }: MatchModalProp
   return (
     <Modal
       visible={visible}
-      transparent
+      transparent={true}
       animationType="fade"
       onRequestClose={onClose}
     >
