@@ -1,3 +1,32 @@
+import React from 'react';
+
+// Runtime detector: catch string booleans being passed to native components
+// This MUST be before any other React imports that use createElement
+const _origCreateElement = React.createElement;
+
+React.createElement = ((type: any, props: any, ...children: any[]) => {
+  if (props && typeof props === 'object') {
+    for (const [k, v] of Object.entries(props)) {
+      if (
+        typeof v === 'string' &&
+        (v === 'true' || v === 'false')
+      ) {
+        const name =
+          typeof type === 'string' ? type : type?.displayName || type?.name || 'UnknownComponent';
+        // Stack to locate callsite
+        const stack = new Error().stack;
+        // eslint-disable-next-line no-console
+        console.error(
+          `[BOOLEAN-STRING PROP] ${name}.${k}="${v}"`,
+          '\nStack:\n',
+          stack
+        );
+      }
+    }
+  }
+  return (_origCreateElement as any)(type, props, ...children);
+}) as any;
+
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { useEffect, useState } from 'react';
