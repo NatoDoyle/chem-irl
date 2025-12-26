@@ -48,3 +48,10 @@ env.local
 
 # build artifacts
 mobile/mobile@1.0.0
+
+# Ignore accidental npm artifact
+mobile/mobile@*
+
+# Accidental artifacts
+chem-irl@*
+next
