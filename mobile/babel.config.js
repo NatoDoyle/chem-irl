@@ -8,13 +8,43 @@ module.exports = function (api) {
     return {
       name: 'strip-ts-as-casts',
       parserOverride(code) {
-        // Preprocess: strip TS "as Type" casts (but preserve "import * as X")
-        const preprocessed = code
+        // Preprocess: strip TS "as Type" casts and multiline JestMockFn patterns
+        let preprocessed = code;
+        
+        // 1) Strip multiline jest.fn() as JestMockFn<...> patterns (with trailing comma)
+        preprocessed = preprocessed.replace(
+          /jest\.fn\([^\n]*\)\s+as\s+JestMockFn<[\s\S]*?>\s*,/g,
+          'jest.fn(),'
+        );
+        
+        // 2) Strip multiline jest.fn() as JestMockFn<...> patterns (without trailing comma)
+        preprocessed = preprocessed.replace(
+          /jest\.fn\([^\n]*\)\s+as\s+JestMockFn<[\s\S]*?>/g,
+          'jest.fn()'
+        );
+        
+        // 3) Strip jest.fn(...)<...> generic instantiation (multiline)
+        preprocessed = preprocessed.replace(
+          /(jest\.fn\([^\n]*\))\s*<[\s\S]*?>\s*,/g,
+          '$1,'
+        );
+        preprocessed = preprocessed.replace(
+          /(jest\.fn\([^\n]*\))\s*<[\s\S]*?>/g,
+          '$1'
+        );
+        
+        // 4) Remove orphaned type parameter lines (>, $FlowFixMe, etc.)
+        preprocessed = preprocessed.replace(/^\s*\$FlowFixMe,?\s*$/gm, '');
+        preprocessed = preprocessed.replace(/^\s*>,\s*$/gm, '');
+        preprocessed = preprocessed.replace(/^\s*<\s*$/gm, '');
+        
+        // 5) Strip remaining "as Type" casts on single lines (but preserve "import * as X")
+        preprocessed = preprocessed
           .split('\n')
           .map((line) => {
             // Don't touch imports
             if (/^\s*import\b/.test(line)) return line;
-            // Strip "as Type" patterns (identifier as Type, ) as Type, etc.)
+            // Strip "as Type" patterns
             return line
               .replace(/\b([A-Za-z_$][\w$]*)\s+as\s+[A-Za-z0-9_$]+(?:\.[A-Za-z0-9_$]+)*(?:<[^>]*>)?/g, '$1')
               .replace(/([)\]}])\s+as\s+[A-Za-z0-9_$]+(?:\.[A-Za-z0-9_$]+)*(?:<[^>]*>)?/g, '$1');
