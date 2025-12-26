@@ -70,7 +70,8 @@ module.exports = function (api) {
     // Note: setup.js uses only Flow syntax, so it's excluded (uses babel-preset-expo).
     overrides: [
       {
-        test: /node_modules\/react-native\/jest\/(mocks\/.*|mock)\.js$/,
+        // React Native files with mixed Flow + TS syntax
+        test: /node_modules\/react-native\/(jest\/(mocks\/.*|mock)|index)\.js$/,
         presets: ['babel-preset-expo'],
         plugins: [stripTsAsCastsPlugin],
       },
