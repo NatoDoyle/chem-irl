@@ -46,6 +46,9 @@ function patchReactNativeSource(src, filename) {
     //   jest.fn(...)<...>   => jest.fn(...)
     out = out.replace(/(jest\.fn\([^\n]*\))\s*<[\s\S]*?>/g, '$1');
 
+    // Defensive: if the "<...>" got partially removed and left a dangling "<" at EOL
+    out = out.replace(/(jest\.fn\([^\n]*\))\s*<\s*$/gm, '$1');
+
     // Clean up orphaned type-param lines
     out = out
       .replace(/^\s*\$FlowFixMe,?\s*$/gm, '')

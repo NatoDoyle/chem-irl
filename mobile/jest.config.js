@@ -5,7 +5,7 @@ module.exports = {
     '^.+\\.(js|jsx|ts|tsx)$': '<rootDir>/jest.transform.js',
   },
   transformIgnorePatterns: [
-    'node_modules/(?!(react-native|@react-native|react-native-.*|expo|expo-.*|@expo|@expo-.*|expo-modules-core)/)',
+    'node_modules/(?!(react-native|@react-native|@react-native-community|expo(nent)?|@expo(nent)?/.*|expo-modules-core|@unimodules|unimodules)/)',
   ],
 };
 
