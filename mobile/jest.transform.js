@@ -7,15 +7,20 @@ const expoTransformer = createTransformer({
 });
 
 // React Native Jest files use a mix of Flow and TypeScript syntax
-// Use both Flow and TypeScript parsers/transformers to handle all syntax
+// The issue: Flow arrow function types (callback: number => void) aren't valid TypeScript
+// Solution: Use Flow parser first (it can handle both), then strip all type annotations
 const rnJestFilesTransformer = createTransformer({
   presets: [['@babel/preset-env', { targets: { node: 'current' } }]],
   plugins: [
+    // Strip Flow types (handles Flow arrow syntax: callback: number => void)
     '@babel/plugin-transform-flow-strip-types',
-    ['@babel/plugin-transform-typescript', { allowNamespaces: true, allowDeclareFields: true }],
+    // Strip TypeScript types (handles TS assertions: ref as string)
+    ['@babel/plugin-transform-typescript', { allowNamespaces: true, allowDeclareFields: true, isTSX: false }],
   ],
+  // Prioritize Flow parser - it's more lenient and can parse Flow syntax
+  // TypeScript parser will handle the rest after Flow strips its annotations
   parserOpts: {
-    plugins: ['flow', 'flowComments', 'typescript', 'typescriptJSX'],
+    plugins: ['flow', 'flowComments'], // Flow first - handles arrow function types
   },
 });
 
