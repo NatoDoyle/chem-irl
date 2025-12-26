@@ -23,16 +23,18 @@ function isReactNativePackageFile(filename) {
 function patchReactNativeSource(src) {
   let out = src;
 
-  // Strip TS-style "as" assertions that appear in RN .js files
+  // 1) RN jest mocks: "jest.fn() as JestMockFn<...>" -> "jest.fn()"
+  out = out.replace(/jest\.fn\(\)\s+as\s+JestMockFn<[\s\S]*?>/g, 'jest.fn()');
+
+  // 2) Older RN jest mocks: "jest.fn()<...>" -> "jest.fn()"
+  out = out.replace(/jest\.fn\(\)\s*<[\s\S]*?>/g, 'jest.fn()');
+
+  // 3) Strip TS-style "as" assertions in RN .js files (supports optional generics)
   // examples:
   //   (ref as string)
   //   } as ReactNativePublicAPI;
-  out = out.replace(/\s+as\s+[A-Za-z0-9_$]+(?=\s*[;,\)\]])/g, '');
-
-  // Some RN jest mocks have invalid-looking generic annotations; drop them
-  // example:
-  //   jest.fn()<$FlowFixMe, $FlowFixMe>
-  out = out.replace(/jest\.fn\(\)\s*<[\s\S]*?>/g, 'jest.fn()');
+  //   x as SomeType<...>
+  out = out.replace(/\s+as\s+[A-Za-z0-9_$]+(?:<[\s\S]*?>)?/g, '');
 
   return out;
 }
