@@ -29,12 +29,10 @@ function patchReactNativeSource(src) {
   // 2) Older RN jest mocks: "jest.fn()<...>" -> "jest.fn()"
   out = out.replace(/jest\.fn\(\)\s*<[\s\S]*?>/g, 'jest.fn()');
 
-  // 3) Strip TS-style "as" assertions in RN .js files (supports optional generics)
-  // examples:
-  //   (ref as string)
-  //   } as ReactNativePublicAPI;
-  //   x as SomeType<...>
-  out = out.replace(/\s+as\s+[A-Za-z0-9_$]+(?:<[\s\S]*?>)?/g, '');
+  // 3) Strip TS "as" assertions ONLY when they follow a closing token.
+  // This fixes cases like: "} as ReactNativePublicAPI;" and "(x) as Foo"
+  // without breaking: "import * as Foo from '...'"
+  out = out.replace(/([)\]}])\s+as\s+[A-Za-z0-9_$]+(?:<[\s\S]*?>)?/g, '$1');
 
   return out;
 }
