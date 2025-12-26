@@ -20,11 +20,31 @@ function isReactNativePackageFile(filename) {
   );
 }
 
-function patchReactNativeSource(src) {
+function patchReactNativeSource(src, filename) {
   let out = src;
 
-  // 1) RN jest mocks: "jest.fn() as JestMockFn<...>" -> "jest.fn()"
+  // (A) Remove TS-style JestMockFn assertions in RN jest mocks (multiline-safe)
+  // Example it must fully delete:
+  //   alertWithArgs: jest.fn() as JestMockFn<
+  //     $FlowFixMe,
+  //     $FlowFixMe,
+  //   >,
+  out = out.replace(/jest\.fn\(\)\s+as\s+JestMockFn<[\s\S]*?>\s*,/g, 'jest.fn(),');
   out = out.replace(/jest\.fn\(\)\s+as\s+JestMockFn<[\s\S]*?>/g, 'jest.fn()');
+
+  // (B) Remove Flow-style cast if present: (jest.fn(): JestMockFn<...>)
+  out = out.replace(/\(\s*jest\.fn\(\)\s*:\s*JestMockFn<[\s\S]*?>\s*\)/g, 'jest.fn()');
+
+  // (C) Safety net ONLY for react-native/jest/mocks: remove orphaned type-param lines
+  // This catches cases where a prior patch removed "as JestMockFn<" but left the inner lines + ">,".
+  const normalizedFilename = filename.split(path.sep).join('/');
+  if (normalizedFilename.includes('/react-native/jest/mocks/')) {
+    out = out
+      .replace(/^\s*\$FlowFixMe,?\s*$/gm, '')
+      .replace(/^\s*>,\s*$/gm, '')
+      .replace(/^\s*<\s*$/gm, '')
+      .replace(/^\s*JestMockFn<\s*$/gm, '');
+  }
 
   // 2) Older RN jest mocks: "jest.fn()<...>" -> "jest.fn()"
   out = out.replace(/jest\.fn\(\)\s*<[\s\S]*?>/g, 'jest.fn()');
@@ -62,7 +82,7 @@ module.exports = {
     const normalized = filename.split(path.sep).join('/');
 
     if (isReactNativePackageFile(normalized)) {
-      const patched = patchReactNativeSource(src);
+      const patched = patchReactNativeSource(src, normalized);
       return rnJestTransformer.process(patched, filename, config, options);
     }
 
