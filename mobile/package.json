@@ -34,14 +34,17 @@
     "zod": "^4.1.13"
   },
   "devDependencies": {
+    "@babel/core": "^7.28.5",
+    "@babel/parser": "^7.28.5",
+    "@babel/plugin-transform-flow-strip-types": "^7.25.0",
+    "@babel/plugin-transform-typescript": "^7.25.0",
+    "@babel/preset-env": "^7.25.0",
+    "@babel/preset-typescript": "^7.25.0",
     "@types/jest": "29.5.14",
     "@types/react": "~19.1.0",
     "@typescript-eslint/eslint-plugin": "^8.0.0",
     "@typescript-eslint/parser": "^8.0.0",
     "babel-preset-expo": "~11.0.0",
-    "@babel/preset-env": "^7.25.0",
-    "@babel/plugin-transform-flow-strip-types": "^7.25.0",
-    "@babel/plugin-transform-typescript": "^7.25.0",
     "eslint": "^8.57.0",
     "eslint-config-expo": "^7.1.2",
     "eslint-config-prettier": "^9.1.0",
@@ -54,7 +57,9 @@
   },
   "jest": {
     "preset": "jest-expo",
-    "setupFiles": ["<rootDir>/jest.setup.js"],
+    "setupFiles": [
+      "<rootDir>/jest.setup.js"
+    ],
     "fakeTimers": {
       "enableGlobally": true
     }
