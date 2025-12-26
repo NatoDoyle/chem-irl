@@ -39,6 +39,14 @@ function patchReactNativeSource(src, filename) {
   // This catches cases where a prior patch removed "as JestMockFn<" but left the inner lines + ">,".
   const normalizedFilename = filename.split(path.sep).join('/');
   if (normalizedFilename.includes('/react-native/jest/mocks/')) {
+    // Remove TS/Flow generic instantiation on jest.fn calls in RN jest mocks:
+    //   jest.fn(...)<...>,  => jest.fn(...),
+    out = out.replace(/(jest\.fn\([^\n]*\))\s*<[\s\S]*?>\s*,/g, '$1,');
+
+    //   jest.fn(...)<...>   => jest.fn(...)
+    out = out.replace(/(jest\.fn\([^\n]*\))\s*<[\s\S]*?>/g, '$1');
+
+    // Clean up orphaned type-param lines
     out = out
       .replace(/^\s*\$FlowFixMe,?\s*$/gm, '')
       .replace(/^\s*>,\s*$/gm, '')
