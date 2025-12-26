@@ -4,11 +4,19 @@ const expoTransformer = createTransformer({
   presets: ['babel-preset-expo'],
 });
 
+// Use Flow parser for react-native/jest files since they contain Flow syntax
+// that TypeScript parser can't handle (e.g., callback: number => void)
 const rnJestTransformer = createTransformer({
   babelrc: false,
   configFile: false,
   presets: [['@babel/preset-env', { targets: { node: 'current' } }]],
-  plugins: [['@babel/plugin-transform-typescript', { allExtensions: true }]],
+  plugins: [
+    '@babel/plugin-transform-flow-strip-types',
+    ['@babel/plugin-transform-typescript', { allExtensions: true }],
+  ],
+  parserOpts: {
+    plugins: ['flow', 'flowComments'],
+  },
 });
 
 function isReactNativeJestFile(filename) {
