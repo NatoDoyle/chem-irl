@@ -3,9 +3,11 @@ module.exports = function (api) {
 
   // Custom plugin to strip TypeScript "as" casts before parsing
   const stripTsAsCastsPlugin = function () {
+    const babelParser = require('@babel/parser');
+    
     return {
       name: 'strip-ts-as-casts',
-      parserOverride(code, opts, parser) {
+      parserOverride(code) {
         // Preprocess: strip TS "as Type" casts (but preserve "import * as X")
         const preprocessed = code
           .split('\n')
@@ -18,8 +20,13 @@ module.exports = function (api) {
               .replace(/([)\]}])\s+as\s+[A-Za-z0-9_$]+(?:\.[A-Za-z0-9_$]+)*(?:<[^>]*>)?/g, '$1');
           })
           .join('\n');
-        // Use the default parser (Flow) to parse the preprocessed code
-        return parser(preprocessed);
+        // Parse with Flow parser explicitly
+        return babelParser.parse(preprocessed, {
+          sourceType: 'module',
+          plugins: ['flow', 'flowComments', 'jsx', 'typescript'],
+          allowImportExportEverywhere: true,
+          allowReturnOutsideFunction: true,
+        });
       },
     };
   };
