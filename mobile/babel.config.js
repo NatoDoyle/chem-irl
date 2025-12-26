@@ -80,11 +80,19 @@ module.exports = function (api) {
     // React Native's Jest mocks include mixed Flow + TS syntax in .js files.
     // Preprocess to strip TS "as" casts before Flow parser runs.
     // Note: setup.js uses only Flow syntax, so it's excluded (uses babel-preset-expo).
-    overrides: [
+      overrides: [
       {
         // React Native files with mixed Flow + TS syntax
-        // Match: jest/mock.js, jest/mocks/**/*.js, jest/**/*.js, index.js
-        test: /node_modules\/react-native\/(jest\/.*|index)\.js$/,
+        // Match: jest/mock.js, jest/mocks/**/*.js, index.js
+        // Exclude: jest/setup.js, jest/mockNativeComponent.js (pure Flow, no TS syntax)
+        test: (filename) => {
+          const match = /node_modules\/react-native\/(jest\/.*|index)\.js$/.test(filename);
+          if (!match) return false;
+          // Exclude pure Flow files
+          if (filename.includes('/jest/setup.js')) return false;
+          if (filename.includes('/jest/mockNativeComponent.js')) return false;
+          return true;
+        },
         presets: ['babel-preset-expo'],
         plugins: [stripTsAsCastsPlugin],
       },
