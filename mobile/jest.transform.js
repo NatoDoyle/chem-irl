@@ -29,10 +29,30 @@ function patchReactNativeSource(src) {
   // 2) Older RN jest mocks: "jest.fn()<...>" -> "jest.fn()"
   out = out.replace(/jest\.fn\(\)\s*<[\s\S]*?>/g, 'jest.fn()');
 
-  // 3) Strip TS "as" assertions ONLY when they follow a closing token.
-  // This fixes cases like: "} as ReactNativePublicAPI;" and "(x) as Foo"
-  // without breaking: "import * as Foo from '...'"
-  out = out.replace(/([)\]}])\s+as\s+[A-Za-z0-9_$]+(?:<[\s\S]*?>)?/g, '$1');
+  // 3) Strip TS "as" assertions in expressions, but NEVER break "import * as X"
+  out = out
+    .split('\n')
+    .map((line) => {
+      // Do not touch imports (prevents "import * as X" -> "import * X")
+      if (/^\s*import\b/.test(line)) return line;
+
+      let l = line;
+
+      // identifier as Type   -> identifier
+      l = l.replace(
+        /\b([A-Za-z_$][\w$]*)\s+as\s+[A-Za-z0-9_$]+(?:\.[A-Za-z0-9_$]+)*(?:<[^>]*>)?/g,
+        '$1',
+      );
+
+      // ) as Type / ] as Type / } as Type -> )
+      l = l.replace(
+        /([)\]}])\s+as\s+[A-Za-z0-9_$]+(?:\.[A-Za-z0-9_$]+)*(?:<[^>]*>)?/g,
+        '$1',
+      );
+
+      return l;
+    })
+    .join('\n');
 
   return out;
 }
