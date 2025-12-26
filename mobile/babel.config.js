@@ -8,6 +8,14 @@ module.exports = function (api) {
     return {
       name: 'strip-ts-as-casts',
       parserOverride(code) {
+        // Only preprocess if file contains TS "as" syntax (avoid breaking pure Flow files)
+        const hasTsAsSyntax = /\s+as\s+[A-Za-z0-9_$]/.test(code);
+        
+        if (!hasTsAsSyntax) {
+          // Pure Flow file - use default parser (babel-preset-expo)
+          return undefined; // Return undefined to use default parser
+        }
+        
         // Preprocess: strip TS "as Type" casts and multiline JestMockFn patterns
         let preprocessed = code;
         
