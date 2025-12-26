@@ -57,6 +57,10 @@ module.exports = function (api) {
           plugins: ['flow', 'flowComments', 'jsx'],
           allowImportExportEverywhere: true,
           allowReturnOutsideFunction: true,
+          allowUndeclaredExports: true,
+          // Allow statements without semicolons (for component() type syntax)
+          allowSuperOutsideMethod: false,
+          errorRecovery: false,
         });
       },
     };
