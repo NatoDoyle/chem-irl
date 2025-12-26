@@ -71,7 +71,8 @@ module.exports = function (api) {
     overrides: [
       {
         // React Native files with mixed Flow + TS syntax
-        test: /node_modules\/react-native\/(jest\/(mocks\/.*|mock)|index)\.js$/,
+        // Match: jest/mock.js, jest/mocks/**/*.js, jest/**/*.js, index.js
+        test: /node_modules\/react-native\/(jest\/.*|index)\.js$/,
         presets: ['babel-preset-expo'],
         plugins: [stripTsAsCastsPlugin],
       },
