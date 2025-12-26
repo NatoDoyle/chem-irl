@@ -41,3 +41,10 @@ yarn-error.log*
 next-env.d.ts
 
 .vercel
+
+.env.local
+env.local
+.env
+
+# build artifacts
+mobile/mobile@1.0.0

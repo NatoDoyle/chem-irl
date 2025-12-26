@@ -7,17 +7,33 @@ module.exports = function (api) {
     
     return {
       name: 'strip-ts-as-casts',
-      parserOverride(code) {
+      parserOverride(code, opts) {
         // Only preprocess if file contains TS "as" syntax (avoid breaking pure Flow files)
+        // Also skip if file uses component() syntax (pure Flow indicator)
         const hasTsAsSyntax = /\s+as\s+[A-Za-z0-9_$]/.test(code);
+        const hasComponentSyntax = /=\s*component\s*\(/.test(code);
         
-        if (!hasTsAsSyntax) {
+        if (!hasTsAsSyntax || hasComponentSyntax) {
           // Pure Flow file - use default parser (babel-preset-expo)
-          return undefined; // Return undefined to use default parser
+          // Return undefined to let Babel use the default parser from presets
+          return undefined;
         }
         
         // Preprocess: strip TS "as Type" casts and multiline JestMockFn patterns
         let preprocessed = code;
+        
+        // 0) Global pass: strip ALL "as Type" patterns aggressively
+        // This must happen before line-by-line processing to catch all cases
+        // Pattern: (identifier as Type) -> (identifier)
+        preprocessed = preprocessed.replace(
+          /\(([^()]+?)\s+as\s+[A-Za-z0-9_$]+(?:\.[A-Za-z0-9_$]+)*(?:<[^>]*>)?\)/g,
+          '($1)'
+        );
+        // Pattern: identifier as Type -> identifier (but not import * as X)
+        preprocessed = preprocessed.replace(
+          /([^a-zA-Z_$]|^)([A-Za-z_$][\w$]*)\s+as\s+[A-Za-z0-9_$]+(?:\.[A-Za-z0-9_$]+)*(?:<[^>]*>)?(?![*\s]as)/g,
+          '$1$2'
+        );
         
         // 1) Strip multiline jest.fn() as JestMockFn<...> patterns (with trailing comma)
         preprocessed = preprocessed.replace(
@@ -53,9 +69,13 @@ module.exports = function (api) {
             // Don't touch imports
             if (/^\s*import\b/.test(line)) return line;
             // Strip "as Type" patterns
-            return line
+            // Handle: identifier as Type, (expr) as Type, [expr] as Type, {expr} as Type
+            let l = line
               .replace(/\b([A-Za-z_$][\w$]*)\s+as\s+[A-Za-z0-9_$]+(?:\.[A-Za-z0-9_$]+)*(?:<[^>]*>)?/g, '$1')
               .replace(/([)\]}])\s+as\s+[A-Za-z0-9_$]+(?:\.[A-Za-z0-9_$]+)*(?:<[^>]*>)?/g, '$1');
+            // Also handle (identifier as Type) patterns more aggressively
+            l = l.replace(/\(\s*([A-Za-z_$][\w$]*)\s+as\s+[A-Za-z0-9_$]+(?:\.[A-Za-z0-9_$]+)*(?:<[^>]*>)?\s*\)/g, '($1)');
+            return l;
           })
           .join('\n');
         // Parse with Flow parser only (can't combine Flow + TS plugins)
@@ -86,12 +106,16 @@ module.exports = function (api) {
         // Match: jest/mock.js, jest/mocks/**/*.js, index.js
         // Exclude: jest/setup.js, jest/mockNativeComponent.js (pure Flow, no TS syntax)
         test: (filename) => {
-          const match = /node_modules\/react-native\/(jest\/.*|index)\.js$/.test(filename);
-          if (!match) return false;
-          // Exclude pure Flow files
-          if (filename.includes('/jest/setup.js')) return false;
-          if (filename.includes('/jest/mockNativeComponent.js')) return false;
-          return true;
+          // Normalize path separators
+          const normalized = filename.replace(/\\/g, '/');
+          
+          // First, exclude pure Flow files explicitly (before checking match)
+          if (normalized.includes('/react-native/jest/setup.js')) return false;
+          if (normalized.includes('/react-native/jest/mockNativeComponent.js')) return false;
+          
+          // Then check if it matches our pattern
+          const match = /node_modules\/react-native\/(jest\/(mocks\/.*|mock\.js)|index)\.js$/.test(normalized);
+          return match;
         },
         presets: ['babel-preset-expo'],
         plugins: [stripTsAsCastsPlugin],

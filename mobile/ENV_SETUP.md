@@ -6,7 +6,7 @@ Create a `.env` file in the `mobile/` directory with the following:
 
 ```env
 EXPO_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
-EXPO_PUBLIC_SUPABASE_ANON_KEY=your_anon_key_here
+EXPO_PUBLIC_SUPABASE_KEY=your_publishable_key_here
 EXPO_PUBLIC_APP_URL=https://chemirl.app
 ```
 
@@ -17,13 +17,13 @@ EXPO_PUBLIC_APP_URL=https://chemirl.app
 3. Go to **Settings** → **API**
 4. Copy the following:
    - **Project URL** → Use for `EXPO_PUBLIC_SUPABASE_URL`
-   - **anon public** key → Use for `EXPO_PUBLIC_SUPABASE_ANON_KEY`
+   - **anon public** key → Use for `EXPO_PUBLIC_SUPABASE_KEY`
 
 ## Example
 
 ```env
 EXPO_PUBLIC_SUPABASE_URL=https://abcdefghijklmnop.supabase.co
-EXPO_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFiY2RlZmdoaWprbG1ub3AiLCJyb2xlIjoiYW5vbiIsImlhdCI6MTYxNjIzOTAyMiwiZXhwIjoxOTMxODE1MDIyfQ.example
+EXPO_PUBLIC_SUPABASE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFiY2RlZmdoaWprbG1ub3AiLCJyb2xlIjoiYW5vbiIsImlhdCI6MTYxNjIzOTAyMiwiZXhwIjoxOTMxODE1MDIyfQ.example
 EXPO_PUBLIC_APP_URL=https://chemirl.app
 ```
 

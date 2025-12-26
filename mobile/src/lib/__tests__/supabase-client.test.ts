@@ -1,35 +1,80 @@
-describe('Supabase Client', () => {
-  // Mock environment variables
-  const originalEnv = process.env;
+// Mock react-native-get-random-values before any imports
+jest.mock('react-native-get-random-values', () => {});
 
+// Mock expo-secure-store before importing anything
+jest.mock('expo-secure-store', () => ({
+  getItemAsync: jest.fn(),
+  setItemAsync: jest.fn(),
+  deleteItemAsync: jest.fn(),
+}));
+
+// Mock AsyncStorage
+jest.mock('@react-native-async-storage/async-storage', () => ({
+  getItem: jest.fn(),
+  setItem: jest.fn(),
+  removeItem: jest.fn(),
+}));
+
+// Mock crypto.getRandomValues for aes-js (needed for LargeSecureStore encryption)
+global.crypto = {
+  getRandomValues: jest.fn((arr: Uint8Array) => {
+    for (let i = 0; i < arr.length; i++) {
+      arr[i] = Math.floor(Math.random() * 256);
+    }
+    return arr;
+  }),
+} as any;
+
+// Mock @supabase/supabase-js createClient
+const mockCreateClient = jest.fn(() => ({
+  auth: {
+    getSession: jest.fn(),
+    signInWithOtp: jest.fn(),
+  },
+  from: jest.fn(() => ({
+    select: jest.fn(),
+    insert: jest.fn(),
+    update: jest.fn(),
+  })),
+}));
+
+jest.mock('@supabase/supabase-js', () => ({
+  createClient: mockCreateClient,
+}));
+
+describe('Supabase Client', () => {
   beforeEach(() => {
     jest.resetModules();
-    process.env = {
-      ...originalEnv,
-      EXPO_PUBLIC_SUPABASE_URL: 'https://test.supabase.co',
-      EXPO_PUBLIC_SUPABASE_ANON_KEY: 'test-anon-key',
-    };
-  });
-
-  afterEach(() => {
-    process.env = originalEnv;
+    // Set env vars before requiring the module
+    // Use bracket notation to avoid Babel inlining
+    const env = process.env as any;
+    env['EXPO_PUBLIC_SUPABASE_URL'] = 'https://test-project.supabase.co';
+    env['EXPO_PUBLIC_SUPABASE_KEY'] =
+      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRlc3QtcHJvamVjdCIsInJvbGUiOiJhbm9uIiwiaWF0IjoxNjE2MjM5MDIyLCJleHAiOjE5MzE4MTUwMjJ9.test-signature';
   });
 
   it('should export supabase client', () => {
-    // Dynamic import to ensure env vars are set
+    // Dynamic require after env vars are set
     const { supabase } = require('../supabase/client');
 
     expect(supabase).toBeDefined();
+    expect(supabase).toBeTruthy();
+    // Note: Babel inlines process.env.EXPO_PUBLIC_* at build time, so values may be undefined
+    // The important thing is that createClient was called and the client is exported
+    expect(mockCreateClient).toHaveBeenCalled();
+    expect(mockCreateClient.mock.calls[0][2]).toMatchObject({
+      auth: {
+        autoRefreshToken: true,
+        persistSession: true,
+        detectSessionInUrl: false,
+      },
+    });
   });
 
   it('should use environment variables for configuration', () => {
-    // This is a smoke test - we're just checking the module loads
-    // without errors when env vars are set
-    // Env vars are set in jest.setup.js, but may be undefined if setup hasn't run
-    expect(process.env.EXPO_PUBLIC_SUPABASE_URL || 'https://test.supabase.co').toBe(
-      'https://test.supabase.co'
-    );
-    expect(process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || 'test-anon-key').toBe('test-anon-key');
+    const env = process.env as any;
+    expect(env['EXPO_PUBLIC_SUPABASE_URL']).toBe('https://test-project.supabase.co');
+    expect(env['EXPO_PUBLIC_SUPABASE_KEY']).toBeDefined();
   });
 });
 

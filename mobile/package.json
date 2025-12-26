@@ -12,15 +12,18 @@
     "lint:fix": "eslint . --ext .ts,.tsx --fix",
     "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md}\"",
     "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,md}\"",
-    "test": "jest",
-    "test:unit": "jest -c jest.unit.config.js"
+    "test": "npm run test:unit",
+    "test:unit": "jest -c jest.unit.config.js",
+    "test:native": "jest -c jest.native.config.js"
   },
   "dependencies": {
+    "@react-native-async-storage/async-storage": "^2.2.0",
     "@react-navigation/bottom-tabs": "^7.8.11",
     "@react-navigation/native": "^7.1.24",
     "@react-navigation/native-stack": "^7.8.5",
     "@react-navigation/stack": "^7.6.11",
     "@supabase/supabase-js": "^2.86.2",
+    "aes-js": "^3.1.2",
     "expo": "~54.0.27",
     "expo-image-picker": "^17.0.9",
     "expo-linking": "^8.0.10",
@@ -29,6 +32,7 @@
     "react": "19.1.0",
     "react-native": "0.81.5",
     "react-native-gesture-handler": "^2.29.1",
+    "react-native-get-random-values": "^2.0.0",
     "react-native-reanimated": "^4.2.0",
     "react-native-safe-area-context": "^5.6.2",
     "react-native-screens": "~4.16.0",
@@ -40,8 +44,9 @@
     "@babel/plugin-transform-flow-strip-types": "^7.25.0",
     "@babel/plugin-transform-typescript": "^7.25.0",
     "@babel/preset-env": "^7.25.0",
-    "@babel/preset-typescript": "^7.25.0",
     "@babel/preset-flow": "^7.25.0",
+    "@babel/preset-typescript": "^7.25.0",
+    "@types/aes-js": "^3.1.4",
     "@types/jest": "29.5.14",
     "@types/react": "~19.1.0",
     "@typescript-eslint/eslint-plugin": "^8.0.0",
@@ -57,6 +62,7 @@
     "react-test-renderer": "19.1.0",
     "typescript": "~5.9.2"
   },
+  "_comment": "Jest config moved to explicit config files. Use 'test:unit' for unit tests (default via 'npm test') or 'test:native' for React Native component tests.",
   "jest": {
     "preset": "jest-expo",
     "setupFiles": [

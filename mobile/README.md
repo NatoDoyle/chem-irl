@@ -25,7 +25,7 @@ Create a `.env` file in the root directory:
 
 ```env
 EXPO_PUBLIC_SUPABASE_URL=your_supabase_project_url
-EXPO_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+EXPO_PUBLIC_SUPABASE_KEY=your_supabase_publishable_key
 EXPO_PUBLIC_APP_URL=https://chemirl.app
 ```
 

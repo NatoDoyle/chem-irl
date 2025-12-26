@@ -8,7 +8,7 @@ Create a `.env` file in the `mobile/` directory:
 
 ```env
 EXPO_PUBLIC_SUPABASE_URL=your_supabase_project_url
-EXPO_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+EXPO_PUBLIC_SUPABASE_KEY=your_supabase_publishable_key
 EXPO_PUBLIC_APP_URL=https://chemirl.app
 ```
 
@@ -19,7 +19,7 @@ EXPO_PUBLIC_APP_URL=https://chemirl.app
 3. Go to **Settings** → **API**
 4. Copy:
    - **Project URL** → `EXPO_PUBLIC_SUPABASE_URL`
-   - **anon public** key → `EXPO_PUBLIC_SUPABASE_ANON_KEY`
+   - **anon public** key → `EXPO_PUBLIC_SUPABASE_KEY`
 
 ## Step 2: Install Dependencies
 

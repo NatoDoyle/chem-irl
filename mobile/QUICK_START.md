@@ -6,7 +6,7 @@ Create a file named `.env` in the `mobile/` directory with:
 
 ```env
 EXPO_PUBLIC_SUPABASE_URL=your_supabase_url_here
-EXPO_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key_here
+EXPO_PUBLIC_SUPABASE_KEY=your_supabase_publishable_key_here
 EXPO_PUBLIC_APP_URL=https://chemirl.app
 ```
 
