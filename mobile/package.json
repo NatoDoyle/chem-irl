@@ -12,7 +12,8 @@
     "lint:fix": "eslint . --ext .ts,.tsx --fix",
     "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md}\"",
     "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,md}\"",
-    "test": "jest"
+    "test": "jest",
+    "test:unit": "jest -c jest.unit.config.js"
   },
   "dependencies": {
     "@react-navigation/bottom-tabs": "^7.8.11",
