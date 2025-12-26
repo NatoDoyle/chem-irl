@@ -21,10 +21,9 @@ function patchReactNativeJestFiles(src) {
   // 1) Strip TS-style `as Type`
   out = out.replace(/\s+as\s+[A-Za-z_$][A-Za-z0-9_$]*(?:\[\])?/g, '');
 
-  // 2) Strip Flow instantiation expressions on call results:
-  //    `jest.fn()<$FlowFixMe, $FlowFixMe>` -> `jest.fn()`
-  // (Limit to same-line type args to avoid over-matching.)
-  out = out.replace(/\)\s*<[^>\n]*>/g, ')');
+  // 2) Strip TS-style generic instantiation after a call result, including multiline:
+  //    `jest.fn()<$FlowFixMe, $FlowFixMe>` (often split over lines) -> `jest.fn()`
+  out = out.replace(/\)\s*<[\s\S]*?>/g, ')');
 
   return out;
 }
