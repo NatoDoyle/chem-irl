@@ -57,19 +57,19 @@ describe('Supabase Client', () => {
     // Dynamic require after env vars are set
     const { supabase } = require('../supabase/client');
 
-    expect(supabase).toBeDefined();
-    expect(supabase).toBeTruthy();
-    // Note: Babel inlines process.env.EXPO_PUBLIC_* at build time, so values may be undefined
-    // The important thing is that createClient was called and the client is exported
-    expect(mockCreateClient).toHaveBeenCalled();
-    expect(mockCreateClient.mock.calls[0][2]).toMatchObject({
-      auth: {
-        autoRefreshToken: true,
-        persistSession: true,
-        detectSessionInUrl: false,
-      },
-    });
+    expect(mockCreateClient).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.any(String),
+      expect.objectContaining({
+        auth: {
+          autoRefreshToken: true,
+          persistSession: true,
+          detectSessionInUrl: false,
+        },
+      }),
+    )
   });
+    
 
   it('should use environment variables for configuration', () => {
     const env = process.env as any;

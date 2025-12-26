@@ -32,11 +32,13 @@ jest.mock('@react-native-async-storage/async-storage', () => ({
 
 // Mock crypto.getRandomValues for aes-js
 global.crypto = {
-  getRandomValues: jest.fn((arr: Uint8Array) => {
+  /** @param {Uint8Array} arr */
+  getRandomValues: jest.fn((arr) => {
     for (let i = 0; i < arr.length; i++) {
       arr[i] = Math.floor(Math.random() * 256);
     }
     return arr;
   }),
 };
+
 
