@@ -54,6 +54,7 @@
   },
   "jest": {
     "preset": "jest-expo",
+    "setupFiles": ["<rootDir>/jest.setup.js"],
     "fakeTimers": {
       "enableGlobally": true
     }
