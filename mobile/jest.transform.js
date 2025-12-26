@@ -6,13 +6,16 @@ const expoTransformer = createTransformer({
   presets: ['babel-preset-expo'],
 });
 
-// React Native Jest files use Flow syntax, not TypeScript
-// Use Flow parser/transformer for these files
+// React Native Jest files use a mix of Flow and TypeScript syntax
+// Use both Flow and TypeScript parsers/transformers to handle all syntax
 const rnJestFilesTransformer = createTransformer({
   presets: [['@babel/preset-env', { targets: { node: 'current' } }]],
-  plugins: ['@babel/plugin-transform-flow-strip-types'],
+  plugins: [
+    '@babel/plugin-transform-flow-strip-types',
+    ['@babel/plugin-transform-typescript', { allowNamespaces: true, allowDeclareFields: true }],
+  ],
   parserOpts: {
-    plugins: ['flow', 'flowComments'],
+    plugins: ['flow', 'flowComments', 'typescript', 'typescriptJSX'],
   },
 });
 
