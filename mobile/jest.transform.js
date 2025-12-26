@@ -15,16 +15,24 @@ function isReactNativeJestFile(filename) {
   return filename.includes('node_modules/react-native/jest/');
 }
 
-// Strip TS-style `as` assertions that appear in RN's jest helpers.
-// Example: `(ref as string)` -> `(ref)`
-function stripTypeScriptAsAssertions(src) {
-  return src.replace(/\s+as\s+[A-Za-z_$][A-Za-z0-9_$]*(?:\[\])?/g, '');
+function patchReactNativeJestFiles(src) {
+  let out = src;
+
+  // 1) Strip TS-style `as Type`
+  out = out.replace(/\s+as\s+[A-Za-z_$][A-Za-z0-9_$]*(?:\[\])?/g, '');
+
+  // 2) Strip Flow instantiation expressions on call results:
+  //    `jest.fn()<$FlowFixMe, $FlowFixMe>` -> `jest.fn()`
+  // (Limit to same-line type args to avoid over-matching.)
+  out = out.replace(/\)\s*<[^>\n]*>/g, ')');
+
+  return out;
 }
 
 module.exports = {
   process(src, filename, config, options) {
     if (isReactNativeJestFile(filename)) {
-      const patched = stripTypeScriptAsAssertions(src);
+      const patched = patchReactNativeJestFiles(src);
       return rnJestTransformer.process(patched, filename, config, options);
     }
     return expoTransformer.process(src, filename, config, options);
