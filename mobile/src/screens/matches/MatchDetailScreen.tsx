@@ -1,5 +1,13 @@
-import { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, Image, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { useState, useEffect, useCallback } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  Image,
+  TouchableOpacity,
+  ActivityIndicator,
+} from 'react-native';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { supabase } from '../../lib/supabase/client';
@@ -26,13 +34,11 @@ export default function MatchDetailScreen() {
   const [loading, setLoading] = useState(true);
   const [hasActiveProposal, setHasActiveProposal] = useState(false);
 
-  useEffect(() => {
-    loadMatchData();
-  }, [matchId]);
-
-  const loadMatchData = async () => {
+  const loadMatchData = useCallback(async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
       if (!user) return;
 
       // Load match
@@ -93,7 +99,11 @@ export default function MatchDetailScreen() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [matchId]);
+
+  useEffect(() => {
+    loadMatchData();
+  }, [loadMatchData]);
 
   const handlePropose = () => {
     navigation.navigate('Propose', { matchId });
@@ -148,7 +158,9 @@ export default function MatchDetailScreen() {
             proposal={latestProposal}
             matchId={matchId}
             onConfirm={() => loadMatchData()}
-            onNoneSuits={() => navigation.navigate('Propose', { matchId, responseTo: latestProposal.proposal_id })}
+            onNoneSuits={() =>
+              navigation.navigate('Propose', { matchId, responseTo: latestProposal.proposal_id })
+            }
           />
         </View>
       )}
@@ -253,4 +265,3 @@ const styles = StyleSheet.create({
     marginTop: 40,
   },
 });
-

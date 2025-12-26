@@ -32,12 +32,7 @@ export default function MatchModal({ visible, matchId, onClose }: MatchModalProp
   };
 
   return (
-    <Modal
-      visible={visible}
-      transparent={true}
-      animationType="fade"
-      onRequestClose={onClose}
-    >
+    <Modal visible={visible} transparent={true} animationType="fade" onRequestClose={onClose}>
       <View style={styles.overlay}>
         <View style={styles.modal}>
           <Text style={styles.title}>🎉 It's a Match!</Text>
@@ -45,16 +40,10 @@ export default function MatchModal({ visible, matchId, onClose }: MatchModalProp
             You both liked each other. Start a conversation and propose a time to meet!
           </Text>
           <View style={styles.buttonContainer}>
-            <TouchableOpacity
-              style={[styles.button, styles.secondaryButton]}
-              onPress={onClose}
-            >
+            <TouchableOpacity style={[styles.button, styles.secondaryButton]} onPress={onClose}>
               <Text style={styles.secondaryButtonText}>Continue Browsing</Text>
             </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.button}
-              onPress={handleViewMatch}
-            >
+            <TouchableOpacity style={styles.button} onPress={handleViewMatch}>
               <Text style={styles.buttonText}>View Match</Text>
             </TouchableOpacity>
           </View>
@@ -121,4 +110,3 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
 });
-

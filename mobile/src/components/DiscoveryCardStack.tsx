@@ -46,7 +46,7 @@ export default function DiscoveryCardStack({
 
   const handleSwipeRight = () => {
     if (currentIndex >= feed.length) return;
-    
+
     Animated.timing(position, {
       toValue: { x: SCREEN_WIDTH, y: 0 },
       duration: 300,
@@ -60,7 +60,7 @@ export default function DiscoveryCardStack({
 
   const handleSwipeLeft = () => {
     if (currentIndex >= feed.length) return;
-    
+
     Animated.timing(position, {
       toValue: { x: -SCREEN_WIDTH, y: 0 },
       duration: 300,
@@ -89,7 +89,7 @@ export default function DiscoveryCardStack({
     if (currentIndex >= feed.length) {
       position.setValue({ x: 0, y: 0 });
     }
-  }, [feed.length, currentIndex]);
+  }, [feed.length, currentIndex, position]);
 
   const getCardStyle = (index: number) => {
     const isTopCard = index === currentIndex;
@@ -98,10 +98,7 @@ export default function DiscoveryCardStack({
     const opacity = isTopCard ? 1 : 0.8;
 
     return {
-      transform: [
-        { translateX },
-        { scale },
-      ],
+      transform: [{ translateX }, { scale }],
       opacity,
       zIndex: feed.length - index,
     };
@@ -151,4 +148,3 @@ const styles = StyleSheet.create({
     maxHeight: 600,
   },
 });
-

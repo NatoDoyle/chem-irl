@@ -9,4 +9,3 @@ process.env.EXPO_PUBLIC_SUPABASE_KEY =
   process.env.EXPO_PUBLIC_SUPABASE_KEY ??
   process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ??
   'test-publishable-key';
-

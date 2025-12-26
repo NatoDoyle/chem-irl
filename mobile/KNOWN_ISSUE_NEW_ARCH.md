@@ -9,6 +9,7 @@ TypeError: expected dynamic type 'boolean', but had type 'string'
 ```
 
 This is a **known compatibility issue** between:
+
 - React Navigation v7
 - react-native-screens 4.18.0
 - React Native's new architecture (always enabled in Expo Go)
@@ -37,6 +38,7 @@ eas build --profile development --platform android
 ```
 
 Development builds allow you to:
+
 - Disable new architecture if needed
 - Use custom native code
 - Have more control over the build
@@ -44,6 +46,7 @@ Development builds allow you to:
 ### Option 2: Wait for Fix
 
 This issue is being tracked in:
+
 - React Navigation GitHub issues
 - react-native-screens GitHub issues
 
@@ -71,6 +74,7 @@ You could downgrade React Navigation to v6, but this would require significant c
 To test the app properly:
 
 1. **Create development build**:
+
    ```bash
    eas build --profile development --platform ios
    ```
@@ -83,7 +87,3 @@ To test the app properly:
    ```
 
 The app should work correctly in a development build even if it fails in Expo Go.
-
-
-
-

@@ -69,11 +69,13 @@ mobile/
 ## Features
 
 ### ✅ Implemented (Phase 1)
+
 - Auth flow (magic link)
 - Navigation structure
 - Basic screen placeholders
 
 ### 🚧 In Progress (Phase 2-4)
+
 - Discovery feed
 - Like/Match system
 - Proposals
@@ -138,4 +140,3 @@ eas submit --platform android
 - [Expo Documentation](https://docs.expo.dev/)
 - [React Navigation](https://reactnavigation.org/)
 - [Supabase React Native Guide](https://supabase.com/docs/guides/getting-started/tutorials/with-expo-react-native)
-

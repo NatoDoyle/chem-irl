@@ -27,4 +27,3 @@ describe('Brand Config', () => {
     expect(BRAND_MESSAGES.proposal.expired).toBeDefined();
   });
 });
-

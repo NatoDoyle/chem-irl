@@ -39,7 +39,7 @@ export function isRecoverableError(error: unknown): boolean {
  */
 export function getUserErrorMessage(error: unknown): string {
   const message = formatError(error);
-  
+
   // Map common error messages to user-friendly ones
   const errorMap: Record<string, string> = {
     'Failed to fetch': 'Network error. Please check your connection.',
@@ -57,4 +57,3 @@ export function getUserErrorMessage(error: unknown): string {
 
   return message;
 }
-

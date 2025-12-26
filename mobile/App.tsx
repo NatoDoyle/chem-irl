@@ -32,8 +32,10 @@ export default function App() {
   useEffect(() => {
     // Check for existing session and profile completion
     const checkSessionAndProfile = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
       if (session) {
         // Check if profile is complete
         const { data: profile } = await supabase
@@ -55,7 +57,7 @@ export default function App() {
       } else {
         setSession(null);
       }
-      
+
       setLoading(false);
     };
 

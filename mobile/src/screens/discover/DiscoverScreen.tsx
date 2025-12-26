@@ -20,7 +20,9 @@ export default function DiscoverScreen() {
 
   const loadFeed = async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
       if (!user) {
         setLoading(false);
         return;
@@ -52,7 +54,7 @@ export default function DiscoverScreen() {
               ...item,
               photos: Array.isArray(profile?.photos) ? profile.photos : (item.photos ?? []),
             };
-          } catch (error) {
+          } catch {
             // If profile fetch fails, use item.photos or empty array
             return {
               ...item,
@@ -73,7 +75,9 @@ export default function DiscoverScreen() {
 
   const handleLike = async (userId: string) => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
       if (!user) return;
 
       const { data, error } = await supabase.rpc('create_like_and_check_match', {

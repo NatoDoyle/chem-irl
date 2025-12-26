@@ -1,7 +1,9 @@
 # Fix Metro Bundler Connection Issue
 
 ## The Problem
+
 Your phone can't connect to the Metro bundler running on your computer. This usually happens when:
+
 - Metro bundler isn't running
 - Phone and computer aren't on the same Wi-Fi network
 - Firewall is blocking the connection
@@ -15,6 +17,7 @@ Your phone can't connect to the Metro bundler running on your computer. This usu
    - Press `Ctrl+C` in the terminal where Expo is running
 
 2. **Clear cache and restart**:
+
    ```bash
    cd mobile
    npx expo start --clear
@@ -25,6 +28,7 @@ Your phone can't connect to the Metro bundler running on your computer. This usu
 ### Option 2: Check Network Connection
 
 **Make sure:**
+
 - ✅ Phone and computer are on the **same Wi-Fi network**
 - ✅ Wi-Fi is enabled on both devices
 - ✅ No VPN is blocking the connection
@@ -56,6 +60,7 @@ npx expo start --tunnel
 ### Option 5: Check Firewall
 
 **Windows Firewall:**
+
 1. Open Windows Defender Firewall
 2. Click "Allow an app or feature"
 3. Make sure Node.js is allowed for Private networks
@@ -66,6 +71,7 @@ npx expo start --tunnel
 1. **Stop Metro** (Ctrl+C in terminal)
 
 2. **Clear cache**:
+
    ```bash
    cd mobile
    npx expo start --clear
@@ -86,6 +92,7 @@ npx expo start --tunnel
 ## Verify Metro is Running
 
 Check if Metro is listening on port 8081:
+
 ```bash
 netstat -ano | findstr :8081
 ```
@@ -98,7 +105,3 @@ You should see a line with `:8081` if Metro is running.
 2. **Restart your computer's Wi-Fi**
 3. **Try a different network** (mobile hotspot)
 4. **Use tunnel mode** as last resort
-
-
-
-

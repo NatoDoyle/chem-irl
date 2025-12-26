@@ -1,5 +1,14 @@
 import { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, Image, RefreshControl } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  FlatList,
+  TouchableOpacity,
+  ActivityIndicator,
+  Image,
+  RefreshControl,
+} from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { supabase } from '../../lib/supabase/client';
@@ -37,7 +46,9 @@ export default function MatchesScreen() {
 
   const loadMatches = async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
       if (!user) {
         setLoading(false);
         return;
@@ -61,7 +72,7 @@ export default function MatchesScreen() {
       const matchesWithProfiles = await Promise.all(
         (matchesData || []).map(async (match: Match) => {
           const otherUserId = match.user_a === user.id ? match.user_b : match.user_a;
-          
+
           // Get other user's profile
           const { data: profile } = await supabase
             .from('profiles')
@@ -118,9 +129,7 @@ export default function MatchesScreen() {
       <FlatList
         data={matches}
         keyExtractor={(item) => item.match_id}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-        }
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
         renderItem={({ item }) => (
           <TouchableOpacity
             style={styles.matchCard}

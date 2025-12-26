@@ -14,14 +14,14 @@ export default function DiscoveryCard({ item, onLike, onPass }: DiscoveryCardPro
   return (
     <View style={styles.card}>
       <Image source={{ uri: primaryPhoto }} style={styles.image} />
-      
+
       <View style={styles.overlay}>
         <View style={styles.content}>
           <Text style={styles.headline}>{item.headline || 'No headline'}</Text>
           <ScrollView style={styles.bioContainer}>
             <Text style={styles.bio}>{item.bio || 'No bio'}</Text>
           </ScrollView>
-          
+
           {item.availability_summary && (
             <Text style={styles.availability}>{item.availability_summary}</Text>
           )}
@@ -44,16 +44,10 @@ export default function DiscoveryCard({ item, onLike, onPass }: DiscoveryCardPro
 
         {onLike && onPass && (
           <View style={styles.actions}>
-            <TouchableOpacity
-              style={[styles.actionButton, styles.passButton]}
-              onPress={onPass}
-            >
+            <TouchableOpacity style={[styles.actionButton, styles.passButton]} onPress={onPass}>
               <Text style={styles.passButtonText}>Pass</Text>
             </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.actionButton, styles.likeButton]}
-              onPress={onLike}
-            >
+            <TouchableOpacity style={[styles.actionButton, styles.likeButton]} onPress={onLike}>
               <Text style={styles.likeButtonText}>Like</Text>
             </TouchableOpacity>
           </View>
@@ -161,4 +155,3 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
 });
-

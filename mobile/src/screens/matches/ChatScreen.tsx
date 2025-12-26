@@ -1,5 +1,14 @@
-import { useState, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, FlatList, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform } from 'react-native';
+import { useState, useEffect, useRef, useCallback } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  FlatList,
+  TextInput,
+  TouchableOpacity,
+  KeyboardAvoidingView,
+  Platform,
+} from 'react-native';
 import { useRoute } from '@react-navigation/native';
 import { supabase } from '../../lib/supabase/client';
 import { Message } from '../../lib/types';
@@ -19,12 +28,7 @@ export default function ChatScreen() {
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
 
-  useEffect(() => {
-    loadMessages();
-    subscribeToMessages();
-  }, [matchId]);
-
-  const loadMessages = async () => {
+  const loadMessages = useCallback(async () => {
     try {
       const { data, error } = await supabase
         .from('messages')
@@ -43,9 +47,9 @@ export default function ChatScreen() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [matchId]);
 
-  const subscribeToMessages = () => {
+  const subscribeToMessages = useCallback(() => {
     const channel = supabase
       .channel(`match:${matchId}`)
       .on(
@@ -70,7 +74,13 @@ export default function ChatScreen() {
     return () => {
       supabase.removeChannel(channel);
     };
-  };
+  }, [matchId]);
+
+  useEffect(() => {
+    loadMessages();
+    const unsubscribe = subscribeToMessages();
+    return unsubscribe;
+  }, [loadMessages, subscribeToMessages]);
 
   const handleSend = async () => {
     if (!newMessage.trim()) return;
@@ -80,7 +90,9 @@ export default function ChatScreen() {
     setSending(true);
 
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
       if (!user) return;
 
       const { error } = await supabase.from('messages').insert({
@@ -115,18 +127,8 @@ export default function ChatScreen() {
     const isOwn = item.sender_id === currentUserId;
 
     return (
-      <View
-        style={[
-          styles.messageContainer,
-          isOwn ? styles.ownMessage : styles.otherMessage,
-        ]}
-      >
-        <Text
-          style={[
-            styles.messageText,
-            isOwn ? styles.ownMessageText : styles.otherMessageText,
-          ]}
-        >
+      <View style={[styles.messageContainer, isOwn ? styles.ownMessage : styles.otherMessage]}>
+        <Text style={[styles.messageText, isOwn ? styles.ownMessageText : styles.otherMessageText]}>
           {item.content}
         </Text>
         <Text style={styles.messageTime}>
@@ -270,4 +272,3 @@ const styles = StyleSheet.create({
     color: BRAND_COLORS.text[600],
   },
 });
-

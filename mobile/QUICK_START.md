@@ -11,6 +11,7 @@ EXPO_PUBLIC_APP_URL=https://chemirl.app
 ```
 
 **Get your Supabase credentials:**
+
 1. Go to https://supabase.com/dashboard
 2. Select your project
 3. Settings → API
@@ -24,6 +25,7 @@ npm start
 ```
 
 This will:
+
 - Start the Expo dev server
 - Show a QR code
 - Open Expo Go on your phone and scan the QR code
@@ -50,18 +52,17 @@ This will:
 ## Troubleshooting
 
 **App won't start?**
+
 - Make sure `.env` file exists
 - Restart Expo: Press `r` in terminal or restart `npm start`
 
 **Can't connect to Supabase?**
+
 - Check `.env` has correct values
 - Verify Supabase project is active
 - Check internet connection
 
 **Deep linking not working?**
+
 - Test on physical device (not simulator)
 - Check Supabase Auth redirect URLs include `chemirl://auth/callback`
-
-
-
-

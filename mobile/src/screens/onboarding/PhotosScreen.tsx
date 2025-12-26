@@ -1,5 +1,14 @@
 import { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Image, ScrollView, Alert, ActivityIndicator } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  Image,
+  ScrollView,
+  Alert,
+  ActivityIndicator,
+} from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { supabase } from '../../lib/supabase/client';
 import { BRAND_COLORS } from '../../config/brand';
@@ -32,7 +41,9 @@ export default function PhotosScreen() {
   const uploadPhoto = async (uri: string) => {
     setUploading(true);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
       if (!user) {
         Alert.alert('Error', 'Not authenticated');
         setUploading(false);
@@ -46,7 +57,7 @@ export default function PhotosScreen() {
       const fileName = `${user.id}/${Date.now()}.${fileExt}`;
 
       // Upload to Supabase Storage
-      const { data: uploadData, error: uploadError } = await supabase.storage
+      const { error: uploadError } = await supabase.storage
         .from('profiles')
         .upload(fileName, blob, {
           contentType: `image/${fileExt}`,
@@ -60,9 +71,9 @@ export default function PhotosScreen() {
       }
 
       // Get public URL
-      const { data: { publicUrl } } = supabase.storage
-        .from('profiles')
-        .getPublicUrl(fileName);
+      const {
+        data: { publicUrl },
+      } = supabase.storage.from('profiles').getPublicUrl(fileName);
 
       // Update profile with new photo
       const { data: profileData } = await supabase
@@ -75,13 +86,11 @@ export default function PhotosScreen() {
       // Limit to 6 photos max
       const updatedPhotos = [...existingPhotos, publicUrl].slice(0, 6);
 
-      const { error: updateError } = await supabase
-        .from('profiles')
-        .upsert({
-          user_id: user.id,
-          photos: updatedPhotos,
-          completion_pct: updatedPhotos.length >= 1 ? 100 : 50,
-        });
+      const { error: updateError } = await supabase.from('profiles').upsert({
+        user_id: user.id,
+        photos: updatedPhotos,
+        completion_pct: updatedPhotos.length >= 1 ? 100 : 50,
+      });
 
       if (updateError) {
         Alert.alert('Error', updateError.message);
@@ -102,7 +111,7 @@ export default function PhotosScreen() {
       Alert.alert('Photo required', 'Please add at least one photo to continue');
       return;
     }
-    
+
     // Profile is complete, app will automatically show main navigator
     // on next render due to profile completion check
     // Force a refresh by navigating back to root
@@ -119,11 +128,7 @@ export default function PhotosScreen() {
           <Image key={index} source={{ uri: photo }} style={styles.photo} />
         ))}
         {photos.length < 6 && (
-          <TouchableOpacity
-            style={styles.addPhotoButton}
-            onPress={pickImage}
-            disabled={uploading}
-          >
+          <TouchableOpacity style={styles.addPhotoButton} onPress={pickImage} disabled={uploading}>
             {uploading ? (
               <ActivityIndicator color={BRAND_COLORS.primary} />
             ) : (
@@ -207,4 +212,3 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
 });
-

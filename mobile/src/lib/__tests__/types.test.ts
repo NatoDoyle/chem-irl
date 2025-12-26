@@ -90,4 +90,3 @@ describe('TypeScript Types', () => {
     expect(message.created_at).toBeDefined();
   });
 });
-

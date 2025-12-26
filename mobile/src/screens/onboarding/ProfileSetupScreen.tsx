@@ -1,5 +1,14 @@
 import { useState } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, Alert, ActivityIndicator } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TextInput,
+  TouchableOpacity,
+  ScrollView,
+  Alert,
+  ActivityIndicator,
+} from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { supabase } from '../../lib/supabase/client';
@@ -11,7 +20,10 @@ type OnboardingStackParamList = {
   Preferences: undefined;
 };
 
-type ProfileSetupScreenNavigationProp = NativeStackNavigationProp<OnboardingStackParamList, 'ProfileSetup'>;
+type ProfileSetupScreenNavigationProp = NativeStackNavigationProp<
+  OnboardingStackParamList,
+  'ProfileSetup'
+>;
 
 export default function ProfileSetupScreen() {
   const navigation = useNavigation<ProfileSetupScreenNavigationProp>();
@@ -22,7 +34,7 @@ export default function ProfileSetupScreen() {
   const handleContinue = async () => {
     const headlineTrimmed = headline.trim();
     const bioTrimmed = bio.trim();
-    
+
     if (!headlineTrimmed || !bioTrimmed) {
       Alert.alert('Error', 'Please fill in both headline and bio');
       return;
@@ -40,7 +52,9 @@ export default function ProfileSetupScreen() {
 
     setLoading(true);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
       if (!user) {
         Alert.alert('Error', 'Not authenticated');
         setLoading(false);
@@ -48,16 +62,14 @@ export default function ProfileSetupScreen() {
       }
 
       // Upsert profile
-      const { error } = await supabase
-        .from('profiles')
-        .upsert({
-          user_id: user.id,
-          prompts: {
-            headline: headlineTrimmed,
-            bio: bioTrimmed,
-          },
-          completion_pct: 50, // Will be 100 after photos
-        });
+      const { error } = await supabase.from('profiles').upsert({
+        user_id: user.id,
+        prompts: {
+          headline: headlineTrimmed,
+          bio: bioTrimmed,
+        },
+        completion_pct: 50, // Will be 100 after photos
+      });
 
       if (error) {
         Alert.alert('Error', error.message);
@@ -177,4 +189,3 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
 });
-

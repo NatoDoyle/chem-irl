@@ -12,7 +12,12 @@ interface ProposalCardProps {
   onNoneSuits: () => void;
 }
 
-export default function ProposalCard({ proposal, matchId, onConfirm, onNoneSuits }: ProposalCardProps) {
+export default function ProposalCard({
+  proposal,
+  matchId,
+  onConfirm,
+  onNoneSuits,
+}: ProposalCardProps) {
   const [loading, setLoading] = useState(false);
   const isExpired = new Date(proposal.expires_at) < new Date();
   const isConfirmed = proposal.status === 'confirmed';
@@ -20,7 +25,9 @@ export default function ProposalCard({ proposal, matchId, onConfirm, onNoneSuits
   const handleConfirm = async (chosenWindow: { start: string; end: string }) => {
     setLoading(true);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
       if (!user) return;
 
       // Create confirm record
@@ -88,12 +95,8 @@ export default function ProposalCard({ proposal, matchId, onConfirm, onNoneSuits
 
   return (
     <View style={styles.card}>
-      <Text style={styles.dateTypes}>
-        {proposal.date_types.join(', ')}
-      </Text>
-      {proposal.note && (
-        <Text style={styles.note}>{proposal.note}</Text>
-      )}
+      <Text style={styles.dateTypes}>{proposal.date_types.join(', ')}</Text>
+      {proposal.note && <Text style={styles.note}>{proposal.note}</Text>}
 
       <View style={styles.windows}>
         {proposal.windows.map((window, index) => (
@@ -110,11 +113,7 @@ export default function ProposalCard({ proposal, matchId, onConfirm, onNoneSuits
         ))}
       </View>
 
-      <TouchableOpacity
-        style={styles.noneSuitsButton}
-        onPress={handleNoneSuits}
-        disabled={loading}
-      >
+      <TouchableOpacity style={styles.noneSuitsButton} onPress={handleNoneSuits} disabled={loading}>
         <Text style={styles.noneSuitsText}>None of these suit me</Text>
       </TouchableOpacity>
     </View>
@@ -178,4 +177,3 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
 });
-

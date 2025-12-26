@@ -8,6 +8,7 @@ eas login
 ```
 
 You'll need to:
+
 - Create an Expo account (free) at https://expo.dev
 - Or login if you already have one
 
@@ -18,6 +19,7 @@ eas build:configure
 ```
 
 This will:
+
 - Link your project to Expo
 - Set up build configuration
 - Ask a few questions (just accept defaults)
@@ -25,11 +27,13 @@ This will:
 ## 3. Build for Your Device
 
 ### iOS:
+
 ```bash
 eas build --profile development --platform ios
 ```
 
 ### Android:
+
 ```bash
 eas build --profile development --platform android
 ```
@@ -39,6 +43,7 @@ eas build --profile development --platform android
 ## 4. Install on Device
 
 After build completes:
+
 - **iOS**: Download `.ipa` file and install via TestFlight or direct install
 - **Android**: Download `.apk` file and install on device
 
@@ -68,7 +73,3 @@ The development build will connect to Metro just like Expo Go, but without the b
 - **Free tier**: Unlimited development builds
 - **Production builds**: Limited free builds per month
 - No credit card required for development builds
-
-
-
-

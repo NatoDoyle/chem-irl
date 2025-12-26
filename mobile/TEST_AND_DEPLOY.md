@@ -37,6 +37,7 @@ npm install
    - Android: [Play Store](https://play.google.com/store/apps/details?id=host.exp.exponent)
 
 2. **Start the dev server**:
+
    ```bash
    cd mobile
    npm start
@@ -51,16 +52,19 @@ npm install
 ### Option B: Test in Simulator/Emulator
 
 **iOS (requires macOS):**
+
 ```bash
 npm run ios
 ```
 
 **Android:**
+
 ```bash
 npm run android
 ```
 
 **Web (for quick testing):**
+
 ```bash
 npm run web
 ```
@@ -70,6 +74,7 @@ npm run web
 Once the app loads, test:
 
 ### ✅ Auth Flow
+
 - [ ] Welcome screen displays
 - [ ] Can enter email on login screen
 - [ ] Magic link email is sent
@@ -77,12 +82,14 @@ Once the app loads, test:
 - [ ] User is logged in after clicking link
 
 ### ✅ Onboarding
+
 - [ ] Profile setup screen appears for new users
 - [ ] Can enter headline and bio
 - [ ] Can upload photos
 - [ ] Photos save to Supabase Storage
 
 ### ✅ Main App
+
 - [ ] Discovery feed loads
 - [ ] Can see profile cards
 - [ ] Can swipe/like profiles
@@ -96,11 +103,13 @@ Once the app loads, test:
 ### Prerequisites
 
 1. **Install EAS CLI**:
+
    ```bash
    npm install -g eas-cli
    ```
 
 2. **Login to Expo**:
+
    ```bash
    eas login
    ```
@@ -117,6 +126,7 @@ eas build --platform ios
 ```
 
 **Requirements:**
+
 - Apple Developer account ($99/year)
 - macOS (for local builds) or use EAS cloud builds
 
@@ -127,6 +137,7 @@ eas build --platform android
 ```
 
 **Requirements:**
+
 - Google Play Developer account ($25 one-time)
 
 ### Build for Both
@@ -144,6 +155,7 @@ eas submit --platform ios
 ```
 
 **Requirements:**
+
 - App Store Connect account
 - App Store review process (1-3 days typically)
 
@@ -154,6 +166,7 @@ eas submit --platform android
 ```
 
 **Requirements:**
+
 - Google Play Console account
 - Play Store review process (few hours to 1 day typically)
 
@@ -207,7 +220,3 @@ Before deploying, verify:
 3. **Test with real users** (beta testing)
 4. **Build production versions**
 5. **Submit to app stores**
-
-
-
-

@@ -42,4 +42,3 @@ EXPO_PUBLIC_APP_URL=https://chemirl.app
    npm start
    ```
 3. The app will now connect to your Supabase project!
-

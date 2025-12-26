@@ -1,7 +1,14 @@
 // Database types matching Supabase schema
 
 export type UserGender = 'male' | 'female' | 'non_binary' | 'other';
-export type UserOrientation = 'straight' | 'gay' | 'lesbian' | 'bisexual' | 'pansexual' | 'asexual' | 'other';
+export type UserOrientation =
+  | 'straight'
+  | 'gay'
+  | 'lesbian'
+  | 'bisexual'
+  | 'pansexual'
+  | 'asexual'
+  | 'other';
 export type MatchStatus = 'open' | 'expired' | 'closed' | 'unmatched';
 export type ProposalStatus = 'active' | 'expired' | 'confirmed' | 'reopened';
 
@@ -60,7 +67,7 @@ export interface Proposal {
   proposal_id: string;
   match_id: string;
   sender_id: string;
-  windows: Array<{ start: string; end: string }>;
+  windows: { start: string; end: string }[];
   date_types: string[];
   note?: string;
   created_at: string;
@@ -85,4 +92,3 @@ export interface Message {
   bytes: number;
   created_at: string;
 }
-

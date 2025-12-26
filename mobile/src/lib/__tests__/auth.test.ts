@@ -1,4 +1,5 @@
 import { sendMagicLink, handleMagicLink } from '../auth';
+import { supabase } from '../supabase/client';
 
 // Mock Supabase client
 jest.mock('../supabase/client', () => ({
@@ -31,8 +32,9 @@ describe('Auth Functions', () => {
 
   describe('sendMagicLink', () => {
     it('should call supabase.auth.signInWithOtp with correct email', async () => {
-      const { supabase } = require('../supabase/client');
-      supabase.auth.signInWithOtp.mockResolvedValue({ data: {}, error: null });
+      jest
+        .spyOn(supabase.auth, 'signInWithOtp')
+        .mockResolvedValue({ data: {} as any, error: null } as any);
 
       const result = await sendMagicLink('test@example.com');
 
@@ -46,8 +48,9 @@ describe('Auth Functions', () => {
     });
 
     it('should trim and lowercase email', async () => {
-      const { supabase } = require('../supabase/client');
-      supabase.auth.signInWithOtp.mockResolvedValue({ data: {}, error: null });
+      jest
+        .spyOn(supabase.auth, 'signInWithOtp')
+        .mockResolvedValue({ data: {} as any, error: null } as any);
 
       await sendMagicLink('  TEST@EXAMPLE.COM  ');
 
@@ -61,15 +64,12 @@ describe('Auth Functions', () => {
 
   describe('handleMagicLink', () => {
     it('should extract tokens from URL and set session', async () => {
-      const { supabase } = require('../supabase/client');
       const mockSession = { access_token: 'token', refresh_token: 'refresh' };
-      supabase.auth.setSession.mockResolvedValue({
-        data: { session: mockSession },
-        error: null,
-      });
+      jest
+        .spyOn(supabase.auth, 'setSession')
+        .mockResolvedValue({ data: { session: mockSession }, error: null } as any);
 
-      const url =
-        'chemirl://auth/callback?access_token=token123&refresh_token=refresh123';
+      const url = 'chemirl://auth/callback?access_token=token123&refresh_token=refresh123';
       const result = await handleMagicLink(url);
 
       expect(supabase.auth.setSession).toHaveBeenCalledWith({
@@ -89,4 +89,3 @@ describe('Auth Functions', () => {
     });
   });
 });
-

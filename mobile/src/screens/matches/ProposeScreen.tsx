@@ -1,5 +1,14 @@
 import { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert, ActivityIndicator } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  TextInput,
+  Alert,
+  ActivityIndicator,
+} from 'react-native';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { supabase } from '../../lib/supabase/client';
@@ -12,21 +21,14 @@ type ProposeRouteParams = {
 
 type ProposeNavigationProp = NativeStackNavigationProp<any, 'Propose'>;
 
-const DATE_TYPES = [
-  'Coffee',
-  'Drinks',
-  'Dinner',
-  'Walk',
-  'Activity',
-  'Other',
-];
+const DATE_TYPES = ['Coffee', 'Drinks', 'Dinner', 'Walk', 'Activity', 'Other'];
 
 export default function ProposeScreen() {
   const route = useRoute();
   const navigation = useNavigation<ProposeNavigationProp>();
-  const { matchId, responseTo } = route.params as ProposeRouteParams;
+  const { matchId } = route.params as ProposeRouteParams;
 
-  const [selectedWindows, setSelectedWindows] = useState<Array<{ start: string; end: string }>>([]);
+  const [selectedWindows, setSelectedWindows] = useState<{ start: string; end: string }[]>([]);
   const [selectedDateTypes, setSelectedDateTypes] = useState<string[]>([]);
   const [note, setNote] = useState('');
   const [loading, setLoading] = useState(false);
@@ -43,13 +45,13 @@ export default function ProposeScreen() {
     const daysAhead = selectedWindows.length + 1; // 1, 2, or 3 days ahead
     const windowDate = new Date(now);
     windowDate.setDate(windowDate.getDate() + daysAhead);
-    
+
     // Ensure within 7 days
     if (daysAhead > 7) {
       Alert.alert('Error', 'All times must be within the next 7 days');
       return;
     }
-    
+
     windowDate.setHours(18, 0, 0, 0);
 
     const endTime = new Date(windowDate);
@@ -90,7 +92,7 @@ export default function ProposeScreen() {
     const now = new Date();
     const sevenDaysFromNow = new Date(now);
     sevenDaysFromNow.setDate(sevenDaysFromNow.getDate() + 7);
-    
+
     const invalidWindow = selectedWindows.find((window) => {
       const windowDate = new Date(window.start);
       return windowDate > sevenDaysFromNow || windowDate < now;
@@ -108,7 +110,9 @@ export default function ProposeScreen() {
 
     setLoading(true);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
       if (!user) return;
 
       // Calculate expiry (72 hours from now)
@@ -155,7 +159,9 @@ export default function ProposeScreen() {
     <ScrollView style={styles.container}>
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Time Windows (2-3 required)</Text>
-        <Text style={styles.sectionSubtitle}>Select 2-3 different times within the next 7 days</Text>
+        <Text style={styles.sectionSubtitle}>
+          Select 2-3 different times within the next 7 days
+        </Text>
 
         {selectedWindows.map((window, index) => (
           <View key={index} style={styles.windowItem}>
@@ -332,4 +338,3 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
 });
-

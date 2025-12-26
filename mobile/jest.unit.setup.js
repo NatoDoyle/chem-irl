@@ -40,5 +40,3 @@ global.crypto = {
     return arr;
   }),
 };
-
-

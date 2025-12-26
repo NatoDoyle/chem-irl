@@ -1,5 +1,13 @@
 import { useState } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TextInput,
+  TouchableOpacity,
+  Alert,
+  ActivityIndicator,
+} from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { AuthStackParamList } from '../../navigation/AuthNavigator';
@@ -15,7 +23,7 @@ export default function LoginScreen() {
 
   const handleLogin = async () => {
     const emailTrimmed = email.trim();
-    
+
     if (!emailTrimmed) {
       Alert.alert('Error', 'Please enter your email address');
       return;
@@ -125,4 +133,3 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
 });
-

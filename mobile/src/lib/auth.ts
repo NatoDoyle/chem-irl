@@ -39,7 +39,7 @@ export async function handleMagicLink(url: string) {
  */
 export async function sendMagicLink(email: string) {
   try {
-    const { data, error } = await supabase.auth.signInWithOtp({
+    const { error } = await supabase.auth.signInWithOtp({
       email: email.trim().toLowerCase(),
       options: {
         emailRedirectTo: Linking.createURL('/auth/callback'),
@@ -55,4 +55,3 @@ export async function sendMagicLink(email: string) {
     return { success: false, error: error.message || 'Failed to send magic link' };
   }
 }
-

@@ -15,10 +15,7 @@ export default function WelcomeScreen() {
         <Text style={styles.title}>{BRAND.tagline}</Text>
         <Text style={styles.description}>{BRAND.description}</Text>
       </View>
-      <TouchableOpacity
-        style={styles.button}
-        onPress={() => navigation.navigate('Login')}
-      >
+      <TouchableOpacity style={styles.button} onPress={() => navigation.navigate('Login')}>
         <Text style={styles.buttonText}>Get Started</Text>
       </TouchableOpacity>
     </View>
@@ -64,4 +61,3 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
 });
-
