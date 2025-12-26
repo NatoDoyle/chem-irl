@@ -39,7 +39,7 @@ describe('Auth Functions', () => {
       expect(supabase.auth.signInWithOtp).toHaveBeenCalledWith({
         email: 'test@example.com',
         options: {
-          emailRedirectTo: 'chemirl://auth/callback',
+          emailRedirectTo: 'chemirl:///auth/callback',
         },
       });
       expect(result.success).toBe(true);

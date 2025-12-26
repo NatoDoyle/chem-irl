@@ -1,3 +1,4 @@
+const path = require('path');
 const { createTransformer } = require('babel-jest');
 
 const expoTransformer = createTransformer({
@@ -11,29 +12,40 @@ const rnJestTransformer = createTransformer({
   plugins: ['@babel/plugin-transform-flow-strip-types'],
 });
 
-function isReactNativeJestFile(filename) {
-  return filename.includes('node_modules/react-native/jest/');
+function isReactNativePackageFile(filename) {
+  const normalized = filename.split(path.sep).join('/');
+  return (
+    normalized.includes('/node_modules/react-native/') ||
+    normalized.includes('/node_modules/@react-native/')
+  );
 }
 
-function patchReactNativeJestFiles(src) {
+function patchReactNativeSource(src) {
   let out = src;
 
-  // 1) Strip TS-style `as Type`
-  out = out.replace(/\s+as\s+[A-Za-z_$][A-Za-z0-9_$]*(?:\[\])?/g, '');
+  // Strip TS-style "as" assertions that appear in RN .js files
+  // examples:
+  //   (ref as string)
+  //   } as ReactNativePublicAPI;
+  out = out.replace(/\s+as\s+[A-Za-z0-9_$]+(?=\s*[;,\)\]])/g, '');
 
-  // 2) Strip TS-style generic instantiation after a call result, including multiline:
-  //    `jest.fn()<$FlowFixMe, $FlowFixMe>` (often split over lines) -> `jest.fn()`
-  out = out.replace(/\)\s*<[\s\S]*?>/g, ')');
+  // Some RN jest mocks have invalid-looking generic annotations; drop them
+  // example:
+  //   jest.fn()<$FlowFixMe, $FlowFixMe>
+  out = out.replace(/jest\.fn\(\)\s*<[\s\S]*?>/g, 'jest.fn()');
 
   return out;
 }
 
 module.exports = {
   process(src, filename, config, options) {
-    if (isReactNativeJestFile(filename)) {
-      const patched = patchReactNativeJestFiles(src);
+    const normalized = filename.split(path.sep).join('/');
+
+    if (isReactNativePackageFile(normalized)) {
+      const patched = patchReactNativeSource(src);
       return rnJestTransformer.process(patched, filename, config, options);
     }
+
     return expoTransformer.process(src, filename, config, options);
   },
 };
