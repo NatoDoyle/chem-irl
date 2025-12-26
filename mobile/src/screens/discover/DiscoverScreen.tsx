@@ -6,8 +6,10 @@ import DiscoveryCardStack from '../../components/DiscoveryCardStack';
 import MatchModal from '../../components/MatchModal';
 import { BRAND_COLORS } from '../../config/brand';
 
+type FeedItemWithPhotos = FeedItem & { photos: string[] };
+
 export default function DiscoverScreen() {
-  const [feed, setFeed] = useState<FeedItem[]>([]);
+  const [feed, setFeed] = useState<FeedItemWithPhotos[]>([]);
   const [loading, setLoading] = useState(true);
   const [matchModalVisible, setMatchModalVisible] = useState(false);
   const [newMatchId, setNewMatchId] = useState<string | null>(null);
@@ -36,9 +38,9 @@ export default function DiscoverScreen() {
         return;
       }
 
-      // Fetch photos for each user (with error handling)
-      const feedWithPhotos = await Promise.all(
-        (data || []).map(async (item: FeedItem) => {
+      // Fetch photos for each user (with error handling) and normalize photos array
+      const feedWithPhotos: FeedItemWithPhotos[] = await Promise.all(
+        (data || []).map(async (item: FeedItem): Promise<FeedItemWithPhotos> => {
           try {
             const { data: profile } = await supabase
               .from('profiles')
@@ -48,13 +50,13 @@ export default function DiscoverScreen() {
 
             return {
               ...item,
-              photos: (profile?.photos as string[]) || [],
+              photos: Array.isArray(profile?.photos) ? profile.photos : (item.photos ?? []),
             };
           } catch (error) {
-            // If profile fetch fails, return item without photos
+            // If profile fetch fails, use item.photos or empty array
             return {
               ...item,
-              photos: [],
+              photos: item.photos ?? [],
             };
           }
         })

@@ -8,6 +8,13 @@ describe('TypeScript Types', () => {
       user_id: '123e4567-e89b-12d3-a456-426614174000',
       email: 'test@example.com',
       created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      dob: '1990-01-01',
+      gender: 'male',
+      orientation: 'straight',
+      city_id: 'city-123',
+      timezone: 'UTC',
+      last_active_at: new Date().toISOString(),
     };
 
     expect(user.user_id).toBeDefined();
@@ -19,8 +26,10 @@ describe('TypeScript Types', () => {
     const profile: Profile = {
       user_id: '123e4567-e89b-12d3-a456-426614174000',
       prompts: { headline: 'Test', bio: 'Test bio' },
+      availability: {},
       photos: ['url1', 'url2'],
       completion_pct: 100,
+      created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     };
 
@@ -49,7 +58,10 @@ describe('TypeScript Types', () => {
       proposal_id: '123e4567-e89b-12d3-a456-426614174000',
       match_id: '123e4567-e89b-12d3-a456-426614174001',
       sender_id: '123e4567-e89b-12d3-a456-426614174002',
-      windows: ['2024-01-01T10:00:00Z'],
+      windows: [
+        { start: '2024-01-01T10:00:00Z', end: '2024-01-01T11:00:00Z' },
+        { start: '2024-01-02T10:00:00Z', end: '2024-01-02T11:00:00Z' },
+      ],
       date_types: ['coffee'],
       note: 'Test note',
       status: 'active',
@@ -69,6 +81,7 @@ describe('TypeScript Types', () => {
       match_id: '123e4567-e89b-12d3-a456-426614174001',
       sender_id: '123e4567-e89b-12d3-a456-426614174002',
       content: 'Test message',
+      bytes: 12,
       created_at: new Date().toISOString(),
     };
 
