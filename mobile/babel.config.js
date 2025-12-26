@@ -20,10 +20,11 @@ module.exports = function (api) {
               .replace(/([)\]}])\s+as\s+[A-Za-z0-9_$]+(?:\.[A-Za-z0-9_$]+)*(?:<[^>]*>)?/g, '$1');
           })
           .join('\n');
-        // Parse with Flow parser explicitly
+        // Parse with Flow parser only (can't combine Flow + TS plugins)
+        // TS "as" casts are already stripped by preprocessing above
         return babelParser.parse(preprocessed, {
           sourceType: 'module',
-          plugins: ['flow', 'flowComments', 'jsx', 'typescript'],
+          plugins: ['flow', 'flowComments', 'jsx'],
           allowImportExportEverywhere: true,
           allowReturnOutsideFunction: true,
         });
