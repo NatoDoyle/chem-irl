@@ -1,7 +1,7 @@
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Proposal } from '../lib/types';
 import { BRAND_COLORS } from '../config/brand';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase/client';
 import { Alert } from 'react-native';
 
@@ -19,8 +19,45 @@ export default function ProposalCard({
   onNoneSuits,
 }: ProposalCardProps) {
   const [loading, setLoading] = useState(false);
-  const isExpired = new Date(proposal.expires_at) < new Date();
+  const [isExpired, setIsExpired] = useState(() => new Date(proposal.expires_at) < new Date());
   const isConfirmed = proposal.status === 'confirmed';
+
+  // Auto-update expiry status every minute
+  useEffect(() => {
+    // Check immediately if already expired
+    if (isExpired) {
+      return;
+    }
+
+    // Set up interval to check expiry every minute
+    const interval = setInterval(() => {
+      const now = new Date();
+      const expiresAt = new Date(proposal.expires_at);
+      if (expiresAt < now && !isExpired) {
+        setIsExpired(true);
+      }
+    }, 60000); // Check every 60 seconds (1 minute)
+
+    // Also calculate when it will expire and set a timeout for immediate update
+    const expiresAt = new Date(proposal.expires_at);
+    const now = new Date();
+    const msUntilExpiry = expiresAt.getTime() - now.getTime();
+
+    let timeoutId: NodeJS.Timeout | null = null;
+    if (msUntilExpiry > 0 && msUntilExpiry < 60000) {
+      // If it expires within the next minute, set a timeout for immediate update
+      timeoutId = setTimeout(() => {
+        setIsExpired(true);
+      }, msUntilExpiry);
+    }
+
+    return () => {
+      clearInterval(interval);
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+    };
+  }, [proposal.expires_at, isExpired]);
 
   const handleConfirm = async (chosenWindow: { start: string; end: string }) => {
     setLoading(true);

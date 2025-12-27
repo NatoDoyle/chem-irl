@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -122,6 +122,53 @@ export default function MatchDetailScreen() {
   useEffect(() => {
     loadMatchData();
   }, [loadMatchData]);
+
+  // Auto-update proposal expiry status every minute
+  // This ensures that if a proposal expires while user is viewing the screen,
+  // the UI updates to show the expired state
+  const proposalsRef = useRef(proposals);
+  proposalsRef.current = proposals;
+
+  useEffect(() => {
+    const checkExpiry = () => {
+      const currentProposals = proposalsRef.current;
+      if (!currentProposals.length) {
+        return;
+      }
+
+      const now = new Date();
+      let hasChanges = false;
+      const updatedProposals = currentProposals.map((proposal) => {
+        // Only check active proposals
+        if (proposal.status === 'active') {
+          const expiresAt = new Date(proposal.expires_at);
+          if (expiresAt < now) {
+            hasChanges = true;
+            // Update status locally (DB update will happen on next load or via server-side trigger)
+            return { ...proposal, status: 'expired' as const };
+          }
+        }
+        return proposal;
+      });
+
+      if (hasChanges) {
+        setProposals(updatedProposals);
+        // Update hasActiveProposal state
+        const activeProposal = updatedProposals.find((p) => p.status === 'active');
+        setHasActiveProposal(!!activeProposal);
+      }
+    };
+
+    // Check immediately
+    checkExpiry();
+
+    // Set up interval to check every minute
+    const interval = setInterval(checkExpiry, 60000); // 60 seconds = 1 minute
+
+    return () => {
+      clearInterval(interval);
+    };
+  }, []); // Empty deps - only run once on mount
 
   const handlePropose = () => {
     navigation.navigate('Propose', { matchId });
