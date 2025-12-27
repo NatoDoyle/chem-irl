@@ -33,6 +33,7 @@ Chem IRL is a dating app that optimizes time-to-date through structured proposal
 ### Tech Stack
 
 **Mobile App**
+
 - React Native (Expo SDK 54)
 - TypeScript
 - React Navigation v7
@@ -40,12 +41,14 @@ Chem IRL is a dating app that optimizes time-to-date through structured proposal
 - Expo SecureStore (auth storage)
 
 **Website**
+
 - Next.js 16 (Static Export)
 - TypeScript
 - Tailwind CSS
 - Deployed to Vercel
 
 **Backend**
+
 - Supabase (PostgreSQL)
 - Supabase Auth (Magic Links)
 - Supabase Realtime (Chat)
@@ -53,6 +56,7 @@ Chem IRL is a dating app that optimizes time-to-date through structured proposal
 - RPC Functions (Business Logic)
 
 **Third-Party Services**
+
 - Stripe (Payments)
 - Postmark (Email)
 - PostHog (Analytics)
@@ -211,13 +215,15 @@ npm install
 ```
 
 Create `mobile/.env`:
+
 ```env
 EXPO_PUBLIC_SUPABASE_URL=your_supabase_project_url
-EXPO_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+EXPO_PUBLIC_SUPABASE_KEY=your_supabase_anon_key
 EXPO_PUBLIC_APP_URL=https://chemirl.app
 ```
 
 Run the app:
+
 ```bash
 npm start
 # Then scan QR code with Expo Go app
@@ -231,6 +237,7 @@ npm install
 ```
 
 Create `web/.env.local` (for build-time constants):
+
 ```env
 NEXT_PUBLIC_APP_NAME=Chem IRL
 NEXT_PUBLIC_DOMAIN=chemirl.app
@@ -238,6 +245,7 @@ NEXT_PUBLIC_APP_URL=https://chemirl.app
 ```
 
 Build static site:
+
 ```bash
 npm run build
 npm run start
@@ -247,16 +255,17 @@ npm run start
 
 1. Create Supabase project at https://supabase.com
 2. Run SQL files in order (in Supabase SQL Editor):
+
    ```sql
    -- 1. Schema
    \i db/schema.sql
-   
+
    -- 2. RLS Policies
    \i db/rls.sql
-   
+
    -- 3. KPI Views
    \i db/kpi_views.sql
-   
+
    -- 4. Scoring Functions
    \i db/scoring.sql
    ```
@@ -273,16 +282,19 @@ npm run start
 ### 5. Environment Variables
 
 **Mobile App** (`mobile/.env`):
+
 - `EXPO_PUBLIC_SUPABASE_URL`
 - `EXPO_PUBLIC_SUPABASE_KEY` (publishable anon key)
 - `EXPO_PUBLIC_APP_URL`
 
 **Website** (`web/.env.local`):
+
 - `NEXT_PUBLIC_APP_NAME`
 - `NEXT_PUBLIC_DOMAIN`
 - `NEXT_PUBLIC_APP_URL`
 
 **Supabase** (for webhooks/cron - if using):
+
 - `SUPABASE_SERVICE_ROLE_KEY`
 - `POSTMARK_API_TOKEN`
 - `STRIPE_SECRET_KEY`
@@ -326,15 +338,18 @@ App.tsx (Root)
 ### Key Screens
 
 #### Auth Flow
+
 - **WelcomeScreen**: Landing page with "Get Started" button
 - **LoginScreen**: Email input, sends magic link
 - **MagicLinkSentScreen**: Confirmation message
 
 #### Onboarding
+
 - **ProfileSetupScreen**: Headline and bio input
 - **PhotosScreen**: Photo upload (min 1, max 6)
 
 #### Main App
+
 - **DiscoverScreen**: Discovery feed with card stack
 - **MatchesScreen**: List of all matches
 - **MatchDetailScreen**: Match details, proposals, actions
@@ -352,40 +367,45 @@ App.tsx (Root)
 ### Supabase Integration
 
 #### Authentication
+
 ```typescript
-import { supabase } from './src/lib/supabase/client';
+import { supabase } from "./src/lib/supabase/client";
 
 // Send magic link
 await supabase.auth.signInWithOtp({
-  email: 'user@example.com',
+  email: "user@example.com",
   options: {
-    emailRedirectTo: Linking.createURL('/auth/callback'),
+    emailRedirectTo: Linking.createURL("/auth/callback"),
   },
 });
 
 // Get session
-const { data: { session } } = await supabase.auth.getSession();
+const {
+  data: { session },
+} = await supabase.auth.getSession();
 
 // Sign out
 await supabase.auth.signOut();
 ```
 
 #### RPC Functions
+
 ```typescript
 // Get discovery feed
-const { data, error } = await supabase.rpc('get_discovery_feed', {
+const { data, error } = await supabase.rpc("get_discovery_feed", {
   p_viewer: userId,
   p_limit: 20,
 });
 
 // Like user and check for match
-const { data, error } = await supabase.rpc('create_like_and_check_match', {
+const { data, error } = await supabase.rpc("create_like_and_check_match", {
   p_liker: userId,
   p_likee: targetUserId,
 });
 ```
 
 #### Direct Queries
+
 ```typescript
 // Insert proposal
 const { error } = await supabase.from('proposals').insert({
@@ -407,20 +427,25 @@ const { data } = await supabase
 ```
 
 #### Realtime Subscriptions
+
 ```typescript
 // Subscribe to messages
 const channel = supabase
   .channel(`match:${matchId}`)
-  .on('postgres_changes', {
-    event: 'INSERT',
-    schema: 'public',
-    table: 'messages',
-    filter: `match_id=eq.${matchId}`,
-  }, (payload) => {
-    // Handle new message
-    const newMessage = payload.new as Message;
-    setMessages(prev => [...prev, newMessage]);
-  })
+  .on(
+    "postgres_changes",
+    {
+      event: "INSERT",
+      schema: "public",
+      table: "messages",
+      filter: `match_id=eq.${matchId}`,
+    },
+    (payload) => {
+      // Handle new message
+      const newMessage = payload.new as Message;
+      setMessages((prev) => [...prev, newMessage]);
+    },
+  )
   .subscribe();
 
 // Cleanup
@@ -430,21 +455,22 @@ return () => {
 ```
 
 #### Storage
+
 ```typescript
 // Upload photo
 const { data, error } = await supabase.storage
-  .from('profiles')
+  .from("profiles")
   .upload(`${userId}/${fileName}`, blob);
 
 // Get public URL
-const { data: { publicUrl } } = supabase.storage
-  .from('profiles')
-  .getPublicUrl(fileName);
+const {
+  data: { publicUrl },
+} = supabase.storage.from("profiles").getPublicUrl(fileName);
 ```
 
 ### Deep Linking
 
-Magic links use the scheme `chemirl://auth/callback`. Configured in `app.json`:
+Magic links use the scheme `chemirl:///auth/callback` (note the triple slash). Configured in `app.json`:
 
 ```json
 {
@@ -455,6 +481,7 @@ Magic links use the scheme `chemirl://auth/callback`. Configured in `app.json`:
 ```
 
 The app handles deep links in `App.tsx`:
+
 - Initial URL on app open
 - URL changes while app is running
 
@@ -475,9 +502,10 @@ The website is now a **static marketing site only**. It does not contain any pro
 ### Configuration
 
 Static export configured in `next.config.ts`:
+
 ```typescript
 const nextConfig = {
-  output: 'export',
+  output: "export",
   images: { unoptimized: true },
 };
 ```
@@ -485,6 +513,7 @@ const nextConfig = {
 ### Deployment
 
 Deploy to Vercel or any static hosting:
+
 ```bash
 cd web
 npm run build
@@ -498,6 +527,7 @@ npm run build
 ### Schema Overview
 
 **Core Tables**
+
 - `users` - User accounts (email, phone, dob, gender, orientation)
 - `profiles` - Extended profiles (prompts, photos, availability, completion_pct)
 - `likes` - Like relationships (liker_id, likee_id)
@@ -507,62 +537,77 @@ npm run build
 - `messages` - Chat messages (match_id, sender_id, content)
 
 **Scoring & Metrics**
+
 - `scores_daily` - Daily Action Speed, Profile Quality, Reliability scores
 - `surveys` - Post-date feedback
 
 **Monetization**
+
 - `purchases` - Stripe transactions
 - `credits_ledger` - Credit usage tracking
 
 **Safety**
+
 - `reports` - User reports
 - `enforcements` - Moderation actions
 
 ### RPC Functions
 
 #### `get_discovery_feed(p_viewer UUID, p_limit INTEGER)`
+
 Returns discovery candidates for a user, ordered by scores.
 
 **Returns:**
+
 - `user_id`, `headline`, `bio`, `availability_summary`
 - `action_speed`, `profile_quality`, `reliability`
 
 **Filters:**
+
 - Excludes already liked users
 - Excludes existing matches
 - Only profiles with `completion_pct >= 80`
 
 #### `create_like_and_check_match(p_liker UUID, p_likee UUID)`
+
 Creates a like and checks for mutual like (match).
 
 **Returns:**
+
 - `like_id`
 - `matched` (boolean)
 - `match_id` (if matched)
 
 **Actions:**
+
 - Inserts like (or returns existing)
 - Checks for mutual like
 - Creates match if mutual like exists
 
 #### `get_user_matches(user_uuid UUID)`
+
 Returns all matches for a user.
 
 **Returns:**
+
 - `match_id`, `other_user_id`, `other_user_email`, `created_at`
 
 #### `update_action_speed(p_user_id UUID, p_event_type TEXT, p_metadata JSONB)`
+
 Updates Action Speed score based on event.
 
 #### `update_profile_quality(p_user_id UUID, p_event_type TEXT, p_metadata JSONB)`
+
 Updates Profile Quality score based on event.
 
 #### `update_reliability(p_user_id UUID, p_event_type TEXT, p_metadata JSONB)`
+
 Updates Reliability score based on event.
 
 ### Row Level Security (RLS)
 
 All tables have RLS enabled. Policies ensure:
+
 - Users can only see their own data
 - Users can only see data from their matches
 - Users can only insert/update their own data
@@ -577,12 +622,14 @@ All tables have RLS enabled. Policies ensure:
 The mobile app uses Supabase directly. No REST API layer.
 
 #### Authentication
+
 - `supabase.auth.signInWithOtp()` - Send magic link
 - `supabase.auth.getSession()` - Get current session
 - `supabase.auth.signOut()` - Sign out
 - `supabase.auth.onAuthStateChange()` - Listen for auth changes
 
 #### RPC Functions
+
 - `supabase.rpc('get_discovery_feed', { p_viewer, p_limit })`
 - `supabase.rpc('create_like_and_check_match', { p_liker, p_likee })`
 - `supabase.rpc('get_user_matches', { p_user_id })`
@@ -591,6 +638,7 @@ The mobile app uses Supabase directly. No REST API layer.
 - `supabase.rpc('update_reliability', { p_user_id, p_event_type, p_metadata })`
 
 #### Direct Queries
+
 - `supabase.from('profiles').select().eq('user_id', id)`
 - `supabase.from('matches').select().or('user_a.eq.id,user_b.eq.id')`
 - `supabase.from('proposals').insert({ ... })`
@@ -598,15 +646,18 @@ The mobile app uses Supabase directly. No REST API layer.
 - `supabase.from('messages').insert({ ... })`
 
 #### Realtime
+
 - `supabase.channel('match:${matchId}').on('postgres_changes', ...).subscribe()`
 
 #### Storage
+
 - `supabase.storage.from('profiles').upload(path, blob)`
 - `supabase.storage.from('profiles').getPublicUrl(path)`
 
 ### Webhooks (If Needed)
 
 If you need webhooks for Stripe, Postmark, or cron jobs, they should be deployed separately (not part of static site). Options:
+
 1. Supabase Edge Functions
 2. Separate Next.js API routes (deployed to Vercel)
 3. Standalone serverless functions
@@ -622,6 +673,7 @@ If you need webhooks for Stripe, Postmark, or cron jobs, they should be deployed
 3. Update TypeScript types if needed
 
 Example:
+
 ```typescript
 // mobile/src/screens/settings/SettingsScreen.tsx
 export default function SettingsScreen() {
@@ -639,6 +691,7 @@ export default function SettingsScreen() {
 3. Call from mobile app
 
 Example:
+
 ```sql
 CREATE OR REPLACE FUNCTION my_new_function(p_param UUID)
 RETURNS TABLE(...)
@@ -659,14 +712,15 @@ $$;
 ### Error Handling
 
 Use centralized error utilities:
+
 ```typescript
-import { formatError, getUserErrorMessage } from '../lib/errors';
+import { formatError, getUserErrorMessage } from "../lib/errors";
 
 try {
   // ...
 } catch (error) {
   const message = getUserErrorMessage(error);
-  Alert.alert('Error', message);
+  Alert.alert("Error", message);
 }
 ```
 
@@ -690,6 +744,7 @@ cd web && npm run build
 ### Mobile App
 
 #### Development
+
 ```bash
 cd mobile
 npm start
@@ -699,6 +754,7 @@ npm start
 #### Production Build
 
 **Using EAS Build:**
+
 ```bash
 # Install EAS CLI
 npm install -g eas-cli
@@ -720,6 +776,7 @@ eas submit --platform android
 
 **Environment Variables:**
 Set in EAS dashboard or `eas.json`:
+
 - `EXPO_PUBLIC_SUPABASE_URL`
 - `EXPO_PUBLIC_SUPABASE_KEY` (publishable anon key)
 - `EXPO_PUBLIC_APP_URL`
@@ -727,6 +784,7 @@ Set in EAS dashboard or `eas.json`:
 ### Website
 
 #### Vercel (Recommended)
+
 ```bash
 cd web
 vercel
@@ -735,6 +793,7 @@ vercel
 Or connect GitHub repo to Vercel dashboard.
 
 #### Other Static Hosting
+
 ```bash
 cd web
 npm run build
@@ -746,6 +805,7 @@ npm run build
 Database is managed in Supabase. Migrations are run manually in SQL Editor.
 
 **Migration Process:**
+
 1. Update SQL files in `web/db/`
 2. Run in Supabase SQL Editor
 3. Test in staging first
@@ -758,17 +818,20 @@ Database is managed in Supabase. Migrations are run manually in SQL Editor.
 ### Manual Testing Checklist
 
 **Auth Flow**
+
 - [ ] Send magic link
 - [ ] Click link in email
 - [ ] App opens and authenticates
 - [ ] Session persists on app restart
 
 **Onboarding**
+
 - [ ] Profile setup (headline, bio)
 - [ ] Photo upload (min 1, max 6)
 - [ ] Profile completion detection
 
 **Discovery**
+
 - [ ] Feed loads
 - [ ] Swipe right (like)
 - [ ] Swipe left (pass)
@@ -777,6 +840,7 @@ Database is managed in Supabase. Migrations are run manually in SQL Editor.
 - [ ] Match notification appears
 
 **Matches**
+
 - [ ] Matches list loads
 - [ ] Match detail shows proposals
 - [ ] Create proposal (2-3 windows)
@@ -784,6 +848,7 @@ Database is managed in Supabase. Migrations are run manually in SQL Editor.
 - [ ] "None suits" flow
 
 **Chat**
+
 - [ ] Chat unlocks after confirm
 - [ ] Send message
 - [ ] Receive message (realtime)
@@ -792,6 +857,7 @@ Database is managed in Supabase. Migrations are run manually in SQL Editor.
 ### Automated Testing
 
 Not yet implemented. Consider adding:
+
 - Unit tests (Jest)
 - Integration tests (Detox)
 - E2E tests (Maestro)
@@ -803,26 +869,31 @@ Not yet implemented. Consider adding:
 ### Common Issues
 
 **Mobile App Won't Start**
+
 - Check `.env` file exists and has correct values
 - Run `npm install` again
 - Clear Expo cache: `expo start -c`
 
 **Auth Not Working**
+
 - Check Supabase URL and keys
 - Verify deep linking scheme in `app.json`
 - Check email redirect URL in Supabase Auth settings
 
 **Database Errors**
+
 - Verify RLS policies are correct
 - Check user has proper permissions
 - Verify RPC functions exist
 
 **Realtime Not Working**
+
 - Enable Realtime for `messages` table in Supabase
 - Check subscription is active
 - Verify match_id filter is correct
 
 **Photo Upload Fails**
+
 - Check Storage bucket exists (`profiles`)
 - Verify bucket permissions
 - Check file size limits
@@ -832,17 +903,20 @@ Not yet implemented. Consider adding:
 ## Next Steps
 
 ### Immediate
+
 1. Test all flows end-to-end
 2. Fix any bugs found
 3. Prepare for App Store submission
 
 ### Short Term
+
 1. Add proper date/time picker
 2. Implement push notifications
 3. Add analytics (PostHog)
 4. Improve error handling
 
 ### Long Term
+
 1. Add profile editing
 2. Implement availability preferences
 3. Add reporting/blocking in mobile
@@ -854,12 +928,14 @@ Not yet implemented. Consider adding:
 ## Resources
 
 ### Documentation
+
 - [Expo Documentation](https://docs.expo.dev/)
 - [React Navigation](https://reactnavigation.org/)
 - [Supabase React Native](https://supabase.com/docs/guides/getting-started/tutorials/with-expo-react-native)
 - [Supabase RPC Functions](https://supabase.com/docs/guides/database/functions)
 
 ### Related Files
+
 - `ARCHITECTURE_PIVOT_PLAN.md` - Architecture decision document
 - `mobile/README.md` - Mobile app quick start
 - `web/README.md` - Website documentation
@@ -872,6 +948,7 @@ Not yet implemented. Consider adding:
 ## Support
 
 For issues or questions:
+
 1. Check this documentation
 2. Review error messages
 3. Check Supabase logs
@@ -881,4 +958,3 @@ For issues or questions:
 
 **Last Updated**: After App-First Pivot (Phase 2 Complete)
 **Version**: 1.0.0 (MVP)
-

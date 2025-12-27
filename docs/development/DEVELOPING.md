@@ -113,6 +113,7 @@ Run these SQL files in Supabase SQL Editor in this exact order:
 5. Wait for completion
 
 **Quick copy-paste order:**
+
 ```bash
 # Files to run in order:
 1. db/schema.sql
@@ -139,6 +140,7 @@ npm install
    - Copy **Project URL** and **anon public** key
 
 2. Create `.env` file:
+
    ```bash
    cp .env.example .env
    ```
@@ -146,7 +148,7 @@ npm install
 3. Edit `.env` with your values:
    ```env
    EXPO_PUBLIC_SUPABASE_URL=https://your-project-id.supabase.co
-   EXPO_PUBLIC_SUPABASE_ANON_KEY=your_anon_key_here
+   EXPO_PUBLIC_SUPABASE_KEY=your_anon_key_here
    EXPO_PUBLIC_APP_URL=https://chemirl.app
    ```
 
@@ -157,16 +159,19 @@ npm start
 ```
 
 This will:
+
 - Start Metro bundler
 - Show QR code in terminal
 - Open Expo DevTools in browser
 
 **To test on device:**
+
 1. Install **Expo Go** app on your phone (iOS/Android)
 2. Scan QR code from terminal
 3. App loads on your device
 
 **To test in simulator:**
+
 ```bash
 npm run ios      # iOS simulator (macOS only)
 npm run android  # Android emulator
@@ -193,6 +198,7 @@ cp .env.example .env.local
 ```
 
 Edit `.env.local` if you want to override defaults:
+
 ```env
 NEXT_PUBLIC_APP_NAME=Chem IRL
 NEXT_PUBLIC_DOMAIN=chemirl.app
@@ -207,6 +213,7 @@ npm run dev
 Visit http://localhost:3000
 
 **Build static site:**
+
 ```bash
 npm run build
 ```
@@ -242,25 +249,30 @@ npm run dev
 ## Troubleshooting
 
 ### Mobile: "Unable to connect to Supabase"
+
 - Check `.env` file exists and has correct values
 - Verify Supabase project is active
 - Restart Expo dev server: Press `r` in terminal or restart `npm start`
 
 ### Mobile: "Deep linking not working"
+
 - Verify redirect URL `chemirl://auth/callback` is in Supabase Auth settings
 - Test on physical device (not simulator/emulator)
 
 ### Mobile: "Photo upload fails"
+
 - Check `profiles` bucket exists in Supabase Storage
 - Verify bucket is public
 - Check storage RLS policies allow authenticated uploads
 
 ### Database: "relation already exists" errors
+
 - This is normal if running migrations multiple times
 - Most errors can be ignored (tables already exist)
 - If you need a clean slate, delete tables and re-run
 
 ### Web: "Module not found" errors
+
 - Run `npm install` in `web/` directory
 - Delete `node_modules` and `package-lock.json`, then `npm install` again
 
@@ -275,4 +287,3 @@ After setup is complete:
 3. ✅ Test discovery feed
 4. ✅ Test matches and proposals
 5. ✅ Review [DOCUMENTATION.md](../../DOCUMENTATION.md) for architecture details
-
