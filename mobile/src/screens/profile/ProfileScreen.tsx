@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
+import { compressImage } from '../../lib/imageCompression';
 import { supabase } from '../../lib/supabase/client';
 import { BRAND_COLORS } from '../../config/brand';
 import { deletePhotoFromStorage } from '../../lib/storage';
@@ -226,10 +227,14 @@ export default function ProfileScreen() {
         return;
       }
 
-      // Convert URI to blob
-      const response = await fetch(uri);
+      // Compress image before upload
+      const compressedUri = await compressImage(uri);
+
+      // Convert compressed URI to blob
+      const response = await fetch(compressedUri);
       const blob = await response.blob();
-      const fileExt = uri.split('.').pop();
+      // Use compressed URI for filename extension
+      const fileExt = 'jpg'; // Always JPEG after compression
       const fileName = `${user.id}/${Date.now()}.${fileExt}`;
 
       // Upload to Supabase Storage
