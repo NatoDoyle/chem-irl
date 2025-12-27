@@ -39,6 +39,11 @@ export default function ChatScreen() {
   const [queuedMessages, setQueuedMessages] = useState<Map<string, QueuedMessage>>(new Map());
   // Throttle message sending to prevent spam (min 500ms between messages)
   const sendThrottleRef = useRef(createThrottle(() => {}, 500));
+  // Typing indicator state
+  const [isOtherUserTyping, setIsOtherUserTyping] = useState(false);
+  const typingChannelRef = useRef<any>(null);
+  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const currentUserIdRef = useRef<string | null>(null);
 
   const loadMessages = useCallback(async () => {
     try {
@@ -63,7 +68,16 @@ export default function ChatScreen() {
     }
   }, [matchId]);
 
-  const subscribeToMessages = useCallback(() => {
+  const subscribeToMessages = useCallback(async () => {
+    // Get current user ID for typing indicator
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (user) {
+      currentUserIdRef.current = user.id;
+    }
+
+    // Subscribe to message changes
     const channel = supabase
       .channel(`match:${matchId}`)
       .on(
@@ -85,8 +99,66 @@ export default function ChatScreen() {
       )
       .subscribe();
 
+    // Subscribe to typing indicators using presence
+    if (user) {
+      const typingChannel = supabase.channel(`typing:${matchId}`, {
+        config: {
+          presence: {
+            key: user.id,
+          },
+        },
+      });
+
+      // Track local typing state
+      typingChannel
+        .on('presence', { event: 'sync' }, () => {
+          const state = typingChannel.presenceState();
+          // Check if other user is typing (any presence entry that's not current user)
+          let otherUserTyping = false;
+          Object.keys(state).forEach((key) => {
+            if (key !== user.id) {
+              const presences = state[key] as { typing?: boolean }[];
+              if (presences.some((p) => p.typing === true)) {
+                otherUserTyping = true;
+              }
+            }
+          });
+          setIsOtherUserTyping(otherUserTyping);
+        })
+        .on('presence', { event: 'join' }, ({ key, newPresences }) => {
+          // Another user joined - check if they're typing
+          if (key !== user.id) {
+            const isTyping = newPresences.some((p: any) => p.typing === true);
+            if (isTyping) {
+              setIsOtherUserTyping(true);
+            }
+          }
+        })
+        .on('presence', { event: 'leave' }, ({ key }) => {
+          // User left - stop showing typing indicator if it was them
+          if (key !== user.id) {
+            setIsOtherUserTyping(false);
+          }
+        })
+        .subscribe(async (status) => {
+          if (status === 'SUBSCRIBED') {
+            // Set initial presence (not typing)
+            await typingChannel.track({
+              typing: false,
+              userId: user.id,
+            });
+          }
+        });
+
+      typingChannelRef.current = typingChannel;
+    }
+
     return () => {
       supabase.removeChannel(channel);
+      if (typingChannelRef.current) {
+        supabase.removeChannel(typingChannelRef.current);
+        typingChannelRef.current = null;
+      }
     };
   }, [matchId]);
 
@@ -122,8 +194,21 @@ export default function ChatScreen() {
   useEffect(() => {
     loadMessages();
     updateQueueSize();
-    const unsubscribe = subscribeToMessages();
-    return unsubscribe;
+    let unsubscribe: (() => void) | null = null;
+
+    subscribeToMessages().then((cleanup) => {
+      unsubscribe = cleanup;
+    });
+
+    // Cleanup typing timeout on unmount
+    return () => {
+      if (unsubscribe) {
+        unsubscribe();
+      }
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
+      }
+    };
   }, [loadMessages, subscribeToMessages, updateQueueSize]);
 
   // Re-subscribe to realtime when app comes to foreground
@@ -143,8 +228,54 @@ export default function ChatScreen() {
     };
   }, [loadMessages]);
 
+  // Track typing state and broadcast to presence channel
+  const handleTypingChange = useCallback((text: string) => {
+    setNewMessage(text);
+
+    // Clear existing timeout
+    if (typingTimeoutRef.current) {
+      clearTimeout(typingTimeoutRef.current);
+    }
+
+    // If user is typing, broadcast typing state
+    if (text.trim().length > 0 && typingChannelRef.current) {
+      typingChannelRef.current.track({
+        typing: true,
+        userId: currentUserIdRef.current,
+      });
+
+      // Stop typing indicator after 3 seconds of no input
+      typingTimeoutRef.current = setTimeout(() => {
+        if (typingChannelRef.current) {
+          typingChannelRef.current.track({
+            typing: false,
+            userId: currentUserIdRef.current,
+          });
+        }
+      }, 3000);
+    } else if (typingChannelRef.current) {
+      // User cleared input - stop typing indicator
+      typingChannelRef.current.track({
+        typing: false,
+        userId: currentUserIdRef.current,
+      });
+    }
+  }, []);
+
   const handleSend = async () => {
     if (!newMessage.trim()) return;
+
+    // Stop typing indicator when sending
+    if (typingChannelRef.current) {
+      typingChannelRef.current.track({
+        typing: false,
+        userId: currentUserIdRef.current,
+      });
+    }
+    if (typingTimeoutRef.current) {
+      clearTimeout(typingTimeoutRef.current);
+      typingTimeoutRef.current = null;
+    }
 
     // Prevent rapid successive messages (rate limiting)
     if (sendThrottleRef.current.isThrottled()) {
@@ -247,6 +378,7 @@ export default function ChatScreen() {
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
       setCurrentUserId(user?.id || null);
+      currentUserIdRef.current = user?.id || null;
     });
   }, []);
 
@@ -311,14 +443,22 @@ export default function ChatScreen() {
           <Text style={styles.emptySubtext}>Start the conversation!</Text>
         </View>
       ) : (
-        <FlatList
-          ref={flatListRef}
-          data={allMessages}
-          keyExtractor={(item) => item.message_id}
-          renderItem={renderMessage}
-          contentContainerStyle={styles.messagesList}
-          onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: true })}
-        />
+        <>
+          <FlatList
+            ref={flatListRef}
+            data={allMessages}
+            keyExtractor={(item) => item.message_id}
+            renderItem={renderMessage}
+            contentContainerStyle={styles.messagesList}
+            onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: true })}
+          />
+          {/* Typing indicator */}
+          {isOtherUserTyping && (
+            <View style={styles.typingIndicator}>
+              <Text style={styles.typingText}>Typing...</Text>
+            </View>
+          )}
+        </>
       )}
       {queueSize > 0 && (
         <View style={styles.queueBanner}>
@@ -334,7 +474,7 @@ export default function ChatScreen() {
             placeholder="Type a message..."
             placeholderTextColor={BRAND_COLORS.text[600]}
             value={newMessage}
-            onChangeText={setNewMessage}
+            onChangeText={handleTypingChange}
             multiline
             maxLength={500}
             editable={!sending}
@@ -471,5 +611,15 @@ const styles = StyleSheet.create({
     fontStyle: 'italic',
     color: BRAND_COLORS.text[600],
     marginTop: 4,
+  },
+  typingIndicator: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    backgroundColor: BRAND_COLORS.background[50],
+  },
+  typingText: {
+    fontSize: 14,
+    fontStyle: 'italic',
+    color: BRAND_COLORS.text[600],
   },
 });
