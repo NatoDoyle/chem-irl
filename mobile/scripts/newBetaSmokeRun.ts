@@ -168,7 +168,7 @@ try {
 - [ ] \`npm run use:staging\` executed
 - [ ] Expo restarted after env switch
 - [ ] \`npm run verify:staging\` passed
-- [ ] Confirm detected environment: **${detectedEnv}**
+- [ ] Confirm detected environment: **${detectedEnv}**${detectedEnv === 'unknown' ? '\n  Hint: create .env.staging/.env.production or run `npm run use:staging` / `npm run use:production`' : ''}
 - [ ] Confirm Supabase URL host: **${supabaseHost}**
 - [ ] Phones installed using Expo Go
 - [ ] Phones installed using Dev build
