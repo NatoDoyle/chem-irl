@@ -16,6 +16,8 @@ import { supabase } from '../../lib/supabase/client';
 import { Match } from '../../lib/types';
 import { BRAND_COLORS } from '../../config/brand';
 import { getErrorAlert } from '../../lib/errors';
+import { createDebounce } from '../../lib/debounce';
+import type { RealtimeChannel } from '@supabase/supabase-js';
 
 const REFRESH_THROTTLE_MS = 10000; // 10 seconds - minimum time between auto-refreshes
 const REALTIME_DEBOUNCE_MS = 750; // 750ms debounce for realtime subscription callbacks
@@ -42,8 +44,10 @@ export default function MatchesScreen() {
   const [error, setError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const lastFetchTimeRef = useRef<number>(0);
-  const debounceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const userIdRef = useRef<string | null>(null);
+  const channelsRef = useRef<RealtimeChannel[]>([]);
+  const isMountedRef = useRef<boolean>(true);
+  const debouncedRefreshRef = useRef<ReturnType<typeof createDebounce> | null>(null);
 
   const loadMatches = useCallback(
     async (skipLoadingState: boolean = false) => {
@@ -126,6 +130,8 @@ export default function MatchesScreen() {
   // This provides instant updates when a new match is created, even when user is already on the screen.
   // We use focus-refresh as a fallback for when realtime fails or user switches tabs.
   useEffect(() => {
+    isMountedRef.current = true;
+
     // Wait for initial load to complete and get user ID
     if (!userIdRef.current) {
       return;
@@ -135,19 +141,18 @@ export default function MatchesScreen() {
 
     // Debounced callback to refresh matches list on realtime events
     // Debouncing prevents multiple rapid fetches during bursts (e.g., multiple matches created quickly)
-    const debouncedRefresh = () => {
-      if (debounceTimeoutRef.current) {
-        clearTimeout(debounceTimeoutRef.current);
-      }
-      debounceTimeoutRef.current = setTimeout(() => {
+    // Guard: only execute if component is still mounted
+    debouncedRefreshRef.current = createDebounce(() => {
+      if (isMountedRef.current) {
         loadMatches(true); // Skip loading state during realtime updates
-      }, REALTIME_DEBOUNCE_MS);
-    };
+      }
+    }, REALTIME_DEBOUNCE_MS);
 
     // Subscribe to matches table changes
     // Filter: matches where current user is either user_a or user_b
     // Since Supabase realtime filters can't easily do OR conditions, we subscribe to both
     // and deduplicate via debouncing
+    // Column names verified: matches table has user_a and user_b columns (db/schema.sql)
     const channel = supabase
       .channel(`matches:${userId}`)
       .on(
@@ -159,7 +164,7 @@ export default function MatchesScreen() {
           filter: `user_a=eq.${userId}`,
         },
         () => {
-          debouncedRefresh();
+          debouncedRefreshRef.current?.execute();
         }
       )
       .on(
@@ -171,7 +176,7 @@ export default function MatchesScreen() {
           filter: `user_b=eq.${userId}`,
         },
         () => {
-          debouncedRefresh();
+          debouncedRefreshRef.current?.execute();
         }
       )
       .on(
@@ -183,7 +188,7 @@ export default function MatchesScreen() {
           filter: `user_a=eq.${userId}`,
         },
         () => {
-          debouncedRefresh();
+          debouncedRefreshRef.current?.execute();
         }
       )
       .on(
@@ -195,17 +200,29 @@ export default function MatchesScreen() {
           filter: `user_b=eq.${userId}`,
         },
         () => {
-          debouncedRefresh();
+          debouncedRefreshRef.current?.execute();
         }
       )
       .subscribe();
 
+    // Track channel for cleanup
+    channelsRef.current.push(channel);
+
     // Cleanup on unmount
     return () => {
-      if (debounceTimeoutRef.current) {
-        clearTimeout(debounceTimeoutRef.current);
+      isMountedRef.current = false;
+
+      // Cancel any pending debounced callbacks
+      if (debouncedRefreshRef.current) {
+        debouncedRefreshRef.current.cancel();
+        debouncedRefreshRef.current = null;
       }
-      supabase.removeChannel(channel);
+
+      // Remove all tracked channels
+      channelsRef.current.forEach((ch) => {
+        supabase.removeChannel(ch);
+      });
+      channelsRef.current = [];
     };
   }, [loadMatches]);
 
