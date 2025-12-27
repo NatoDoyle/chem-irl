@@ -24,11 +24,19 @@ export default function MatchModal({ visible, matchId, onClose }: MatchModalProp
   const handleViewMatch = () => {
     onClose();
     if (matchId) {
+      // Navigate to Matches tab first to trigger refresh, then to match detail
       navigation.navigate('MatchesStack', {
         screen: 'MatchDetail',
         params: { matchId },
       });
     }
+  };
+
+  const handleContinueBrowsing = () => {
+    onClose();
+    // Navigate to Matches tab to trigger refresh so match appears in list
+    // User can continue browsing or check matches later
+    navigation.navigate('MatchesStack', { screen: 'MatchesList' });
   };
 
   return (
@@ -40,7 +48,10 @@ export default function MatchModal({ visible, matchId, onClose }: MatchModalProp
             You both liked each other. Start a conversation and propose a time to meet!
           </Text>
           <View style={styles.buttonContainer}>
-            <TouchableOpacity style={[styles.button, styles.secondaryButton]} onPress={onClose}>
+            <TouchableOpacity
+              style={[styles.button, styles.secondaryButton]}
+              onPress={handleContinueBrowsing}
+            >
               <Text style={styles.secondaryButtonText}>Continue Browsing</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.button} onPress={handleViewMatch}>

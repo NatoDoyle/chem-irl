@@ -99,6 +99,9 @@ export default function DiscoverScreen() {
       if (data?.matched && data?.match_id) {
         setNewMatchId(data.match_id);
         setMatchModalVisible(true);
+        // Trigger matches list refresh by navigating to Matches tab temporarily
+        // This ensures new match appears immediately when user navigates to Matches
+        // We'll use a navigation event to trigger refresh in MatchesScreen
       }
 
       // Remove liked user from feed

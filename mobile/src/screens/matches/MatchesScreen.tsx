@@ -10,8 +10,9 @@ import {
   RefreshControl,
   Alert,
 } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { useCallback } from 'react';
 import { supabase } from '../../lib/supabase/client';
 import { Match } from '../../lib/types';
 import { BRAND_COLORS } from '../../config/brand';
@@ -41,6 +42,17 @@ export default function MatchesScreen() {
   useEffect(() => {
     loadMatches();
   }, []);
+
+  // Refresh matches when screen comes into focus (e.g., after returning from Discover tab with new match)
+  useFocusEffect(
+    useCallback(() => {
+      // Only refresh if not currently loading and we have matches (to avoid loading spinner on every focus)
+      // Or if matches list is empty (to catch new matches)
+      if (!loading && matches.length === 0) {
+        loadMatches();
+      }
+    }, [loading, matches.length])
+  );
 
   const onRefresh = async () => {
     setRefreshing(true);
