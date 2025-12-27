@@ -1,7 +1,16 @@
 import { useState, useEffect } from 'react';
-import { View, StyleSheet, Dimensions, PanResponder, Animated } from 'react-native';
+import {
+  View,
+  StyleSheet,
+  Dimensions,
+  PanResponder,
+  Animated,
+  ActivityIndicator,
+  Text,
+} from 'react-native';
 import { FeedItem } from '../lib/types';
 import DiscoveryCard from './DiscoveryCard';
+import { BRAND_COLORS } from '../config/brand';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const SWIPE_THRESHOLD = 120;
@@ -11,6 +20,10 @@ interface DiscoveryCardStackProps {
   onLike: (userId: string) => void;
   onPass: (userId: string) => void;
   onRefresh: () => void;
+  onLoadMore?: () => void;
+  loadingMore?: boolean;
+  hasMore?: boolean;
+  loadMoreThreshold?: number;
 }
 
 export default function DiscoveryCardStack({
@@ -18,6 +31,10 @@ export default function DiscoveryCardStack({
   onLike,
   onPass,
   onRefresh,
+  onLoadMore,
+  loadingMore = false,
+  hasMore = true,
+  loadMoreThreshold = 5,
 }: DiscoveryCardStackProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [position] = useState(new Animated.ValueXY());
@@ -91,6 +108,20 @@ export default function DiscoveryCardStack({
     }
   }, [feed.length, currentIndex, position]);
 
+  // Load more when approaching end of feed
+  useEffect(() => {
+    const remainingCards = feed.length - currentIndex;
+    if (
+      onLoadMore &&
+      hasMore &&
+      !loadingMore &&
+      remainingCards <= loadMoreThreshold &&
+      feed.length > 0
+    ) {
+      onLoadMore();
+    }
+  }, [currentIndex, feed.length, hasMore, loadingMore, loadMoreThreshold, onLoadMore]);
+
   const getCardStyle = (index: number) => {
     const isTopCard = index === currentIndex;
     const translateX = isTopCard ? position.x : 0;
@@ -109,6 +140,8 @@ export default function DiscoveryCardStack({
   if (visibleCards.length === 0) {
     return null;
   }
+
+  const remainingCards = feed.length - currentIndex;
 
   return (
     <View style={styles.container}>
@@ -130,6 +163,17 @@ export default function DiscoveryCardStack({
           </Animated.View>
         );
       })}
+      {loadingMore && (
+        <View style={styles.loadingMoreContainer}>
+          <ActivityIndicator size="small" color={BRAND_COLORS.primary} />
+          <Text style={styles.loadingMoreText}>Loading more...</Text>
+        </View>
+      )}
+      {!hasMore && remainingCards <= 3 && remainingCards > 0 && (
+        <View style={styles.endContainer}>
+          <Text style={styles.endText}>You've reached the end of the feed</Text>
+        </View>
+      )}
     </View>
   );
 }
@@ -146,5 +190,35 @@ const styles = StyleSheet.create({
     width: SCREEN_WIDTH - 32,
     height: '80%',
     maxHeight: 600,
+  },
+  loadingMoreContainer: {
+    position: 'absolute',
+    bottom: 60,
+    alignSelf: 'center',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+  },
+  loadingMoreText: {
+    fontSize: 14,
+    color: BRAND_COLORS.text[600],
+  },
+  endContainer: {
+    position: 'absolute',
+    bottom: 60,
+    alignSelf: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+  },
+  endText: {
+    fontSize: 14,
+    color: BRAND_COLORS.text[600],
+    textAlign: 'center',
   },
 });

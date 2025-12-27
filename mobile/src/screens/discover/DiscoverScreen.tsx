@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { View, Text, StyleSheet, ActivityIndicator, Alert, TouchableOpacity } from 'react-native';
 import { supabase } from '../../lib/supabase/client';
 import { FeedItem } from '../../lib/types';
@@ -9,89 +9,129 @@ import { getErrorAlert } from '../../lib/errors';
 
 type FeedItemWithPhotos = FeedItem & { photos: string[] };
 
+const FEED_PAGE_SIZE = 20;
+const LOAD_MORE_THRESHOLD = 5; // Load more when 5 cards remaining
+
 export default function DiscoverScreen() {
   const [feed, setFeed] = useState<FeedItemWithPhotos[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [matchModalVisible, setMatchModalVisible] = useState(false);
   const [newMatchId, setNewMatchId] = useState<string | null>(null);
+  const [hasMore, setHasMore] = useState(true);
+  const [seenUserIds, setSeenUserIds] = useState<Set<string>>(new Set());
+
+  const loadFeed = useCallback(
+    async (reset: boolean = false) => {
+      if (reset) {
+        setError(null);
+        setLoading(true);
+        setFeed([]);
+        setHasMore(true);
+        setSeenUserIds(new Set());
+      } else {
+        setLoadingMore(true);
+      }
+
+      try {
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
+        if (!user) {
+          setLoading(false);
+          setLoadingMore(false);
+          return;
+        }
+
+        // Calculate how many new items we need
+        // Since RPC doesn't support offset, we request more items and filter duplicates
+        const currentFeedSize = reset ? 0 : feed.length;
+        const requestLimit = currentFeedSize + FEED_PAGE_SIZE;
+
+        const { data, error: rpcError } = await supabase.rpc('get_discovery_feed', {
+          p_viewer: user.id,
+          p_limit: requestLimit,
+        });
+
+        if (rpcError) {
+          console.error('Error loading feed:', rpcError);
+          const { message } = getErrorAlert(rpcError, 'Failed to load discovery feed');
+          setError(message);
+          setLoading(false);
+          setLoadingMore(false);
+          return;
+        }
+
+        const allItems = (data || []) as FeedItem[];
+
+        // Filter out users we've already seen (due to RPC not supporting offset)
+        const newItems = allItems.filter((item: FeedItem) => !seenUserIds.has(item.user_id));
+
+        // If we got fewer new items than requested, we've reached the end
+        if (newItems.length === 0 || allItems.length < requestLimit) {
+          setHasMore(false);
+        }
+
+        // Update seen user IDs
+        const newSeenIds = new Set(seenUserIds);
+        newItems.forEach((item) => newSeenIds.add(item.user_id));
+        setSeenUserIds(newSeenIds);
+
+        // Batch fetch all profiles at once to avoid N+1 query pattern
+        // Extract user IDs from feed items
+        const userIds = newItems.map((item: FeedItem) => item.user_id);
+
+        // Batch fetch all profiles in a single query
+        let profilesMap = new Map<string, { photos: string[] }>();
+        if (userIds.length > 0) {
+          try {
+            const { data: profilesData } = await supabase
+              .from('profiles')
+              .select('user_id, photos')
+              .in('user_id', userIds);
+
+            // Create a map for O(1) lookup
+            if (profilesData) {
+              profilesMap = new Map(
+                profilesData.map((profile) => [
+                  profile.user_id,
+                  { photos: Array.isArray(profile.photos) ? profile.photos : [] },
+                ])
+              );
+            }
+          } catch (error) {
+            console.error('Error batch fetching profiles:', error);
+            // Continue with empty map - will use fallback below
+          }
+        }
+
+        // Map feed items with photos from batch fetch
+        const feedWithPhotos: FeedItemWithPhotos[] = newItems.map((item: FeedItem) => {
+          const profile = profilesMap.get(item.user_id);
+          return {
+            ...item,
+            photos: profile?.photos ?? item.photos ?? [],
+          };
+        });
+
+        setFeed((prev) => (reset ? feedWithPhotos : [...prev, ...feedWithPhotos]));
+        setError(null);
+      } catch (error: any) {
+        console.error('Error loading feed:', error);
+        const { message } = getErrorAlert(error, 'Failed to load discovery feed');
+        setError(message);
+      } finally {
+        setLoading(false);
+        setLoadingMore(false);
+      }
+    },
+    [feed.length, seenUserIds]
+  );
 
   useEffect(() => {
-    loadFeed();
-  }, []);
-
-  const loadFeed = async () => {
-    setError(null);
-    setLoading(true);
-    try {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (!user) {
-        setLoading(false);
-        return;
-      }
-
-      const { data, error: rpcError } = await supabase.rpc('get_discovery_feed', {
-        p_viewer: user.id,
-        p_limit: 20,
-      });
-
-      if (rpcError) {
-        console.error('Error loading feed:', rpcError);
-        const { message } = getErrorAlert(rpcError, 'Failed to load discovery feed');
-        setError(message);
-        setLoading(false);
-        return;
-      }
-
-      // Batch fetch all profiles at once to avoid N+1 query pattern
-      // Extract user IDs from feed items
-      const userIds = (data || []).map((item: FeedItem) => item.user_id);
-
-      // Batch fetch all profiles in a single query
-      let profilesMap = new Map<string, { photos: string[] }>();
-      if (userIds.length > 0) {
-        try {
-          const { data: profilesData } = await supabase
-            .from('profiles')
-            .select('user_id, photos')
-            .in('user_id', userIds);
-
-          // Create a map for O(1) lookup
-          if (profilesData) {
-            profilesMap = new Map(
-              profilesData.map((profile) => [
-                profile.user_id,
-                { photos: Array.isArray(profile.photos) ? profile.photos : [] },
-              ])
-            );
-          }
-        } catch (error) {
-          console.error('Error batch fetching profiles:', error);
-          // Continue with empty map - will use fallback below
-        }
-      }
-
-      // Map feed items with photos from batch fetch
-      const feedWithPhotos: FeedItemWithPhotos[] = (data || []).map((item: FeedItem) => {
-        const profile = profilesMap.get(item.user_id);
-        return {
-          ...item,
-          photos: profile?.photos ?? item.photos ?? [],
-        };
-      });
-
-      setFeed(feedWithPhotos);
-      setError(null);
-    } catch (error: any) {
-      console.error('Error loading feed:', error);
-      const { message } = getErrorAlert(error, 'Failed to load discovery feed');
-      setError(message);
-    } finally {
-      setLoading(false);
-    }
-  };
+    loadFeed(true);
+  }, [loadFeed]);
 
   const handleLike = async (userId: string) => {
     try {
@@ -148,7 +188,7 @@ export default function DiscoverScreen() {
       <View style={styles.container}>
         <Text style={styles.errorText}>Failed to load discovery feed</Text>
         <Text style={styles.errorSubtext}>{error}</Text>
-        <TouchableOpacity style={styles.retryButton} onPress={loadFeed}>
+        <TouchableOpacity style={styles.retryButton} onPress={() => loadFeed(true)}>
           <Text style={styles.retryButtonText}>Retry</Text>
         </TouchableOpacity>
       </View>
@@ -160,12 +200,18 @@ export default function DiscoverScreen() {
       <View style={styles.container}>
         <Text style={styles.emptyText}>No more profiles to discover</Text>
         <Text style={styles.emptySubtext}>Check back later for new matches</Text>
-        <TouchableOpacity style={styles.refreshButton} onPress={loadFeed}>
+        <TouchableOpacity style={styles.refreshButton} onPress={() => loadFeed(true)}>
           <Text style={styles.refreshButtonText}>Refresh</Text>
         </TouchableOpacity>
       </View>
     );
   }
+
+  const handleLoadMore = () => {
+    if (!loadingMore && hasMore && feed.length > 0) {
+      loadFeed(false);
+    }
+  };
 
   return (
     <View style={styles.container}>
@@ -173,7 +219,11 @@ export default function DiscoverScreen() {
         feed={feed}
         onLike={handleLike}
         onPass={handlePass}
-        onRefresh={loadFeed}
+        onRefresh={() => loadFeed(true)}
+        onLoadMore={handleLoadMore}
+        loadingMore={loadingMore}
+        hasMore={hasMore}
+        loadMoreThreshold={LOAD_MORE_THRESHOLD}
       />
       <MatchModal
         visible={matchModalVisible}
