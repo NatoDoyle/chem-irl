@@ -45,29 +45,42 @@ export default function DiscoverScreen() {
         return;
       }
 
-      // Fetch photos for each user (with error handling) and normalize photos array
-      const feedWithPhotos: FeedItemWithPhotos[] = await Promise.all(
-        (data || []).map(async (item: FeedItem): Promise<FeedItemWithPhotos> => {
-          try {
-            const { data: profile } = await supabase
-              .from('profiles')
-              .select('photos')
-              .eq('user_id', item.user_id)
-              .single();
+      // Batch fetch all profiles at once to avoid N+1 query pattern
+      // Extract user IDs from feed items
+      const userIds = (data || []).map((item: FeedItem) => item.user_id);
 
-            return {
-              ...item,
-              photos: Array.isArray(profile?.photos) ? profile.photos : (item.photos ?? []),
-            };
-          } catch {
-            // If profile fetch fails, use item.photos or empty array
-            return {
-              ...item,
-              photos: item.photos ?? [],
-            };
+      // Batch fetch all profiles in a single query
+      let profilesMap = new Map<string, { photos: string[] }>();
+      if (userIds.length > 0) {
+        try {
+          const { data: profilesData } = await supabase
+            .from('profiles')
+            .select('user_id, photos')
+            .in('user_id', userIds);
+
+          // Create a map for O(1) lookup
+          if (profilesData) {
+            profilesMap = new Map(
+              profilesData.map((profile) => [
+                profile.user_id,
+                { photos: Array.isArray(profile.photos) ? profile.photos : [] },
+              ])
+            );
           }
-        })
-      );
+        } catch (error) {
+          console.error('Error batch fetching profiles:', error);
+          // Continue with empty map - will use fallback below
+        }
+      }
+
+      // Map feed items with photos from batch fetch
+      const feedWithPhotos: FeedItemWithPhotos[] = (data || []).map((item: FeedItem) => {
+        const profile = profilesMap.get(item.user_id);
+        return {
+          ...item,
+          photos: profile?.photos ?? item.photos ?? [],
+        };
+      });
 
       setFeed(feedWithPhotos);
       setError(null);

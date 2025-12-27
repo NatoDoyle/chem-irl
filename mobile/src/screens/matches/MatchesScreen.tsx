@@ -98,29 +98,53 @@ export default function MatchesScreen() {
           return;
         }
 
-        // Fetch profile info for each match
-        const matchesWithProfiles = await Promise.all(
-          (matchesData || []).map(async (match: Match) => {
-            const otherUserId = match.user_a === user.id ? match.user_b : match.user_a;
-
-            // Get other user's profile
-            const { data: profile } = await supabase
-              .from('profiles')
-              .select('photos, prompts')
-              .eq('user_id', otherUserId)
-              .single();
-
-            const photos = (profile?.photos as string[]) || [];
-            const prompts = (profile?.prompts as Record<string, string>) || {};
-
-            return {
-              ...match,
-              otherUserId,
-              otherUserPhoto: photos[0],
-              otherUserName: prompts.headline || 'No name',
-            };
-          })
+        // Batch fetch all profiles at once to avoid N+1 query pattern
+        // Extract other user IDs from matches
+        const otherUserIds = (matchesData || []).map((match: Match) =>
+          match.user_a === user.id ? match.user_b : match.user_a
         );
+
+        // Batch fetch all profiles in a single query
+        let profilesMap = new Map<string, { photos: string[]; prompts: Record<string, string> }>();
+        if (otherUserIds.length > 0) {
+          try {
+            const { data: profilesData } = await supabase
+              .from('profiles')
+              .select('user_id, photos, prompts')
+              .in('user_id', otherUserIds);
+
+            // Create a map for O(1) lookup
+            if (profilesData) {
+              profilesMap = new Map(
+                profilesData.map((profile) => [
+                  profile.user_id,
+                  {
+                    photos: (profile.photos as string[]) || [],
+                    prompts: (profile.prompts as Record<string, string>) || {},
+                  },
+                ])
+              );
+            }
+          } catch (error) {
+            console.error('Error batch fetching profiles:', error);
+            // Continue with empty map - will use fallback below
+          }
+        }
+
+        // Map matches with profile info from batch fetch
+        const matchesWithProfiles = (matchesData || []).map((match: Match) => {
+          const otherUserId = match.user_a === user.id ? match.user_b : match.user_a;
+          const profile = profilesMap.get(otherUserId);
+          const photos = profile?.photos || [];
+          const prompts = profile?.prompts || {};
+
+          return {
+            ...match,
+            otherUserId,
+            otherUserPhoto: photos[0],
+            otherUserName: prompts.headline || 'No name',
+          };
+        });
 
         setMatches(matchesWithProfiles);
         setError(null);
