@@ -18,6 +18,7 @@ import { BRAND_COLORS } from '../../config/brand';
 import { getErrorAlert, isRecoverableError } from '../../lib/errors';
 import { enqueue, processQueue, QueuedProposal } from '../../lib/offlineQueue';
 import { createThrottle } from '../../lib/throttle';
+import { sanitizeMultilineText } from '../../lib/sanitize';
 import {
   localDateToUTC,
   isWithinSevenDays,
@@ -316,12 +317,15 @@ export default function ProposeScreen() {
       expiresAt.setHours(expiresAt.getHours() + 72);
       const expiresAtUTC = localDateToUTC(expiresAt);
 
+      // Sanitize note before storing
+      const sanitizedNote = note.trim() ? sanitizeMultilineText(note) : null;
+
       const { error } = await supabase.from('proposals').insert({
         match_id: matchId,
         sender_id: user.id,
         windows: selectedWindows, // Already in UTC format
         date_types: selectedDateTypes,
-        note: note.trim() || null,
+        note: sanitizedNote,
         expires_at: expiresAtUTC,
         status: 'active',
       });

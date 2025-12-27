@@ -19,6 +19,7 @@ import { BRAND_COLORS } from '../../config/brand';
 import { getErrorAlert, isRecoverableError } from '../../lib/errors';
 import { enqueue, processQueue, getQueueSize, QueuedMessage } from '../../lib/offlineQueue';
 import ConnectionStatus from '../../components/ConnectionStatus';
+import { sanitizeText } from '../../lib/sanitize';
 
 type ChatRouteParams = {
   matchId: string;

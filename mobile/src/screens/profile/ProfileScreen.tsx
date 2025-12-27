@@ -16,6 +16,7 @@ import { supabase } from '../../lib/supabase/client';
 import { BRAND_COLORS } from '../../config/brand';
 import { deletePhotoFromStorage } from '../../lib/storage';
 import { getErrorAlert } from '../../lib/errors';
+import { sanitizeText, sanitizeMultilineText } from '../../lib/sanitize';
 import {
   reconcilePhotos,
   shouldRunReconciliation,

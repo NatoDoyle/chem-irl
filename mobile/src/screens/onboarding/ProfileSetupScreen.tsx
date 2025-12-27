@@ -14,6 +14,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { supabase } from '../../lib/supabase/client';
 import { BRAND_COLORS } from '../../config/brand';
 import { getErrorAlert } from '../../lib/errors';
+import { sanitizeText, sanitizeMultilineText } from '../../lib/sanitize';
 
 type OnboardingStackParamList = {
   ProfileSetup: undefined;
@@ -62,12 +63,16 @@ export default function ProfileSetupScreen() {
         return;
       }
 
+      // Sanitize user inputs before storing
+      const sanitizedHeadline = sanitizeText(headlineTrimmed);
+      const sanitizedBio = sanitizeMultilineText(bioTrimmed);
+
       // Upsert profile
       const { error } = await supabase.from('profiles').upsert({
         user_id: user.id,
         prompts: {
-          headline: headlineTrimmed,
-          bio: bioTrimmed,
+          headline: sanitizedHeadline,
+          bio: sanitizedBio,
         },
         completion_pct: 50, // Will be 100 after photos
       });
