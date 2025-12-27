@@ -22,7 +22,7 @@ import type { RealtimeChannel } from '@supabase/supabase-js';
 const REFRESH_THROTTLE_MS = 10000; // 10 seconds - minimum time between auto-refreshes
 const REALTIME_DEBOUNCE_MS = 750; // 750ms debounce for realtime subscription callbacks
 
-const PLACEHOLDER_IMAGE = require('../../assets/icon.png');
+const PLACEHOLDER_IMAGE = require('../../../assets/icon.png');
 
 type MatchesStackParamList = {
   MatchesList: undefined;

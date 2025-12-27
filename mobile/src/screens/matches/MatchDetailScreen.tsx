@@ -16,7 +16,7 @@ import { BRAND_COLORS } from '../../config/brand';
 import { getErrorAlert } from '../../lib/errors';
 import ProposalCard from '../../components/ProposalCard';
 
-const PLACEHOLDER_IMAGE = require('../../assets/icon.png');
+const PLACEHOLDER_IMAGE = require('../../../assets/icon.png');
 
 type MatchDetailRouteParams = {
   matchId: string;
