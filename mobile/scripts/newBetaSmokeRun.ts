@@ -222,15 +222,13 @@ try {
   // Write file
   writeFileSync(filepath, content, 'utf-8');
 
+  // Print absolute path and next steps
+  const absolutePath = resolve(filepath);
+
   console.log('');
-  console.log('✅ Created new beta smoke test run log:');
-  console.log(`   ${filepath}`);
+  console.log(`✅ Created beta smoke log: ${absolutePath}`);
   console.log('');
-  console.log(`   Date: ${date} ${now.toTimeString().split(' ')[0].substring(0, 5)}`);
-  console.log(`   Commit: ${gitHash}${gitMessage ? ` - ${gitMessage}` : ''}`);
-  console.log('');
-  console.log('📋 Checklist: docs/BETA_SMOKE_CHECKLIST.md');
-  console.log('📝 Edit the file to fill in test results.');
+  console.log('Next: open the file, complete Pre-flight, then follow docs/BETA_SMOKE_CHECKLIST.md');
   console.log('');
 } catch (error: any) {
   if (error.code === 'ENOENT' && error.path === templatePath) {
