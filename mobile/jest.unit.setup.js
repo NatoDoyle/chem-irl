@@ -40,3 +40,6 @@ global.crypto = {
     return arr;
   }),
 };
+
+// Define __DEV__ for tests (set to false to disable debug logs in tests)
+global.__DEV__ = false;
