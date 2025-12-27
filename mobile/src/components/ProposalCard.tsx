@@ -12,6 +12,7 @@ interface ProposalCardProps {
   matchId: string;
   onConfirm: () => void;
   onNoneSuits: () => void;
+  existingConfirms?: Array<{ confirmer_id: string; proposal_id: string }>; // Optional: existing confirm records to check for race conditions
 }
 
 export default function ProposalCard({
@@ -19,6 +20,7 @@ export default function ProposalCard({
   matchId,
   onConfirm,
   onNoneSuits,
+  existingConfirms = [],
 }: ProposalCardProps) {
   const [loading, setLoading] = useState(false);
   const [isExpired, setIsExpired] = useState(() => new Date(proposal.expires_at) < new Date());
@@ -68,6 +70,33 @@ export default function ProposalCard({
         data: { user },
       } = await supabase.auth.getUser();
       if (!user) return;
+
+      // Client-side check: prevent race condition by checking if proposal already has a confirm
+      // Note: This doesn't fully prevent the race condition (backend constraint needed),
+      // but it reduces the likelihood by checking before attempting insert
+      const alreadyConfirmed = existingConfirms.some(
+        (confirm) => confirm.proposal_id === proposal.proposal_id
+      );
+      if (alreadyConfirmed) {
+        Alert.alert(
+          'Already Confirmed',
+          'This proposal has already been confirmed. Please refresh to see the latest status.'
+        );
+        setLoading(false);
+        onConfirm(); // Refresh parent component
+        return;
+      }
+
+      // Also check if proposal status is already confirmed
+      if (proposal.status === 'confirmed') {
+        Alert.alert(
+          'Already Confirmed',
+          'This proposal has already been confirmed. Please refresh to see the latest status.'
+        );
+        setLoading(false);
+        onConfirm(); // Refresh parent component
+        return;
+      }
 
       // Create confirm record
       const { error } = await supabase.from('confirms').insert({
