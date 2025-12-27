@@ -274,7 +274,7 @@ npm run start
 
 **Mobile App** (`mobile/.env`):
 - `EXPO_PUBLIC_SUPABASE_URL`
-- `EXPO_PUBLIC_SUPABASE_ANON_KEY`
+- `EXPO_PUBLIC_SUPABASE_KEY` (publishable anon key)
 - `EXPO_PUBLIC_APP_URL`
 
 **Website** (`web/.env.local`):
@@ -721,7 +721,7 @@ eas submit --platform android
 **Environment Variables:**
 Set in EAS dashboard or `eas.json`:
 - `EXPO_PUBLIC_SUPABASE_URL`
-- `EXPO_PUBLIC_SUPABASE_ANON_KEY`
+- `EXPO_PUBLIC_SUPABASE_KEY` (publishable anon key)
 - `EXPO_PUBLIC_APP_URL`
 
 ### Website
@@ -861,11 +861,11 @@ Not yet implemented. Consider adding:
 
 ### Related Files
 - `ARCHITECTURE_PIVOT_PLAN.md` - Architecture decision document
-- `PHASE1_COMPLETE.md` - Phase 1 summary
-- `PHASE2_COMPLETE.md` - Phase 2 summary
-- `POLISH_COMPLETE.md` - Polish improvements
 - `mobile/README.md` - Mobile app quick start
 - `web/README.md` - Website documentation
+- `docs/README.md` - Complete documentation index
+
+**Note:** Historical phase completion summaries are archived in `docs/archive/`.
 
 ---
 

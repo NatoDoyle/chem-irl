@@ -2,6 +2,16 @@
  * Centralized error handling utilities for mobile app
  */
 
+// Lazy import Sentry to avoid requiring it when not configured
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+let SentryModule: typeof import('@sentry/react-native') | null = null;
+try {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  SentryModule = require('@sentry/react-native');
+} catch {
+  // Sentry not installed or not available
+}
+
 export interface AppError {
   message: string;
   code?: string;
@@ -56,4 +66,25 @@ export function getUserErrorMessage(error: unknown): string {
   }
 
   return message;
+}
+
+/**
+ * Helper to get error message for Alert.alert
+ * Returns { title, message } for use with Alert.alert(title, message)
+ */
+export function getErrorAlert(
+  error: unknown,
+  title: string = 'Error'
+): { title: string; message: string } {
+  // Capture error in Sentry if available
+  if (SentryModule && error) {
+    SentryModule.captureException(error, {
+      tags: { errorTitle: title },
+    });
+  }
+
+  return {
+    title,
+    message: getUserErrorMessage(error),
+  };
 }

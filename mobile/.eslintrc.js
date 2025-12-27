@@ -8,5 +8,5 @@ module.exports = {
     '@typescript-eslint/no-unsafe-function-type': 'error',
     '@typescript-eslint/no-wrapper-object-types': 'error',
   },
-  ignorePatterns: ['node_modules/', '.expo/', 'dist/'],
+  ignorePatterns: ['node_modules/', '.expo/', 'dist/', 'docs/', '*.md'],
 };

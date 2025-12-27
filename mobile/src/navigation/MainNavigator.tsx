@@ -7,6 +7,15 @@ import ProposeScreen from '../screens/matches/ProposeScreen';
 import ChatScreen from '../screens/matches/ChatScreen';
 import ProfileScreen from '../screens/profile/ProfileScreen';
 
+// Debug screen - only available in development
+const ENABLE_DEBUG_MENU = __DEV__ || process.env.EXPO_PUBLIC_ENABLE_DEBUG_MENU === 'true';
+
+let DebugScreen: React.ComponentType<any> | null = null;
+if (ENABLE_DEBUG_MENU) {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  DebugScreen = require('../screens/debug/DebugScreen').default;
+}
+
 export type MainTabParamList = {
   Discover: undefined;
   MatchesStack: {
@@ -14,6 +23,7 @@ export type MainTabParamList = {
     params?: MatchesStackParamList[keyof MatchesStackParamList];
   };
   Profile: undefined;
+  Debug?: undefined; // Optional - only in dev builds
 };
 
 export type MatchesStackParamList = {
@@ -67,6 +77,15 @@ export default function MainNavigator() {
           tabBarLabel: 'Profile',
         }}
       />
+      {ENABLE_DEBUG_MENU && DebugScreen && (
+        <Tab.Screen
+          name="Debug"
+          component={DebugScreen}
+          options={{
+            tabBarLabel: 'Debug',
+          }}
+        />
+      )}
     </Tab.Navigator>
   );
 }

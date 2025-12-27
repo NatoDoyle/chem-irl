@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -18,6 +18,32 @@ export default function PhotosScreen() {
   const navigation = useNavigation();
   const [photos, setPhotos] = useState<string[]>([]);
   const [uploading, setUploading] = useState(false);
+
+  useEffect(() => {
+    loadExistingPhotos();
+  }, []);
+
+  const loadExistingPhotos = async () => {
+    try {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('photos')
+        .eq('user_id', user.id)
+        .single();
+
+      if (profile?.photos && Array.isArray(profile.photos)) {
+        setPhotos(profile.photos as string[]);
+      }
+    } catch (error) {
+      // Silently fail - user might not have a profile yet
+      console.error('Error loading existing photos:', error);
+    }
+  };
 
   const pickImage = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();

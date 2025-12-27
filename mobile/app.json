@@ -35,7 +35,9 @@
         {
           "photosPermission": "Allow Chem IRL to access your photos to upload profile pictures."
         }
-      ]
+      ],
+      "@react-native-community/datetimepicker",
+      "@sentry/react-native"
     ]
   }
 }

@@ -8,11 +8,14 @@ import {
   TextInput,
   Alert,
   ActivityIndicator,
+  Platform,
 } from 'react-native';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { supabase } from '../../lib/supabase/client';
 import { BRAND_COLORS } from '../../config/brand';
+import { getErrorAlert } from '../../lib/errors';
 
 type ProposeRouteParams = {
   matchId: string;
@@ -23,6 +26,8 @@ type ProposeNavigationProp = NativeStackNavigationProp<any, 'Propose'>;
 
 const DATE_TYPES = ['Coffee', 'Drinks', 'Dinner', 'Walk', 'Activity', 'Other'];
 
+type PickerMode = 'date' | 'start-time' | 'end-time' | null;
+
 export default function ProposeScreen() {
   const route = useRoute();
   const navigation = useNavigation<ProposeNavigationProp>();
@@ -32,6 +37,12 @@ export default function ProposeScreen() {
   const [selectedDateTypes, setSelectedDateTypes] = useState<string[]>([]);
   const [note, setNote] = useState('');
   const [loading, setLoading] = useState(false);
+  const [pickerMode, setPickerMode] = useState<PickerMode>(null);
+  const [tempWindow, setTempWindow] = useState<{
+    date: Date;
+    startTime: Date;
+    endTime: Date;
+  } | null>(null);
 
   const addTimeWindow = () => {
     if (selectedWindows.length >= 3) {
@@ -39,31 +50,204 @@ export default function ProposeScreen() {
       return;
     }
 
-    // For MVP, use a simple date picker approach
-    // In production, use a proper date/time picker
     const now = new Date();
-    const daysAhead = selectedWindows.length + 1; // 1, 2, or 3 days ahead
-    const windowDate = new Date(now);
-    windowDate.setDate(windowDate.getDate() + daysAhead);
+    const defaultDate = new Date(now);
+    defaultDate.setDate(defaultDate.getDate() + 1);
+    defaultDate.setHours(0, 0, 0, 0);
 
-    // Ensure within 7 days
-    if (daysAhead > 7) {
-      Alert.alert('Error', 'All times must be within the next 7 days');
+    const defaultStartTime = new Date(defaultDate);
+    defaultStartTime.setHours(18, 0, 0);
+
+    const defaultEndTime = new Date(defaultDate);
+    defaultEndTime.setHours(20, 0, 0);
+
+    setTempWindow({
+      date: defaultDate,
+      startTime: defaultStartTime,
+      endTime: defaultEndTime,
+    });
+    setPickerMode('date');
+  };
+
+  const handleDateChange = (event: any, selectedDate?: Date) => {
+    if (Platform.OS === 'android') {
+      setPickerMode(null);
+    }
+
+    if (event.type === 'set' && selectedDate && tempWindow) {
+      const newDate = new Date(selectedDate);
+      newDate.setHours(0, 0, 0, 0);
+
+      const updatedStartTime = new Date(tempWindow.startTime);
+      updatedStartTime.setFullYear(newDate.getFullYear());
+      updatedStartTime.setMonth(newDate.getMonth());
+      updatedStartTime.setDate(newDate.getDate());
+
+      const updatedEndTime = new Date(tempWindow.endTime);
+      updatedEndTime.setFullYear(newDate.getFullYear());
+      updatedEndTime.setMonth(newDate.getMonth());
+      updatedEndTime.setDate(newDate.getDate());
+
+      setTempWindow({
+        date: newDate,
+        startTime: updatedStartTime,
+        endTime: updatedEndTime,
+      });
+
+      if (Platform.OS === 'ios') {
+        setPickerMode('start-time');
+      } else {
+        // Android: continue to start time
+        setTimeout(() => setPickerMode('start-time'), 100);
+      }
+    } else if (event.type === 'dismissed') {
+      setPickerMode(null);
+      setTempWindow(null);
+    }
+  };
+
+  const handleTimeChange = (event: any, selectedTime?: Date, type: 'start' | 'end' = 'start') => {
+    if (Platform.OS === 'android') {
+      setPickerMode(null);
+    }
+
+    if (event.type === 'set' && selectedTime && tempWindow) {
+      if (type === 'start') {
+        const updatedStartTime = new Date(selectedTime);
+        updatedStartTime.setFullYear(tempWindow.date.getFullYear());
+        updatedStartTime.setMonth(tempWindow.date.getMonth());
+        updatedStartTime.setDate(tempWindow.date.getDate());
+
+        setTempWindow({
+          ...tempWindow,
+          startTime: updatedStartTime,
+        });
+
+        if (Platform.OS === 'ios') {
+          setPickerMode('end-time');
+        } else {
+          setTimeout(() => setPickerMode('end-time'), 100);
+        }
+      } else {
+        const updatedEndTime = new Date(selectedTime);
+        updatedEndTime.setFullYear(tempWindow.date.getFullYear());
+        updatedEndTime.setMonth(tempWindow.date.getMonth());
+        updatedEndTime.setDate(tempWindow.date.getDate());
+
+        const finalStartTime = tempWindow.startTime;
+        const finalEndTime = updatedEndTime;
+
+        // Validate: start < end
+        if (finalStartTime >= finalEndTime) {
+          Alert.alert('Error', 'End time must be after start time');
+          setPickerMode(null);
+          setTempWindow(null);
+          return;
+        }
+
+        // Validate: within 7 days
+        const now = new Date();
+        const sevenDaysFromNow = new Date(now);
+        sevenDaysFromNow.setDate(sevenDaysFromNow.getDate() + 7);
+
+        if (finalStartTime > sevenDaysFromNow || finalStartTime < now) {
+          Alert.alert('Error', 'All time windows must be within the next 7 days');
+          setPickerMode(null);
+          setTempWindow(null);
+          return;
+        }
+
+        // Check for overlapping windows
+        const newWindow = {
+          start: finalStartTime.toISOString(),
+          end: finalEndTime.toISOString(),
+        };
+
+        const hasOverlap = selectedWindows.some((window) => {
+          const wStart = new Date(window.start);
+          const wEnd = new Date(window.end);
+          const nStart = new Date(newWindow.start);
+          const nEnd = new Date(newWindow.end);
+
+          return (
+            (nStart >= wStart && nStart < wEnd) ||
+            (nEnd > wStart && nEnd <= wEnd) ||
+            (nStart <= wStart && nEnd >= wEnd)
+          );
+        });
+
+        if (hasOverlap) {
+          Alert.alert('Error', 'Time windows cannot overlap');
+          setPickerMode(null);
+          setTempWindow(null);
+          return;
+        }
+
+        setSelectedWindows([...selectedWindows, newWindow]);
+        setPickerMode(null);
+        setTempWindow(null);
+      }
+    } else if (event.type === 'dismissed') {
+      setPickerMode(null);
+      setTempWindow(null);
+    }
+  };
+
+  const confirmTimeWindow = () => {
+    if (!tempWindow) return;
+
+    const finalStartTime = tempWindow.startTime;
+    const finalEndTime = tempWindow.endTime;
+
+    // Validate: start < end
+    if (finalStartTime >= finalEndTime) {
+      Alert.alert('Error', 'End time must be after start time');
+      setPickerMode(null);
+      setTempWindow(null);
       return;
     }
 
-    windowDate.setHours(18, 0, 0, 0);
+    // Validate: within 7 days
+    const now = new Date();
+    const sevenDaysFromNow = new Date(now);
+    sevenDaysFromNow.setDate(sevenDaysFromNow.getDate() + 7);
 
-    const endTime = new Date(windowDate);
-    endTime.setHours(20, 0, 0, 0);
+    if (finalStartTime > sevenDaysFromNow || finalStartTime < now) {
+      Alert.alert('Error', 'All time windows must be within the next 7 days');
+      setPickerMode(null);
+      setTempWindow(null);
+      return;
+    }
 
-    setSelectedWindows([
-      ...selectedWindows,
-      {
-        start: windowDate.toISOString(),
-        end: endTime.toISOString(),
-      },
-    ]);
+    // Check for overlapping windows
+    const newWindow = {
+      start: finalStartTime.toISOString(),
+      end: finalEndTime.toISOString(),
+    };
+
+    const hasOverlap = selectedWindows.some((window) => {
+      const wStart = new Date(window.start);
+      const wEnd = new Date(window.end);
+      const nStart = new Date(newWindow.start);
+      const nEnd = new Date(newWindow.end);
+
+      return (
+        (nStart >= wStart && nStart < wEnd) ||
+        (nEnd > wStart && nEnd <= wEnd) ||
+        (nStart <= wStart && nEnd >= wEnd)
+      );
+    });
+
+    if (hasOverlap) {
+      Alert.alert('Error', 'Time windows cannot overlap');
+      setPickerMode(null);
+      setTempWindow(null);
+      return;
+    }
+
+    setSelectedWindows([...selectedWindows, newWindow]);
+    setPickerMode(null);
+    setTempWindow(null);
   };
 
   const removeTimeWindow = (index: number) => {
@@ -130,7 +314,8 @@ export default function ProposeScreen() {
       });
 
       if (error) {
-        Alert.alert('Error', error.message);
+        const { title, message } = getErrorAlert(error, 'Failed to send proposal');
+        Alert.alert(title, message);
         setLoading(false);
         return;
       }
@@ -138,7 +323,8 @@ export default function ProposeScreen() {
       Alert.alert('Success', 'Proposal sent!');
       navigation.goBack();
     } catch (error: any) {
-      Alert.alert('Error', error.message || 'Failed to send proposal');
+      const { title, message } = getErrorAlert(error, 'Failed to send proposal');
+      Alert.alert(title, message);
     } finally {
       setLoading(false);
     }
@@ -178,6 +364,69 @@ export default function ProposeScreen() {
           <TouchableOpacity style={styles.addButton} onPress={addTimeWindow}>
             <Text style={styles.addButtonText}>+ Add Time Window</Text>
           </TouchableOpacity>
+        )}
+
+        {pickerMode && tempWindow && (
+          <View style={styles.pickerContainer}>
+            {pickerMode === 'date' && (
+              <DateTimePicker
+                value={tempWindow.date}
+                mode="date"
+                display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                minimumDate={new Date()}
+                maximumDate={(() => {
+                  const max = new Date();
+                  max.setDate(max.getDate() + 7);
+                  return max;
+                })()}
+                onChange={handleDateChange}
+              />
+            )}
+            {pickerMode === 'start-time' && (
+              <View>
+                <DateTimePicker
+                  value={tempWindow.startTime}
+                  mode="time"
+                  display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                  onChange={(e, d) => handleTimeChange(e, d, 'start')}
+                />
+                {Platform.OS === 'ios' && (
+                  <TouchableOpacity
+                    style={styles.pickerButton}
+                    onPress={() => setPickerMode('end-time')}
+                  >
+                    <Text style={styles.pickerButtonText}>Next: End Time</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+            )}
+            {pickerMode === 'end-time' && (
+              <View>
+                <DateTimePicker
+                  value={tempWindow.endTime}
+                  mode="time"
+                  display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                  onChange={(e, d) => handleTimeChange(e, d, 'end')}
+                />
+                {Platform.OS === 'ios' && (
+                  <View style={styles.pickerButtonsRow}>
+                    <TouchableOpacity
+                      style={[styles.pickerButton, styles.pickerButtonSecondary]}
+                      onPress={() => {
+                        setPickerMode(null);
+                        setTempWindow(null);
+                      }}
+                    >
+                      <Text style={styles.pickerButtonSecondaryText}>Cancel</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity style={styles.pickerButton} onPress={confirmTimeWindow}>
+                      <Text style={styles.pickerButtonText}>Confirm</Text>
+                    </TouchableOpacity>
+                  </View>
+                )}
+              </View>
+            )}
+          </View>
         )}
       </View>
 
@@ -284,6 +533,40 @@ const styles = StyleSheet.create({
   addButtonText: {
     color: BRAND_COLORS.primary,
     fontSize: 14,
+    fontWeight: '600',
+  },
+  pickerContainer: {
+    marginTop: 16,
+    padding: 16,
+    backgroundColor: '#F8FAFC',
+    borderRadius: 8,
+  },
+  pickerButtonsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 16,
+    gap: 12,
+  },
+  pickerButton: {
+    flex: 1,
+    backgroundColor: BRAND_COLORS.primary,
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  pickerButtonSecondary: {
+    backgroundColor: 'transparent',
+    borderWidth: 2,
+    borderColor: BRAND_COLORS.primary,
+  },
+  pickerButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  pickerButtonSecondaryText: {
+    color: BRAND_COLORS.primary,
+    fontSize: 16,
     fontWeight: '600',
   },
   dateTypesGrid: {

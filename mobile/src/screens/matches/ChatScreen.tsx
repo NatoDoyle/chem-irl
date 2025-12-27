@@ -8,11 +8,13 @@ import {
   TouchableOpacity,
   KeyboardAvoidingView,
   Platform,
+  Alert,
 } from 'react-native';
 import { useRoute } from '@react-navigation/native';
 import { supabase } from '../../lib/supabase/client';
 import { Message } from '../../lib/types';
 import { BRAND_COLORS } from '../../config/brand';
+import { getErrorAlert } from '../../lib/errors';
 
 type ChatRouteParams = {
   matchId: string;
@@ -38,6 +40,8 @@ export default function ChatScreen() {
 
       if (error) {
         console.error('Error loading messages:', error);
+        const { title, message } = getErrorAlert(error, 'Failed to load messages');
+        Alert.alert(title, message);
         return;
       }
 
@@ -104,10 +108,14 @@ export default function ChatScreen() {
 
       if (error) {
         console.error('Error sending message:', error);
+        const { title, message } = getErrorAlert(error, 'Failed to send message');
+        Alert.alert(title, message);
         setNewMessage(messageContent); // Restore message on error
       }
     } catch (error: any) {
       console.error('Error sending message:', error);
+      const { title, message } = getErrorAlert(error, 'Failed to send message');
+      Alert.alert(title, message);
       setNewMessage(messageContent);
     } finally {
       setSending(false);

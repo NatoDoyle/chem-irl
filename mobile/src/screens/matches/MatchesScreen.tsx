@@ -8,12 +8,16 @@ import {
   ActivityIndicator,
   Image,
   RefreshControl,
+  Alert,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { supabase } from '../../lib/supabase/client';
 import { Match } from '../../lib/types';
 import { BRAND_COLORS } from '../../config/brand';
+import { getErrorAlert } from '../../lib/errors';
+
+const PLACEHOLDER_IMAGE = require('../../assets/icon.png');
 
 type MatchesStackParamList = {
   MatchesList: undefined;
@@ -64,6 +68,8 @@ export default function MatchesScreen() {
 
       if (error) {
         console.error('Error loading matches:', error);
+        const { title, message } = getErrorAlert(error, 'Failed to load matches');
+        Alert.alert(title, message);
         setLoading(false);
         return;
       }
@@ -95,6 +101,8 @@ export default function MatchesScreen() {
       setMatches(matchesWithProfiles);
     } catch (error: any) {
       console.error('Error loading matches:', error);
+      const { title, message } = getErrorAlert(error, 'Failed to load matches');
+      Alert.alert(title, message);
     } finally {
       setLoading(false);
     }
@@ -136,7 +144,7 @@ export default function MatchesScreen() {
             onPress={() => handleMatchPress(item.match_id)}
           >
             <Image
-              source={{ uri: item.otherUserPhoto || 'https://via.placeholder.com/80' }}
+              source={item.otherUserPhoto ? { uri: item.otherUserPhoto } : PLACEHOLDER_IMAGE}
               style={styles.avatar}
             />
             <View style={styles.matchInfo}>

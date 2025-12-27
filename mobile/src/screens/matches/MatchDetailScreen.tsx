@@ -15,6 +15,8 @@ import { Match, Proposal, Confirm } from '../../lib/types';
 import { BRAND_COLORS } from '../../config/brand';
 import ProposalCard from '../../components/ProposalCard';
 
+const PLACEHOLDER_IMAGE = require('../../assets/icon.png');
+
 type MatchDetailRouteParams = {
   matchId: string;
 };
@@ -136,7 +138,7 @@ export default function MatchDetailScreen() {
     <ScrollView style={styles.container}>
       <View style={styles.header}>
         <Image
-          source={{ uri: otherUserPhoto || 'https://via.placeholder.com/100' }}
+          source={otherUserPhoto ? { uri: otherUserPhoto } : PLACEHOLDER_IMAGE}
           style={styles.avatar}
         />
         <Text style={styles.name}>{otherUserName}</Text>

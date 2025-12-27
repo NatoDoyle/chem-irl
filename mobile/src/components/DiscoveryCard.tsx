@@ -8,12 +8,17 @@ interface DiscoveryCardProps {
   onPass?: () => void;
 }
 
+const PLACEHOLDER_IMAGE = require('../../assets/icon.png');
+
 export default function DiscoveryCard({ item, onLike, onPass }: DiscoveryCardProps) {
-  const primaryPhoto = item.photos[0] || 'https://via.placeholder.com/400x500';
+  const primaryPhoto = item.photos[0] || Image.resolveAssetSource(PLACEHOLDER_IMAGE).uri;
 
   return (
     <View style={styles.card}>
-      <Image source={{ uri: primaryPhoto }} style={styles.image} />
+      <Image
+        source={item.photos[0] ? { uri: primaryPhoto } : PLACEHOLDER_IMAGE}
+        style={styles.image}
+      />
 
       <View style={styles.overlay}>
         <View style={styles.content}>

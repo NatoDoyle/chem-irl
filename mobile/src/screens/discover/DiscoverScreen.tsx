@@ -5,6 +5,7 @@ import { FeedItem } from '../../lib/types';
 import DiscoveryCardStack from '../../components/DiscoveryCardStack';
 import MatchModal from '../../components/MatchModal';
 import { BRAND_COLORS } from '../../config/brand';
+import { getErrorAlert } from '../../lib/errors';
 
 type FeedItemWithPhotos = FeedItem & { photos: string[] };
 
@@ -35,7 +36,8 @@ export default function DiscoverScreen() {
 
       if (error) {
         console.error('Error loading feed:', error);
-        Alert.alert('Error', 'Failed to load discovery feed');
+        const { title, message } = getErrorAlert(error, 'Failed to load discovery feed');
+        Alert.alert(title, message);
         setLoading(false);
         return;
       }
@@ -67,7 +69,8 @@ export default function DiscoverScreen() {
       setFeed(feedWithPhotos);
     } catch (error: any) {
       console.error('Error loading feed:', error);
-      Alert.alert('Error', error.message || 'Failed to load discovery feed');
+      const { title, message } = getErrorAlert(error, 'Failed to load discovery feed');
+      Alert.alert(title, message);
     } finally {
       setLoading(false);
     }
@@ -87,7 +90,8 @@ export default function DiscoverScreen() {
 
       if (error) {
         console.error('Error liking user:', error);
-        Alert.alert('Error', 'Failed to like user');
+        const { title, message } = getErrorAlert(error, 'Failed to like user');
+        Alert.alert(title, message);
         return;
       }
 
@@ -101,7 +105,8 @@ export default function DiscoverScreen() {
       setFeed((prev) => prev.filter((item) => item.user_id !== userId));
     } catch (error: any) {
       console.error('Error liking user:', error);
-      Alert.alert('Error', error.message || 'Failed to like user');
+      const { title, message } = getErrorAlert(error, 'Failed to like user');
+      Alert.alert(title, message);
     }
   };
 
@@ -118,7 +123,7 @@ export default function DiscoverScreen() {
     );
   }
 
-  if (feed.length === 0) {
+  if (feed.length === 0 && !loading) {
     return (
       <View style={styles.container}>
         <Text style={styles.emptyText}>No more profiles to discover</Text>
