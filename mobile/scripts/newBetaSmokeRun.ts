@@ -63,23 +63,19 @@ try {
     // Ignore if package.json can't be read
   }
 
-  // Try to read Supabase URL host from env file
-  let supabaseHost = '[unknown]';
-  try {
-    const envLocalPath = resolve(process.cwd(), '.env.local');
-    const envPath = resolve(process.cwd(), '.env');
+  /**
+   * Extract Supabase hostname from an env file
+   * Returns null if file doesn't exist or URL can't be parsed
+   */
+  function extractHostFromEnvFile(filePath: string): string | null {
+    try {
+      if (!existsSync(filePath)) {
+        return null;
+      }
 
-    // Try .env.local first (active env), then .env as fallback
-    let envContent = '';
-    if (existsSync(envLocalPath)) {
-      envContent = readFileSync(envLocalPath, 'utf-8');
-    } else if (existsSync(envPath)) {
-      envContent = readFileSync(envPath, 'utf-8');
-    }
-
-    if (envContent) {
-      // Parse env file for EXPO_PUBLIC_SUPABASE_URL
+      const envContent = readFileSync(filePath, 'utf-8');
       const lines = envContent.split('\n');
+
       for (const line of lines) {
         // Skip comments and empty lines
         const trimmed = line.trim();
@@ -100,16 +96,42 @@ try {
           // Parse URL and extract hostname only
           try {
             const urlObj = new URL(url);
-            supabaseHost = urlObj.hostname;
+            return urlObj.hostname;
           } catch {
-            // Invalid URL format, leave as unknown
+            // Invalid URL format
+            return null;
           }
-          break;
         }
       }
+    } catch {
+      // Ignore if env file can't be read
     }
-  } catch {
-    // Ignore if env file can't be read
+    return null;
+  }
+
+  // Read Supabase URL host from active env file (.env.local or .env)
+  const envLocalPath = resolve(process.cwd(), '.env.local');
+  const envPath = resolve(process.cwd(), '.env');
+  let supabaseHost = '[unknown]';
+  const activeHost = extractHostFromEnvFile(envLocalPath) || extractHostFromEnvFile(envPath);
+  if (activeHost) {
+    supabaseHost = activeHost;
+  }
+
+  // Read staging and production env files to determine environment
+  const stagingPath = resolve(process.cwd(), '.env.staging');
+  const productionPath = resolve(process.cwd(), '.env.production');
+  const stagingHost = extractHostFromEnvFile(stagingPath);
+  const productionHost = extractHostFromEnvFile(productionPath);
+
+  // Determine detected environment
+  let detectedEnv = 'unknown';
+  if (activeHost) {
+    if (stagingHost && activeHost === stagingHost) {
+      detectedEnv = 'staging';
+    } else if (productionHost && activeHost === productionHost) {
+      detectedEnv = 'production';
+    }
   }
 
   // Replace placeholders in template
@@ -146,7 +168,8 @@ try {
 - [ ] \`npm run use:staging\` executed
 - [ ] Expo restarted after env switch
 - [ ] \`npm run verify:staging\` passed
-- Supabase URL host: ${supabaseHost}
+- [ ] Confirm detected environment: **${detectedEnv}**
+- [ ] Confirm Supabase URL host: **${supabaseHost}**
 - [ ] Phones installed using Expo Go
 - [ ] Phones installed using Dev build
 - [ ] Phones installed using Production build
