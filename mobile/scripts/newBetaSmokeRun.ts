@@ -4,7 +4,7 @@
  * Generate a new beta smoke test run log file with prefilled metadata
  */
 
-import { readFileSync, writeFileSync, mkdirSync } from 'fs';
+import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'fs';
 import { resolve } from 'path';
 import { execSync } from 'child_process';
 
@@ -63,6 +63,55 @@ try {
     // Ignore if package.json can't be read
   }
 
+  // Try to read Supabase URL host from env file
+  let supabaseHost = '[unknown]';
+  try {
+    const envLocalPath = resolve(process.cwd(), '.env.local');
+    const envPath = resolve(process.cwd(), '.env');
+
+    // Try .env.local first (active env), then .env as fallback
+    let envContent = '';
+    if (existsSync(envLocalPath)) {
+      envContent = readFileSync(envLocalPath, 'utf-8');
+    } else if (existsSync(envPath)) {
+      envContent = readFileSync(envPath, 'utf-8');
+    }
+
+    if (envContent) {
+      // Parse env file for EXPO_PUBLIC_SUPABASE_URL
+      const lines = envContent.split('\n');
+      for (const line of lines) {
+        // Skip comments and empty lines
+        const trimmed = line.trim();
+        if (!trimmed || trimmed.startsWith('#')) continue;
+
+        // Match EXPO_PUBLIC_SUPABASE_URL=value (with or without quotes)
+        const match = trimmed.match(/^EXPO_PUBLIC_SUPABASE_URL=(.+)$/);
+        if (match) {
+          let url = match[1].trim();
+          // Remove quotes if present
+          if (
+            (url.startsWith('"') && url.endsWith('"')) ||
+            (url.startsWith("'") && url.endsWith("'"))
+          ) {
+            url = url.slice(1, -1);
+          }
+
+          // Parse URL and extract hostname only
+          try {
+            const urlObj = new URL(url);
+            supabaseHost = urlObj.hostname;
+          } catch {
+            // Invalid URL format, leave as unknown
+          }
+          break;
+        }
+      }
+    }
+  } catch {
+    // Ignore if env file can't be read
+  }
+
   // Replace placeholders in template
   let content = template.replace(/\[YYYY-MM-DD\]/g, date);
   content = content.replace(/\[HH:MM\]/g, now.toTimeString().split(' ')[0].substring(0, 5)); // HH:MM
@@ -97,6 +146,7 @@ try {
 - [ ] \`npm run use:staging\` executed
 - [ ] Expo restarted after env switch
 - [ ] \`npm run verify:staging\` passed
+- Supabase URL host: ${supabaseHost}
 - [ ] Phones installed using Expo Go
 - [ ] Phones installed using Dev build
 - [ ] Phones installed using Production build
