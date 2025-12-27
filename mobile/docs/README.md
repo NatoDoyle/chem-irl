@@ -50,6 +50,62 @@ docs/
 3. **Testing**: Run `npm run test:two-device` for workflow, then follow [Two-Device Test Plan](./TWO_DEVICE_TEST_PLAN.md)
 4. **Before release**: Complete [Release Checklist](./RELEASE_CHECKLIST.md)
 
+## Magic Link Redirect Setup
+
+Magic link authentication uses deep linking to redirect users back into the mobile app after clicking the email link.
+
+### Configuration
+
+1. **Set environment variable** in `.env` or `.env.local`:
+
+   ```bash
+   EXPO_PUBLIC_AUTH_REDIRECT_URL=chemirl://auth/callback
+   ```
+
+   If not set, the app will fallback to `Linking.createURL('/auth/callback')` which generates the URL based on the app scheme.
+
+2. **Configure Supabase Redirect URLs**:
+
+   Add the following redirect URLs in your Supabase project settings:
+
+   **Staging/Development:**
+   - `chemirl://auth/callback`
+   - `exp://localhost:8081/--/auth/callback` (for Expo Go)
+
+   **Production:**
+   - `chemirl://auth/callback`
+
+   **Where to add:**
+   - Supabase Dashboard → Authentication → URL Configuration → Redirect URLs
+   - Add each URL on a new line
+
+3. **Verify app scheme** in `app.json`:
+
+   ```json
+   {
+     "expo": {
+       "scheme": "chemirl"
+     }
+   }
+   ```
+
+   The scheme must match the URL scheme used in `EXPO_PUBLIC_AUTH_REDIRECT_URL`.
+
+### Deep Link Handling
+
+The app automatically handles deep links via `App.tsx`:
+
+- Initial URL on app launch: `Linking.getInitialURL()`
+- URL changes while app is running: `Linking.addEventListener('url')`
+- Both routes to `handleMagicLink()` which extracts tokens and sets the session
+
+### Testing
+
+1. Send a magic link from the login screen
+2. Open the email link on a device with the app installed
+3. The app should open and authenticate automatically
+4. If using Expo Go, use the `exp://` URL format
+
 ## Sentry Setup
 
 Sentry is configured for error logging and crash reporting. It's optional and safe to ignore during local development.

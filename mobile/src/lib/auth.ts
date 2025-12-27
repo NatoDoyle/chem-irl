@@ -47,10 +47,14 @@ export async function handleMagicLink(url: string) {
  */
 export async function sendMagicLink(email: string) {
   try {
+    // Use explicit redirect URL from env, or fallback to Linking.createURL
+    const redirectUrl =
+      process.env.EXPO_PUBLIC_AUTH_REDIRECT_URL || Linking.createURL('/auth/callback');
+
     const { error } = await supabase.auth.signInWithOtp({
       email: email.trim().toLowerCase(),
       options: {
-        emailRedirectTo: Linking.createURL('/auth/callback'),
+        emailRedirectTo: redirectUrl,
       },
     });
 

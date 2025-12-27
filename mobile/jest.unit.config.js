@@ -10,6 +10,9 @@ module.exports = {
   transform: {
     '^.+\\.[jt]sx?$': 'babel-jest',
   },
+  transformIgnorePatterns: [
+    'node_modules/(?!(expo|@expo|expo-.*|@react-native|react-native|@react-navigation)/)',
+  ],
   setupFiles: ['<rootDir>/jest.unit.setup.js'],
   moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json'],
   collectCoverageFrom: [

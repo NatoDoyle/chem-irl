@@ -28,6 +28,8 @@ jest.mock('expo-linking', () => ({
 describe('Auth Functions', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    // Reset environment variable before each test
+    delete process.env.EXPO_PUBLIC_AUTH_REDIRECT_URL;
   });
 
   describe('sendMagicLink', () => {
@@ -45,6 +47,24 @@ describe('Auth Functions', () => {
         },
       });
       expect(result.success).toBe(true);
+    });
+
+    it('should use EXPO_PUBLIC_AUTH_REDIRECT_URL if set', async () => {
+      jest
+        .spyOn(supabase.auth, 'signInWithOtp')
+        .mockResolvedValue({ data: {} as any, error: null } as any);
+
+      // Set environment variable for this test
+      process.env.EXPO_PUBLIC_AUTH_REDIRECT_URL = 'custom://auth/callback';
+
+      await sendMagicLink('test@example.com');
+
+      expect(supabase.auth.signInWithOtp).toHaveBeenCalledWith({
+        email: 'test@example.com',
+        options: {
+          emailRedirectTo: 'custom://auth/callback',
+        },
+      });
     });
 
     it('should trim and lowercase email', async () => {

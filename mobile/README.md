@@ -28,6 +28,9 @@ EXPO_PUBLIC_SUPABASE_URL=your_supabase_project_url
 EXPO_PUBLIC_SUPABASE_KEY=your_supabase_publishable_key
 EXPO_PUBLIC_APP_URL=https://chemirl.app
 
+# Magic link redirect (mobile deep link)
+EXPO_PUBLIC_AUTH_REDIRECT_URL=chemirl://auth/callback
+
 # Optional: Error logging with Sentry
 EXPO_PUBLIC_SENTRY_DSN=your_sentry_dsn_here
 EXPO_PUBLIC_ENVIRONMENT=development  # or production, staging, etc.
