@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback, memo } from 'react';
 import {
   View,
   Text,
@@ -11,7 +11,6 @@ import {
 } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { useCallback } from 'react';
 import { supabase } from '../../lib/supabase/client';
 import { Match } from '../../lib/types';
 import { BRAND_COLORS } from '../../config/brand';
@@ -36,6 +35,25 @@ interface MatchWithProfile extends Match {
   otherUserPhoto?: string;
   otherUserName?: string;
 }
+
+// Memoized match item component for better FlatList performance
+const MatchItem = memo(
+  ({ item, onPress }: { item: MatchWithProfile; onPress: (matchId: string) => void }) => (
+    <TouchableOpacity style={styles.matchCard} onPress={() => onPress(item.match_id)}>
+      <Image
+        source={item.otherUserPhoto ? { uri: item.otherUserPhoto } : PLACEHOLDER_IMAGE}
+        style={styles.avatar}
+      />
+      <View style={styles.matchInfo}>
+        <Text style={styles.matchName}>{item.otherUserName}</Text>
+        <Text style={styles.matchStatus}>{item.status === 'open' ? 'Open' : item.status}</Text>
+      </View>
+      <Text style={styles.chevron}>›</Text>
+    </TouchableOpacity>
+  )
+);
+
+MatchItem.displayName = 'MatchItem';
 
 export default function MatchesScreen() {
   const navigation = useNavigation<MatchesScreenNavigationProp>();
@@ -251,9 +269,30 @@ export default function MatchesScreen() {
     setRefreshing(false);
   };
 
-  const handleMatchPress = (matchId: string) => {
-    navigation.navigate('MatchDetail', { matchId });
-  };
+  const handleMatchPress = useCallback(
+    (matchId: string) => {
+      navigation.navigate('MatchDetail', { matchId });
+    },
+    [navigation]
+  );
+
+  // Calculate item height for getItemLayout optimization
+  // matchCard: padding 16 top + 16 bottom = 32, avatar 60, marginBottom 12
+  // Total: 32 + 60 + 12 = 104px
+  const ITEM_HEIGHT = 104;
+  const getItemLayout = useCallback(
+    (_data: unknown, index: number) => ({
+      length: ITEM_HEIGHT,
+      offset: ITEM_HEIGHT * index,
+      index,
+    }),
+    []
+  );
+
+  const renderItem = useCallback(
+    ({ item }: { item: MatchWithProfile }) => <MatchItem item={item} onPress={handleMatchPress} />,
+    [handleMatchPress]
+  );
 
   if (loading) {
     return (
@@ -292,25 +331,10 @@ export default function MatchesScreen() {
       <FlatList
         data={matches}
         keyExtractor={(item) => item.match_id}
+        renderItem={renderItem}
+        getItemLayout={getItemLayout}
+        removeClippedSubviews={true}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-        renderItem={({ item }) => (
-          <TouchableOpacity
-            style={styles.matchCard}
-            onPress={() => handleMatchPress(item.match_id)}
-          >
-            <Image
-              source={item.otherUserPhoto ? { uri: item.otherUserPhoto } : PLACEHOLDER_IMAGE}
-              style={styles.avatar}
-            />
-            <View style={styles.matchInfo}>
-              <Text style={styles.matchName}>{item.otherUserName}</Text>
-              <Text style={styles.matchStatus}>
-                {item.status === 'open' ? 'Open' : item.status}
-              </Text>
-            </View>
-            <Text style={styles.chevron}>›</Text>
-          </TouchableOpacity>
-        )}
         contentContainerStyle={styles.list}
       />
     </View>
