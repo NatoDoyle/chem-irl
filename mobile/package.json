@@ -21,7 +21,9 @@
     "use:production": "tsx scripts/switchEnv.ts production",
     "verify:staging": "tsx scripts/verifySupabase.ts",
     "test:two-device": "tsx scripts/printTwoDeviceWorkflow.ts",
-    "test:log:new": "tsx scripts/newTestRunLog.ts"
+    "test:log:new": "tsx scripts/newTestRunLog.ts",
+    "test:beta:smoke:new": "tsx scripts/newBetaSmokeRun.ts",
+    "test:beta:smoke": "echo '📋 Beta Smoke Checklist: docs/BETA_SMOKE_CHECKLIST.md' && echo '📱 Install Guide: docs/INSTALL_ON_PHONES.md' && echo '💡 Run: npm run test:beta:smoke:new'"
   },
   "dependencies": {
     "@react-native-async-storage/async-storage": "^2.2.0",
