@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -16,6 +16,8 @@ import { supabase } from '../../lib/supabase/client';
 import { Match } from '../../lib/types';
 import { BRAND_COLORS } from '../../config/brand';
 import { getErrorAlert } from '../../lib/errors';
+
+const REFRESH_THROTTLE_MS = 10000; // 10 seconds - minimum time between auto-refreshes
 
 const PLACEHOLDER_IMAGE = require('../../assets/icon.png');
 
@@ -38,6 +40,7 @@ export default function MatchesScreen() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+  const lastFetchTimeRef = useRef<number>(0);
 
   const loadMatches = useCallback(async () => {
     setError(null);
@@ -95,6 +98,7 @@ export default function MatchesScreen() {
 
       setMatches(matchesWithProfiles);
       setError(null);
+      lastFetchTimeRef.current = Date.now();
     } catch (error: any) {
       console.error('Error loading matches:', error);
       const { message } = getErrorAlert(error, 'Failed to load matches');
@@ -108,15 +112,19 @@ export default function MatchesScreen() {
     loadMatches();
   }, [loadMatches]);
 
-  // Refresh matches when screen comes into focus (e.g., after returning from Discover tab with new match)
+  // Refresh matches when screen comes into focus, but throttle to avoid excessive calls
   useFocusEffect(
     useCallback(() => {
-      // Only refresh if not currently loading and we have matches (to avoid loading spinner on every focus)
-      // Or if matches list is empty (to catch new matches)
-      if (!loading && matches.length === 0) {
+      const now = Date.now();
+      const timeSinceLastFetch = now - lastFetchTimeRef.current;
+
+      // Only auto-refresh if:
+      // 1. Not currently loading/refreshing
+      // 2. Last fetch was more than REFRESH_THROTTLE_MS ago (throttle)
+      if (!loading && !refreshing && timeSinceLastFetch > REFRESH_THROTTLE_MS) {
         loadMatches();
       }
-    }, [loading, matches.length, loadMatches])
+    }, [loading, refreshing, loadMatches])
   );
 
   const onRefresh = async () => {
