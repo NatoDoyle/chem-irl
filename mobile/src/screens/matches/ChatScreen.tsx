@@ -14,7 +14,8 @@ import { useRoute } from '@react-navigation/native';
 import { supabase } from '../../lib/supabase/client';
 import { Message } from '../../lib/types';
 import { BRAND_COLORS } from '../../config/brand';
-import { getErrorAlert } from '../../lib/errors';
+import { getErrorAlert, isRecoverableError } from '../../lib/errors';
+import { enqueue, processQueue, getQueueSize, QueuedMessage } from '../../lib/offlineQueue';
 
 type ChatRouteParams = {
   matchId: string;
@@ -29,6 +30,8 @@ export default function ChatScreen() {
   const [newMessage, setNewMessage] = useState('');
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
+  const [queueSize, setQueueSize] = useState(0);
+  const [queuedMessages, setQueuedMessages] = useState<Map<string, QueuedMessage>>(new Map());
 
   const loadMessages = useCallback(async () => {
     try {
@@ -80,11 +83,41 @@ export default function ChatScreen() {
     };
   }, [matchId]);
 
+  // Load queue size on mount and after processing
+  const updateQueueSize = useCallback(async () => {
+    const size = await getQueueSize();
+    setQueueSize(size);
+
+    // Load queued messages for this match to show optimistically
+    const { loadQueue } = await import('../../lib/offlineQueue');
+    const queue = await loadQueue();
+    const matchQueue = queue.filter(
+      (op): op is QueuedMessage => op.type === 'message' && op.match_id === matchId
+    );
+    const queueMap = new Map(matchQueue.map((msg) => [msg.id, msg]));
+    setQueuedMessages(queueMap);
+  }, [matchId]);
+
+  // Process queue when network is available (after successful operations)
+  const processQueueIfNeeded = useCallback(async () => {
+    try {
+      const processed = await processQueue();
+      if (processed > 0) {
+        // Reload messages to show newly sent ones
+        await loadMessages();
+        await updateQueueSize();
+      }
+    } catch (error) {
+      console.error('Error processing queue:', error);
+    }
+  }, [loadMessages, updateQueueSize]);
+
   useEffect(() => {
     loadMessages();
+    updateQueueSize();
     const unsubscribe = subscribeToMessages();
     return unsubscribe;
-  }, [loadMessages, subscribeToMessages]);
+  }, [loadMessages, subscribeToMessages, updateQueueSize]);
 
   const handleSend = async () => {
     if (!newMessage.trim()) return;
@@ -97,7 +130,10 @@ export default function ChatScreen() {
       const {
         data: { user },
       } = await supabase.auth.getUser();
-      if (!user) return;
+      if (!user) {
+        setSending(false);
+        return;
+      }
 
       const { error } = await supabase.from('messages').insert({
         match_id: matchId,
@@ -107,16 +143,62 @@ export default function ChatScreen() {
       });
 
       if (error) {
-        console.error('Error sending message:', error);
-        const { title, message } = getErrorAlert(error, 'Failed to send message');
-        Alert.alert(title, message);
-        setNewMessage(messageContent); // Restore message on error
+        // Check if it's a recoverable (network) error
+        if (isRecoverableError(error)) {
+          // Queue message for retry
+          const queuedMessage: QueuedMessage = {
+            id: `${Date.now()}-${Math.random()}`,
+            type: 'message',
+            match_id: matchId,
+            sender_id: user.id,
+            content: messageContent,
+            bytes: new Blob([messageContent]).size,
+            createdAt: new Date().toISOString(),
+          };
+          await enqueue(queuedMessage);
+          setQueuedMessages((prev) => new Map(prev).set(queuedMessage.id, queuedMessage));
+          await updateQueueSize();
+          // Show optimistic message in UI
+          Alert.alert('Message queued', "Your message will be sent when you're back online.");
+        } else {
+          // Non-recoverable error
+          const { title, message } = getErrorAlert(error, 'Failed to send message');
+          Alert.alert(title, message);
+          setNewMessage(messageContent); // Restore message on error
+        }
+      } else {
+        // Success - process any queued messages
+        await processQueueIfNeeded();
       }
     } catch (error: any) {
-      console.error('Error sending message:', error);
-      const { title, message } = getErrorAlert(error, 'Failed to send message');
-      Alert.alert(title, message);
-      setNewMessage(messageContent);
+      // Check if it's a recoverable (network) error
+      if (isRecoverableError(error)) {
+        // Queue message for retry
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
+        if (user) {
+          const queuedMessage: QueuedMessage = {
+            id: `${Date.now()}-${Math.random()}`,
+            type: 'message',
+            match_id: matchId,
+            sender_id: user.id,
+            content: messageContent,
+            bytes: new Blob([messageContent]).size,
+            createdAt: new Date().toISOString(),
+          };
+          await enqueue(queuedMessage);
+          setQueuedMessages((prev) => new Map(prev).set(queuedMessage.id, queuedMessage));
+          await updateQueueSize();
+          Alert.alert('Message queued', "Your message will be sent when you're back online.");
+        } else {
+          setNewMessage(messageContent);
+        }
+      } else {
+        const { title, message } = getErrorAlert(error, 'Failed to send message');
+        Alert.alert(title, message);
+        setNewMessage(messageContent);
+      }
     } finally {
       setSending(false);
     }
@@ -130,15 +212,44 @@ export default function ChatScreen() {
     });
   }, []);
 
+  // Merge queued messages with regular messages for display
+  const allMessages = [...messages];
+  queuedMessages.forEach((queuedMsg) => {
+    // Add queued messages that aren't already in the messages list
+    const exists = messages.some((msg) => {
+      // Check if this queued message matches a regular message
+      return (
+        msg.sender_id === queuedMsg.sender_id &&
+        msg.content === queuedMsg.content &&
+        msg.match_id === queuedMsg.match_id
+      );
+    });
+    if (!exists && currentUserId === queuedMsg.sender_id) {
+      // Create a temporary message object for display
+      allMessages.push({
+        message_id: queuedMsg.id,
+        match_id: queuedMsg.match_id,
+        sender_id: queuedMsg.sender_id,
+        content: queuedMsg.content,
+        bytes: queuedMsg.bytes,
+        created_at: queuedMsg.createdAt,
+      } as Message);
+    }
+  });
+  // Sort by created_at
+  allMessages.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+
   const renderMessage = ({ item }: { item: Message }) => {
     if (!currentUserId) return null;
     const isOwn = item.sender_id === currentUserId;
+    const isQueued = queuedMessages.has(item.message_id);
 
     return (
       <View style={[styles.messageContainer, isOwn ? styles.ownMessage : styles.otherMessage]}>
         <Text style={[styles.messageText, isOwn ? styles.ownMessageText : styles.otherMessageText]}>
           {item.content}
         </Text>
+        {isQueued && <Text style={styles.queuedIndicator}>Queued (will send when online)</Text>}
         <Text style={styles.messageTime}>
           {new Date(item.created_at).toLocaleTimeString('en-US', {
             hour: 'numeric',
@@ -163,12 +274,19 @@ export default function ChatScreen() {
       ) : (
         <FlatList
           ref={flatListRef}
-          data={messages}
+          data={allMessages}
           keyExtractor={(item) => item.message_id}
           renderItem={renderMessage}
           contentContainerStyle={styles.messagesList}
           onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: true })}
         />
+      )}
+      {queueSize > 0 && (
+        <View style={styles.queueBanner}>
+          <Text style={styles.queueText}>
+            {queueSize} message{queueSize > 1 ? 's' : ''} queued - will send when online
+          </Text>
+        </View>
       )}
       <View style={styles.inputContainer}>
         <TextInput
@@ -278,5 +396,22 @@ const styles = StyleSheet.create({
   emptySubtext: {
     fontSize: 14,
     color: BRAND_COLORS.text[600],
+  },
+  queueBanner: {
+    backgroundColor: BRAND_COLORS.warning + '20',
+    padding: 12,
+    borderTopWidth: 1,
+    borderTopColor: BRAND_COLORS.warning,
+  },
+  queueText: {
+    fontSize: 12,
+    color: BRAND_COLORS.text[600],
+    textAlign: 'center',
+  },
+  queuedIndicator: {
+    fontSize: 10,
+    fontStyle: 'italic',
+    color: BRAND_COLORS.text[600],
+    marginTop: 4,
   },
 });

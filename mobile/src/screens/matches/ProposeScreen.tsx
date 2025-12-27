@@ -15,7 +15,8 @@ import { useRoute, useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { supabase } from '../../lib/supabase/client';
 import { BRAND_COLORS } from '../../config/brand';
-import { getErrorAlert } from '../../lib/errors';
+import { getErrorAlert, isRecoverableError } from '../../lib/errors';
+import { enqueue, processQueue, QueuedProposal } from '../../lib/offlineQueue';
 
 type ProposeRouteParams = {
   matchId: string;
@@ -314,17 +315,70 @@ export default function ProposeScreen() {
       });
 
       if (error) {
-        const { title, message } = getErrorAlert(error, 'Failed to send proposal');
-        Alert.alert(title, message);
-        setLoading(false);
-        return;
+        // Check if it's a recoverable (network) error
+        if (isRecoverableError(error)) {
+          // Queue proposal for retry
+          const queuedProposal: QueuedProposal = {
+            id: `${Date.now()}-${Math.random()}`,
+            type: 'proposal',
+            match_id: matchId,
+            sender_id: user.id,
+            windows: selectedWindows,
+            date_types: selectedDateTypes,
+            note: note.trim() || null,
+            expires_at: expiresAt.toISOString(),
+            createdAt: new Date().toISOString(),
+          };
+          await enqueue(queuedProposal);
+          Alert.alert('Proposal queued', "Your proposal will be sent when you're back online.");
+          navigation.goBack();
+          setLoading(false);
+          return;
+        } else {
+          // Non-recoverable error
+          const { title, message } = getErrorAlert(error, 'Failed to send proposal');
+          Alert.alert(title, message);
+          setLoading(false);
+          return;
+        }
       }
 
+      // Success - process any queued operations
+      await processQueue();
       Alert.alert('Success', 'Proposal sent!');
       navigation.goBack();
     } catch (error: any) {
+      // Check if it's a recoverable (network) error
+      if (isRecoverableError(error)) {
+        // Queue proposal for retry
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
+        if (user) {
+          const expiresAt = new Date();
+          expiresAt.setHours(expiresAt.getHours() + 72);
+
+          const queuedProposal: QueuedProposal = {
+            id: `${Date.now()}-${Math.random()}`,
+            type: 'proposal',
+            match_id: matchId,
+            sender_id: user.id,
+            windows: selectedWindows,
+            date_types: selectedDateTypes,
+            note: note.trim() || null,
+            expires_at: expiresAt.toISOString(),
+            createdAt: new Date().toISOString(),
+          };
+          await enqueue(queuedProposal);
+          Alert.alert('Proposal queued', "Your proposal will be sent when you're back online.");
+          navigation.goBack();
+          setLoading(false);
+          return;
+        }
+      }
       const { title, message } = getErrorAlert(error, 'Failed to send proposal');
       Alert.alert(title, message);
+      setLoading(false);
     } finally {
       setLoading(false);
     }
