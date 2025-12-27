@@ -9,6 +9,7 @@ import { getErrorAlert } from '../../lib/errors';
 import ConnectionStatus from '../../components/ConnectionStatus';
 import { createThrottle } from '../../lib/throttle';
 import { addBreadcrumb } from '../../lib/sentry';
+import { trackEvent } from '../../lib/analytics';
 
 type FeedItemWithPhotos = FeedItem & { photos: string[] };
 
@@ -157,6 +158,9 @@ export default function DiscoverScreen() {
         liker: user.id.substring(0, 8),
         likee: userId.substring(0, 8),
       });
+      trackEvent('like_sent', {
+        likeeId: userId.substring(0, 8),
+      });
 
       const { data, error } = await supabase.rpc('create_like_and_check_match', {
         p_liker: user.id,
@@ -173,6 +177,9 @@ export default function DiscoverScreen() {
       // Check if matched
       if (data?.matched && data?.match_id) {
         addBreadcrumb('New match created', 'discovery', 'info', {
+          matchId: data.match_id.substring(0, 8),
+        });
+        trackEvent('match_created', {
           matchId: data.match_id.substring(0, 8),
         });
         setNewMatchId(data.match_id);

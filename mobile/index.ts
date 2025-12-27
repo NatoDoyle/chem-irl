@@ -1,5 +1,9 @@
 import { registerRootComponent } from 'expo';
 import App from './App';
+import { initAnalytics } from './src/lib/analytics';
+
+// Initialize analytics
+initAnalytics();
 
 // Initialize Sentry if DSN is provided (optional)
 const sentryDsn = process.env.EXPO_PUBLIC_SENTRY_DSN;

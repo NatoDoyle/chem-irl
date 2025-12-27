@@ -1,6 +1,7 @@
 import { supabase } from './supabase/client';
 import * as Linking from 'expo-linking';
 import { addBreadcrumb } from './sentry';
+import { trackEvent } from './analytics';
 
 /**
  * Handle deep link for magic link authentication
@@ -26,6 +27,11 @@ export async function handleMagicLink(url: string) {
         return { success: false, error };
       }
 
+      if (data.session?.user) {
+        trackEvent('user_signed_up', {
+          userId: data.session.user.id.substring(0, 8),
+        });
+      }
       return { success: true, session: data.session };
     }
 

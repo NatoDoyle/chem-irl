@@ -15,6 +15,7 @@ import { supabase } from '../../lib/supabase/client';
 import { BRAND_COLORS } from '../../config/brand';
 import { getErrorAlert } from '../../lib/errors';
 import { sanitizeText, sanitizeMultilineText } from '../../lib/sanitize';
+import { trackEvent } from '../../lib/analytics';
 
 type OnboardingStackParamList = {
   ProfileSetup: undefined;
@@ -83,6 +84,12 @@ export default function ProfileSetupScreen() {
         setLoading(false);
         return;
       }
+
+      // Track profile setup completion
+      trackEvent('profile_completed', {
+        hasHeadline: sanitizedHeadline.length > 0,
+        hasBio: sanitizedBio.length > 0,
+      });
 
       // Navigate to photos screen
       navigation.navigate('Photos' as any);

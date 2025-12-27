@@ -20,6 +20,7 @@ import { enqueue, processQueue, QueuedProposal } from '../../lib/offlineQueue';
 import { createThrottle } from '../../lib/throttle';
 import { sanitizeMultilineText } from '../../lib/sanitize';
 import { addBreadcrumb } from '../../lib/sentry';
+import { trackEvent } from '../../lib/analytics';
 import {
   localDateToUTC,
   isWithinSevenDays,
@@ -325,6 +326,12 @@ export default function ProposeScreen() {
         matchId: matchId.substring(0, 8),
         windowCount: selectedWindows.length,
         dateTypeCount: selectedDateTypes.length,
+      });
+      trackEvent('proposal_sent', {
+        matchId: matchId.substring(0, 8),
+        windowCount: selectedWindows.length,
+        dateTypeCount: selectedDateTypes.length,
+        hasNote: !!sanitizedNote,
       });
 
       const { error } = await supabase.from('proposals').insert({

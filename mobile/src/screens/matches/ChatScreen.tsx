@@ -21,6 +21,7 @@ import { enqueue, processQueue, getQueueSize, QueuedMessage } from '../../lib/of
 import ConnectionStatus from '../../components/ConnectionStatus';
 import { sanitizeText } from '../../lib/sanitize';
 import { addBreadcrumb } from '../../lib/sentry';
+import { trackEvent } from '../../lib/analytics';
 
 type ChatRouteParams = {
   matchId: string;
@@ -300,6 +301,10 @@ export default function ChatScreen() {
       }
 
       addBreadcrumb('Sending message', 'chat', 'info', {
+        matchId: matchId.substring(0, 8),
+        messageLength: messageContent.length,
+      });
+      trackEvent('message_sent', {
         matchId: matchId.substring(0, 8),
         messageLength: messageContent.length,
       });

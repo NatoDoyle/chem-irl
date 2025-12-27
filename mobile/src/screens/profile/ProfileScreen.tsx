@@ -18,6 +18,7 @@ import { deletePhotoFromStorage } from '../../lib/storage';
 import { getErrorAlert } from '../../lib/errors';
 import { sanitizeText, sanitizeMultilineText } from '../../lib/sanitize';
 import { addBreadcrumb, clearUserContext } from '../../lib/sentry';
+import { trackEvent } from '../../lib/analytics';
 import {
   reconcilePhotos,
   shouldRunReconciliation,
@@ -284,7 +285,10 @@ export default function ProfileScreen() {
       // Limit to 6 photos max
       const updatedPhotos = [...photos, publicUrl].slice(0, 6);
       setPhotos(updatedPhotos);
-
+      // Track photo upload
+      trackEvent('photo_uploaded', {
+        photoCount: updatedPhotos.length,
+      });
       // Clear stored URI on success
       setFailedUploadURIs((prev) => {
         const newMap = new Map(prev);

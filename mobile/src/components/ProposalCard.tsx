@@ -7,6 +7,7 @@ import { Alert } from 'react-native';
 import { formatProposalTime } from '../lib/timezone';
 import { getErrorAlert } from '../lib/errors';
 import { addBreadcrumb } from '../lib/sentry';
+import { trackEvent } from '../lib/analytics';
 
 interface ProposalCardProps {
   proposal: Proposal;
@@ -100,6 +101,10 @@ export default function ProposalCard({
       }
 
       addBreadcrumb('Confirming proposal', 'proposal', 'info', {
+        proposalId: proposal.proposal_id.substring(0, 8),
+        matchId: matchId.substring(0, 8),
+      });
+      trackEvent('proposal_confirmed', {
         proposalId: proposal.proposal_id.substring(0, 8),
         matchId: matchId.substring(0, 8),
       });

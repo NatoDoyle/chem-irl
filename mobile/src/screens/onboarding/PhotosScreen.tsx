@@ -11,6 +11,7 @@ import {
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
 import { compressImage } from '../../lib/imageCompression';
+import { trackEvent } from '../../lib/analytics';
 import { supabase } from '../../lib/supabase/client';
 import { BRAND_COLORS } from '../../config/brand';
 import { useNavigation } from '@react-navigation/native';
@@ -163,6 +164,11 @@ export default function PhotosScreen() {
       }
 
       setPhotos(updatedPhotos);
+      // Track photo upload
+      trackEvent('photo_uploaded', {
+        photoCount: updatedPhotos.length,
+        isOnboarding: true,
+      });
       // Clear stored URI on success
       setFailedUploadURIs((prev) => {
         const newMap = new Map(prev);

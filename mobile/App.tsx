@@ -18,6 +18,13 @@ import OnboardingNavigator from './src/navigation/OnboardingNavigator';
 import MainNavigator from './src/navigation/MainNavigator';
 import { isSessionExpiredError, getErrorAlert, isRecoverableError } from './src/lib/errors';
 import { addBreadcrumb, setUserContext, clearUserContext } from './src/lib/sentry';
+import { identifyUser, resetUser } from './src/lib/analytics';
+import {
+  registerDeviceToken,
+  unregisterDeviceToken,
+  setupNotificationListeners,
+  handleNotificationTap,
+} from './src/lib/notifications';
 
 const Stack = createNativeStackNavigator();
 
@@ -176,6 +183,10 @@ export default function App() {
           }
         }
         clearUserContext();
+        resetUser();
+        unregisterDeviceToken().catch((error) => {
+          console.error('Error unregistering device token:', error);
+        });
         setSession(null);
         setProfileComplete(false);
         return;
@@ -184,6 +195,13 @@ export default function App() {
       if (session) {
         if (session.user) {
           setUserContext(session.user.id, session.user.email || undefined);
+          identifyUser(session.user.id, {
+            email: session.user.email || undefined,
+          });
+          // Register device for push notifications
+          registerDeviceToken().catch((error) => {
+            console.error('Error registering device token:', error);
+          });
         }
         try {
           // Check profile completion on auth change
@@ -230,6 +248,20 @@ export default function App() {
 
     handleInitialURL();
 
+    // Setup notification listeners
+    const notificationCleanup = setupNotificationListeners(
+      (notification) => {
+        // Notification received while app is foregrounded
+        console.log('Notification received:', notification);
+      },
+      (notification) => {
+        // Notification tapped - handle deep link
+        // Note: Navigation ref would be needed for deep linking
+        // For now, just log - can be enhanced with navigation ref
+        handleNotificationTap(notification);
+      }
+    );
+
     // Listen for deep links while app is running
     const linkingSubscription = Linking.addEventListener('url', async (event) => {
       if (event.url.includes('access_token')) {
@@ -240,6 +272,7 @@ export default function App() {
     return () => {
       subscription.unsubscribe();
       linkingSubscription.remove();
+      notificationCleanup();
     };
   }, [checkSessionAndProfile]);
 
