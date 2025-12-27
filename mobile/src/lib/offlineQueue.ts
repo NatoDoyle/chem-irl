@@ -8,6 +8,8 @@ import { supabase } from './supabase/client';
 import { isRecoverableError } from './errors';
 
 const QUEUE_STORAGE_KEY = '@chemirl:offline_queue';
+const MAX_RETRY_ATTEMPTS = 3;
+const INITIAL_RETRY_DELAY_MS = 5000; // 5 seconds
 
 export interface QueuedMessage {
   id: string;
@@ -17,6 +19,8 @@ export interface QueuedMessage {
   content: string;
   bytes: number;
   createdAt: string;
+  retryCount?: number; // Number of retry attempts
+  nextRetryAt?: string; // ISO timestamp when to retry next (for exponential backoff)
 }
 
 export interface QueuedProposal {
@@ -29,6 +33,8 @@ export interface QueuedProposal {
   note: string | null;
   expires_at: string;
   createdAt: string;
+  retryCount?: number; // Number of retry attempts
+  nextRetryAt?: string; // ISO timestamp when to retry next (for exponential backoff)
 }
 
 export type QueuedOperation = QueuedMessage | QueuedProposal;
@@ -63,7 +69,13 @@ async function saveQueue(queue: QueuedOperation[]): Promise<void> {
  */
 export async function enqueue(operation: QueuedOperation): Promise<void> {
   const queue = await loadQueue();
-  queue.push(operation);
+  // Initialize retry count and next retry time
+  const operationWithRetry = {
+    ...operation,
+    retryCount: 0,
+    nextRetryAt: new Date().toISOString(), // Retry immediately on first attempt
+  };
+  queue.push(operationWithRetry);
   await saveQueue(queue);
 }
 
@@ -77,9 +89,46 @@ export async function dequeue(id: string): Promise<void> {
 }
 
 /**
+ * Update retry information for an operation in the queue
+ */
+async function updateRetryInfo(id: string, retryCount: number, nextRetryAt: string): Promise<void> {
+  const queue = await loadQueue();
+  const updated = queue.map((op) => {
+    if (op.id === id) {
+      return {
+        ...op,
+        retryCount,
+        nextRetryAt,
+      };
+    }
+    return op;
+  });
+  await saveQueue(updated);
+}
+
+/**
  * Process a single queued message
  */
 async function processMessage(message: QueuedMessage): Promise<boolean> {
+  const retryCount = message.retryCount || 0;
+
+  // Check if we should retry yet (exponential backoff)
+  if (message.nextRetryAt) {
+    const nextRetry = new Date(message.nextRetryAt);
+    const now = new Date();
+    if (now < nextRetry) {
+      // Not time to retry yet
+      return false;
+    }
+  }
+
+  // Check if max retries exceeded
+  if (retryCount >= MAX_RETRY_ATTEMPTS) {
+    console.error(`Max retries (${MAX_RETRY_ATTEMPTS}) exceeded for message ${message.id}`);
+    await dequeue(message.id);
+    return false;
+  }
+
   try {
     const { error } = await supabase.from('messages').insert({
       match_id: message.match_id,
@@ -89,8 +138,11 @@ async function processMessage(message: QueuedMessage): Promise<boolean> {
     });
 
     if (error) {
-      // If still a recoverable error, keep in queue
+      // If still a recoverable error, update retry count and schedule next retry
       if (isRecoverableError(error)) {
+        const delay = INITIAL_RETRY_DELAY_MS * Math.pow(2, retryCount); // Exponential backoff
+        const nextRetryAt = new Date(Date.now() + delay).toISOString();
+        await updateRetryInfo(message.id, retryCount + 1, nextRetryAt);
         return false;
       }
       // Non-recoverable error - remove from queue
@@ -105,6 +157,9 @@ async function processMessage(message: QueuedMessage): Promise<boolean> {
   } catch (error) {
     // Network or other recoverable error
     if (isRecoverableError(error)) {
+      const delay = INITIAL_RETRY_DELAY_MS * Math.pow(2, retryCount); // Exponential backoff
+      const nextRetryAt = new Date(Date.now() + delay).toISOString();
+      await updateRetryInfo(message.id, retryCount + 1, nextRetryAt);
       return false;
     }
     // Non-recoverable - remove from queue
@@ -118,6 +173,25 @@ async function processMessage(message: QueuedMessage): Promise<boolean> {
  * Process a single queued proposal
  */
 async function processProposal(proposal: QueuedProposal): Promise<boolean> {
+  const retryCount = proposal.retryCount || 0;
+
+  // Check if we should retry yet (exponential backoff)
+  if (proposal.nextRetryAt) {
+    const nextRetry = new Date(proposal.nextRetryAt);
+    const now = new Date();
+    if (now < nextRetry) {
+      // Not time to retry yet
+      return false;
+    }
+  }
+
+  // Check if max retries exceeded
+  if (retryCount >= MAX_RETRY_ATTEMPTS) {
+    console.error(`Max retries (${MAX_RETRY_ATTEMPTS}) exceeded for proposal ${proposal.id}`);
+    await dequeue(proposal.id);
+    return false;
+  }
+
   try {
     const { error } = await supabase.from('proposals').insert({
       match_id: proposal.match_id,
@@ -130,8 +204,11 @@ async function processProposal(proposal: QueuedProposal): Promise<boolean> {
     });
 
     if (error) {
-      // If still a recoverable error, keep in queue
+      // If still a recoverable error, update retry count and schedule next retry
       if (isRecoverableError(error)) {
+        const delay = INITIAL_RETRY_DELAY_MS * Math.pow(2, retryCount); // Exponential backoff
+        const nextRetryAt = new Date(Date.now() + delay).toISOString();
+        await updateRetryInfo(proposal.id, retryCount + 1, nextRetryAt);
         return false;
       }
       // Non-recoverable error - remove from queue
@@ -146,6 +223,9 @@ async function processProposal(proposal: QueuedProposal): Promise<boolean> {
   } catch (error) {
     // Network or other recoverable error
     if (isRecoverableError(error)) {
+      const delay = INITIAL_RETRY_DELAY_MS * Math.pow(2, retryCount); // Exponential backoff
+      const nextRetryAt = new Date(Date.now() + delay).toISOString();
+      await updateRetryInfo(proposal.id, retryCount + 1, nextRetryAt);
       return false;
     }
     // Non-recoverable - remove from queue
