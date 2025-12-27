@@ -197,6 +197,37 @@ This checklist covers the core user loop for beta smoke testing. Focus on critic
 
 ---
 
+## Exit Criteria
+
+### ✅ PASS Conditions
+
+- [ ] All core loop steps (1-7) completed successfully on both devices
+- [ ] No data loss observed (profile updates persist, photos upload/delete correctly)
+- [ ] Realtime match appears within 1 second after mutual like
+- [ ] Realtime chat messages delivered immediately (< 1 second)
+- [ ] Deep linking works (magic link opens app and authenticates)
+- [ ] Session persists after app restart
+- [ ] Photo deletion removes file from storage (verified in Supabase)
+
+### ❌ FAIL Conditions
+
+- [ ] Deep link fails (magic link doesn't open app or doesn't authenticate)
+- [ ] Match doesn't appear in Matches tab within 5 seconds of mutual like
+- [ ] Chat messages not delivered within 5 seconds (realtime broken)
+- [ ] Proposal submit fails or date/time picker constraints not enforced
+- [ ] Photo delete doesn't remove storage file or breaks rollback on offline
+- [ ] Profile edits don't persist after save
+- [ ] Session lost after app restart
+
+### Required Artifacts on FAIL
+
+- [ ] Screen recording of the failing step (start recording before reproducing)
+- [ ] Generated beta smoke log file with all sections filled in
+- [ ] Supabase host and detected environment captured (already in log Pre-flight section)
+- [ ] Error messages/screenshots from failing step
+
+---
+
 ## Next Steps
 
 After completing smoke test:
