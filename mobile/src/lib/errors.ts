@@ -2,6 +2,8 @@
  * Centralized error handling utilities for mobile app
  */
 
+import { addBreadcrumb } from './sentry';
+
 // Lazy import Sentry to avoid requiring it when not configured
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 let SentryModule: typeof import('@sentry/react-native') | null = null;
@@ -97,6 +99,11 @@ export function getErrorAlert(
   error: unknown,
   title: string = 'Error'
 ): { title: string; message: string } {
+  // Add breadcrumb for error
+  addBreadcrumb(`Error: ${title}`, 'error', 'error', {
+    errorMessage: error instanceof Error ? error.message : String(error),
+  });
+
   // Capture error in Sentry if available
   if (SentryModule && error) {
     SentryModule.captureException(error, {

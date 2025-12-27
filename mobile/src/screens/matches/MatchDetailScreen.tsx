@@ -233,6 +233,7 @@ export default function MatchDetailScreen() {
             onNoneSuits={() =>
               navigation.navigate('Propose', { matchId, responseTo: latestProposal.proposal_id })
             }
+            existingConfirms={confirms}
           />
         </View>
       )}

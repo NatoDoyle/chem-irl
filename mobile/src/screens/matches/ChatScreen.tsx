@@ -20,6 +20,7 @@ import { getErrorAlert, isRecoverableError } from '../../lib/errors';
 import { enqueue, processQueue, getQueueSize, QueuedMessage } from '../../lib/offlineQueue';
 import ConnectionStatus from '../../components/ConnectionStatus';
 import { sanitizeText } from '../../lib/sanitize';
+import { addBreadcrumb } from '../../lib/sentry';
 
 type ChatRouteParams = {
   matchId: string;
@@ -166,6 +167,11 @@ export default function ChatScreen() {
         setSending(false);
         return;
       }
+
+      addBreadcrumb('Sending message', 'chat', 'info', {
+        matchId: matchId.substring(0, 8),
+        messageLength: messageContent.length,
+      });
 
       const { error } = await supabase.from('messages').insert({
         match_id: matchId,

@@ -17,6 +17,7 @@ import { BRAND_COLORS } from '../../config/brand';
 import { deletePhotoFromStorage } from '../../lib/storage';
 import { getErrorAlert } from '../../lib/errors';
 import { sanitizeText, sanitizeMultilineText } from '../../lib/sanitize';
+import { addBreadcrumb, clearUserContext } from '../../lib/sentry';
 import {
   reconcilePhotos,
   shouldRunReconciliation,
@@ -399,6 +400,8 @@ export default function ProfileScreen() {
   };
 
   const handleSignOut = async () => {
+    addBreadcrumb('User signing out', 'auth', 'info');
+    clearUserContext();
     await supabase.auth.signOut();
   };
 

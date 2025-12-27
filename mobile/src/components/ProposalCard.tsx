@@ -6,13 +6,14 @@ import { supabase } from '../lib/supabase/client';
 import { Alert } from 'react-native';
 import { formatProposalTime } from '../lib/timezone';
 import { getErrorAlert } from '../lib/errors';
+import { addBreadcrumb } from '../lib/sentry';
 
 interface ProposalCardProps {
   proposal: Proposal;
   matchId: string;
   onConfirm: () => void;
   onNoneSuits: () => void;
-  existingConfirms?: Array<{ confirmer_id: string; proposal_id: string }>; // Optional: existing confirm records to check for race conditions
+  existingConfirms?: { confirmer_id: string; proposal_id: string }[]; // Optional: existing confirm records to check for race conditions
 }
 
 export default function ProposalCard({
@@ -97,6 +98,11 @@ export default function ProposalCard({
         onConfirm(); // Refresh parent component
         return;
       }
+
+      addBreadcrumb('Confirming proposal', 'proposal', 'info', {
+        proposalId: proposal.proposal_id.substring(0, 8),
+        matchId: matchId.substring(0, 8),
+      });
 
       // Create confirm record
       const { error } = await supabase.from('confirms').insert({

@@ -17,6 +17,7 @@ import AuthNavigator from './src/navigation/AuthNavigator';
 import OnboardingNavigator from './src/navigation/OnboardingNavigator';
 import MainNavigator from './src/navigation/MainNavigator';
 import { isSessionExpiredError, getErrorAlert, isRecoverableError } from './src/lib/errors';
+import { addBreadcrumb, setUserContext, clearUserContext } from './src/lib/sentry';
 
 const Stack = createNativeStackNavigator();
 
@@ -153,9 +154,13 @@ export default function App() {
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (event, session) => {
+      // Add breadcrumb for auth state change
+      addBreadcrumb(`Auth state changed: ${event}`, 'auth', 'info');
+
       // Handle session expiry events
       if (event === 'SIGNED_OUT' || event === 'TOKEN_REFRESHED' || !session) {
         if (event === 'SIGNED_OUT' || !session) {
+          clearUserContext();
           // Check if this is due to expiry or explicit sign out
           // Try to get session to check for expiry error
           try {
@@ -170,12 +175,16 @@ export default function App() {
             }
           }
         }
+        clearUserContext();
         setSession(null);
         setProfileComplete(false);
         return;
       }
 
       if (session) {
+        if (session.user) {
+          setUserContext(session.user.id, session.user.email || undefined);
+        }
         try {
           // Check profile completion on auth change
           const { data: profile, error: profileError } = await supabase

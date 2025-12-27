@@ -1,5 +1,6 @@
 import { supabase } from './supabase/client';
 import * as Linking from 'expo-linking';
+import { addBreadcrumb } from './sentry';
 
 /**
  * Handle deep link for magic link authentication
@@ -14,6 +15,7 @@ export async function handleMagicLink(url: string) {
 
     if (accessToken && refreshToken) {
       // Set session with tokens
+      addBreadcrumb('Handling magic link authentication', 'auth', 'info');
       const { data, error } = await supabase.auth.setSession({
         access_token: accessToken,
         refresh_token: refreshToken,

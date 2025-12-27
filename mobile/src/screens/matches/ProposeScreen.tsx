@@ -19,6 +19,7 @@ import { getErrorAlert, isRecoverableError } from '../../lib/errors';
 import { enqueue, processQueue, QueuedProposal } from '../../lib/offlineQueue';
 import { createThrottle } from '../../lib/throttle';
 import { sanitizeMultilineText } from '../../lib/sanitize';
+import { addBreadcrumb } from '../../lib/sentry';
 import {
   localDateToUTC,
   isWithinSevenDays,
@@ -319,6 +320,12 @@ export default function ProposeScreen() {
 
       // Sanitize note before storing
       const sanitizedNote = note.trim() ? sanitizeMultilineText(note) : null;
+
+      addBreadcrumb('Creating proposal', 'proposal', 'info', {
+        matchId: matchId.substring(0, 8),
+        windowCount: selectedWindows.length,
+        dateTypeCount: selectedDateTypes.length,
+      });
 
       const { error } = await supabase.from('proposals').insert({
         match_id: matchId,
