@@ -106,6 +106,26 @@ The app automatically handles deep links via `App.tsx`:
 3. The app should open and authenticate automatically
 4. If using Expo Go, use the `exp://` URL format
 
+### Troubleshooting: Still Redirecting to Website
+
+If clicking the magic link still redirects to the website instead of opening the app:
+
+1. **Redirect URL not allowlisted in Supabase:**
+   - Go to Supabase Dashboard → Authentication → URL Configuration → Redirect URLs
+   - Ensure `chemirl://auth/callback` is added (one per line)
+   - For Expo Go development, also add `exp://localhost:8081/--/auth/callback`
+   - Save changes and try again
+
+2. **Environment variable not loaded / Metro not restarted:**
+   - Verify `EXPO_PUBLIC_AUTH_REDIRECT_URL` is set in `.env` or `.env.local`
+   - If using `switchEnv` script, ensure the variable is in `.env.staging` or `.env.production`
+   - **Restart Metro bundler** after changing environment variables:
+     ```bash
+     # Stop current server (Ctrl+C), then:
+     npm start
+     ```
+   - Expo only loads `EXPO_PUBLIC_*` variables at build/start time, not dynamically
+
 ## Sentry Setup
 
 Sentry is configured for error logging and crash reporting. It's optional and safe to ignore during local development.
