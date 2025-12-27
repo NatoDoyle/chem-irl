@@ -42,71 +42,74 @@ export default function MatchesScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const lastFetchTimeRef = useRef<number>(0);
 
-  const loadMatches = useCallback(async () => {
-    setError(null);
-    if (!refreshing) {
-      setLoading(true);
-    }
-    try {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (!user) {
-        setLoading(false);
-        return;
-      }
-
-      // Get matches directly from matches table (RLS allows viewing own matches)
-      const { data: matchesData, error: queryError } = await supabase
-        .from('matches')
-        .select('match_id, user_a, user_b, status, created_at')
-        .or(`user_a.eq.${user.id},user_b.eq.${user.id}`)
-        .eq('status', 'open')
-        .order('created_at', { ascending: false });
-
-      if (queryError) {
-        console.error('Error loading matches:', queryError);
-        const { message } = getErrorAlert(queryError, 'Failed to load matches');
-        setError(message);
-        setLoading(false);
-        return;
-      }
-
-      // Fetch profile info for each match
-      const matchesWithProfiles = await Promise.all(
-        (matchesData || []).map(async (match: Match) => {
-          const otherUserId = match.user_a === user.id ? match.user_b : match.user_a;
-
-          // Get other user's profile
-          const { data: profile } = await supabase
-            .from('profiles')
-            .select('photos, prompts')
-            .eq('user_id', otherUserId)
-            .single();
-
-          const photos = (profile?.photos as string[]) || [];
-          const prompts = (profile?.prompts as Record<string, string>) || {};
-
-          return {
-            ...match,
-            otherUserId,
-            otherUserPhoto: photos[0],
-            otherUserName: prompts.headline || 'No name',
-          };
-        })
-      );
-
-      setMatches(matchesWithProfiles);
+  const loadMatches = useCallback(
+    async (skipLoadingState: boolean = false) => {
       setError(null);
-      lastFetchTimeRef.current = Date.now();
-    } catch (error: any) {
-      console.error('Error loading matches:', error);
-      const { message } = getErrorAlert(error, 'Failed to load matches');
-      setError(message);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+      if (!skipLoadingState) {
+        setLoading(true);
+      }
+      try {
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
+        if (!user) {
+          setLoading(false);
+          return;
+        }
+
+        // Get matches directly from matches table (RLS allows viewing own matches)
+        const { data: matchesData, error: queryError } = await supabase
+          .from('matches')
+          .select('match_id, user_a, user_b, status, created_at')
+          .or(`user_a.eq.${user.id},user_b.eq.${user.id}`)
+          .eq('status', 'open')
+          .order('created_at', { ascending: false });
+
+        if (queryError) {
+          console.error('Error loading matches:', queryError);
+          const { message } = getErrorAlert(queryError, 'Failed to load matches');
+          setError(message);
+          setLoading(false);
+          return;
+        }
+
+        // Fetch profile info for each match
+        const matchesWithProfiles = await Promise.all(
+          (matchesData || []).map(async (match: Match) => {
+            const otherUserId = match.user_a === user.id ? match.user_b : match.user_a;
+
+            // Get other user's profile
+            const { data: profile } = await supabase
+              .from('profiles')
+              .select('photos, prompts')
+              .eq('user_id', otherUserId)
+              .single();
+
+            const photos = (profile?.photos as string[]) || [];
+            const prompts = (profile?.prompts as Record<string, string>) || {};
+
+            return {
+              ...match,
+              otherUserId,
+              otherUserPhoto: photos[0],
+              otherUserName: prompts.headline || 'No name',
+            };
+          })
+        );
+
+        setMatches(matchesWithProfiles);
+        setError(null);
+        lastFetchTimeRef.current = Date.now();
+      } catch (error: any) {
+        console.error('Error loading matches:', error);
+        const { message } = getErrorAlert(error, 'Failed to load matches');
+        setError(message);
+      } finally {
+        setLoading(false);
+      }
+    },
+    [] // No dependencies - function is stable, skipLoadingState is a parameter
+  );
 
   useEffect(() => {
     loadMatches();
@@ -129,7 +132,7 @@ export default function MatchesScreen() {
 
   const onRefresh = async () => {
     setRefreshing(true);
-    await loadMatches();
+    await loadMatches(true); // Skip loading state during pull-to-refresh
     setRefreshing(false);
   };
 
@@ -150,7 +153,7 @@ export default function MatchesScreen() {
       <View style={styles.container}>
         <Text style={styles.errorText}>Failed to load matches</Text>
         <Text style={styles.errorSubtext}>{error}</Text>
-        <TouchableOpacity style={styles.retryButton} onPress={loadMatches}>
+        <TouchableOpacity style={styles.retryButton} onPress={() => loadMatches()}>
           <Text style={styles.retryButtonText}>Retry</Text>
         </TouchableOpacity>
       </View>
@@ -162,7 +165,7 @@ export default function MatchesScreen() {
       <View style={styles.container}>
         <Text style={styles.emptyText}>No matches yet</Text>
         <Text style={styles.emptySubtext}>Start swiping to find matches!</Text>
-        <TouchableOpacity style={styles.refreshButton} onPress={loadMatches}>
+        <TouchableOpacity style={styles.refreshButton} onPress={() => loadMatches()}>
           <Text style={styles.refreshButtonText}>Refresh</Text>
         </TouchableOpacity>
       </View>

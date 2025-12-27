@@ -33,7 +33,8 @@ EXPO_PUBLIC_SENTRY_DSN=your_sentry_dsn_here
 EXPO_PUBLIC_ENVIRONMENT=development  # or production, staging, etc.
 ```
 
-**Important:** 
+**Important:**
+
 - Variables must start with `EXPO_PUBLIC_` to be accessible in the app
 - Restart Expo dev server after creating/updating `.env`
 - Get credentials from [Supabase Dashboard](https://supabase.com/dashboard) → Settings → API
@@ -137,6 +138,7 @@ Magic links use the scheme `chemirl://auth/callback`. Configure in `app.json`:
 ## Building for Production
 
 Before building, run the release checklist to ensure everything is ready:
+
 - See `docs/RELEASE_CHECKLIST.md` for complete verification steps
 
 ```bash
@@ -158,6 +160,7 @@ eas submit --platform android
 **Quick start:** Run `npm run test:two-device` to see the complete workflow.
 
 1. **Verify staging setup:**
+
    ```bash
    npm run use:staging
    npm start  # Restart required after switching
@@ -179,6 +182,7 @@ eas submit --platform android
 See [`docs/README.md`](./docs/README.md) for complete documentation index.
 
 **Quick links:**
+
 - **[Install on Phones](./docs/INSTALL_ON_PHONES.md)** - Expo Go and EAS dev build installation
 - **[Supabase Staging Setup](./docs/SUPABASE_STAGING_SETUP.md)** - Staging project setup and environment switching
 - **[Two-Device Test Plan](./docs/TWO_DEVICE_TEST_PLAN.md)** - Step-by-step testing workflow
