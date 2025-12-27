@@ -94,7 +94,8 @@ describe('Storage utilities', () => {
     });
 
     it('should delete photo with valid URL and matching user ID', async () => {
-      mockRemove.mockResolvedValue({ data: null, error: null });
+      // Supabase returns an array of deleted file objects on success
+      mockRemove.mockResolvedValue({ data: [], error: null });
       const url =
         'https://abc123.supabase.co/storage/v1/object/public/profiles/user-id-123/image.jpg';
 

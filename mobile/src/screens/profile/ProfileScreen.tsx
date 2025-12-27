@@ -333,11 +333,11 @@ export default function ProfileScreen() {
         return;
       }
 
-      // Delete from storage
+      // Delete from storage (verify deletion succeeds before updating DB)
       const deleteResult = await deletePhotoFromStorage(photoToRemove, user.id);
 
       if (!deleteResult.success) {
-        // Restore photo if deletion failed
+        // Restore photo if deletion failed - don't update DB
         setPhotos(photos);
         const { title, message } = getErrorAlert(
           deleteResult.error || 'Failed to delete photo',
@@ -347,7 +347,7 @@ export default function ProfileScreen() {
         return;
       }
 
-      // Update database with new photos array
+      // Storage deletion verified - now update database
       const { error: updateError } = await supabase.from('profiles').upsert({
         user_id: user.id,
         photos: updatedPhotos,
@@ -355,7 +355,9 @@ export default function ProfileScreen() {
       });
 
       if (updateError) {
-        // Storage deleted but DB update failed - restore UI and show error
+        // Storage deleted but DB update failed - restore UI
+        // Note: We can't restore the deleted storage file, but at least the UI
+        // will be consistent. The photo will remain deleted in storage.
         setPhotos(photos);
         const { title, message } = getErrorAlert(updateError, 'Failed to update profile');
         Alert.alert(

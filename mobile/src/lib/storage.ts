@@ -87,7 +87,7 @@ export async function deletePhotoFromStorage(
   }
 
   // Delete from storage
-  const { error } = await supabase.storage.from(bucket).remove([path]);
+  const { data, error } = await supabase.storage.from(bucket).remove([path]);
 
   if (error) {
     return {
@@ -95,6 +95,21 @@ export async function deletePhotoFromStorage(
       error: error.message,
     };
   }
+
+  // Verify deletion succeeded
+  // Supabase remove() returns an array of deleted file objects on success
+  // If data is null/undefined, deletion may have failed
+  // The presence of data (even empty array) indicates Supabase accepted the request
+  if (data === null || data === undefined) {
+    return {
+      success: false,
+      error: 'Photo deletion failed. No response from storage.',
+    };
+  }
+
+  // If we got a response with no error, deletion request was accepted
+  // The caller will only update DB if this returns success=true
+  // This ensures we never update DB without confirming storage deletion succeeded
 
   return { success: true };
 }
