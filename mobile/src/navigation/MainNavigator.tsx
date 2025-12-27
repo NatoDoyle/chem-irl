@@ -7,8 +7,9 @@ import ProposeScreen from '../screens/matches/ProposeScreen';
 import ChatScreen from '../screens/matches/ChatScreen';
 import ProfileScreen from '../screens/profile/ProfileScreen';
 
-// Debug screen - only available in development
-const ENABLE_DEBUG_MENU = __DEV__ || process.env.EXPO_PUBLIC_ENABLE_DEBUG_MENU === 'true';
+// Debug screen - only available in development builds
+// Never enable in production, even if EXPO_PUBLIC_ENABLE_DEBUG_MENU is set
+const ENABLE_DEBUG_MENU = __DEV__ === true;
 
 let DebugScreen: React.ComponentType<any> | null = null;
 if (ENABLE_DEBUG_MENU) {
