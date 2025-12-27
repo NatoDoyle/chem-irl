@@ -12,6 +12,7 @@ type FeedItemWithPhotos = FeedItem & { photos: string[] };
 export default function DiscoverScreen() {
   const [feed, setFeed] = useState<FeedItemWithPhotos[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [matchModalVisible, setMatchModalVisible] = useState(false);
   const [newMatchId, setNewMatchId] = useState<string | null>(null);
 
@@ -20,6 +21,8 @@ export default function DiscoverScreen() {
   }, []);
 
   const loadFeed = async () => {
+    setError(null);
+    setLoading(true);
     try {
       const {
         data: { user },
@@ -29,15 +32,15 @@ export default function DiscoverScreen() {
         return;
       }
 
-      const { data, error } = await supabase.rpc('get_discovery_feed', {
+      const { data, error: rpcError } = await supabase.rpc('get_discovery_feed', {
         p_viewer: user.id,
         p_limit: 20,
       });
 
-      if (error) {
-        console.error('Error loading feed:', error);
-        const { title, message } = getErrorAlert(error, 'Failed to load discovery feed');
-        Alert.alert(title, message);
+      if (rpcError) {
+        console.error('Error loading feed:', rpcError);
+        const { message } = getErrorAlert(rpcError, 'Failed to load discovery feed');
+        setError(message);
         setLoading(false);
         return;
       }
@@ -67,10 +70,11 @@ export default function DiscoverScreen() {
       );
 
       setFeed(feedWithPhotos);
+      setError(null);
     } catch (error: any) {
       console.error('Error loading feed:', error);
-      const { title, message } = getErrorAlert(error, 'Failed to load discovery feed');
-      Alert.alert(title, message);
+      const { message } = getErrorAlert(error, 'Failed to load discovery feed');
+      setError(message);
     } finally {
       setLoading(false);
     }
@@ -122,6 +126,18 @@ export default function DiscoverScreen() {
     return (
       <View style={styles.container}>
         <ActivityIndicator size="large" color={BRAND_COLORS.primary} />
+      </View>
+    );
+  }
+
+  if (error) {
+    return (
+      <View style={styles.container}>
+        <Text style={styles.errorText}>Failed to load discovery feed</Text>
+        <Text style={styles.errorSubtext}>{error}</Text>
+        <TouchableOpacity style={styles.retryButton} onPress={loadFeed}>
+          <Text style={styles.retryButtonText}>Retry</Text>
+        </TouchableOpacity>
       </View>
     );
   }
@@ -184,6 +200,32 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   refreshButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  errorText: {
+    fontSize: 20,
+    fontWeight: '600',
+    color: BRAND_COLORS.danger,
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  errorSubtext: {
+    fontSize: 16,
+    color: BRAND_COLORS.text[600],
+    marginBottom: 16,
+    textAlign: 'center',
+    paddingHorizontal: 32,
+  },
+  retryButton: {
+    backgroundColor: BRAND_COLORS.primary,
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 8,
+    marginTop: 8,
+  },
+  retryButtonText: {
     color: '#fff',
     fontSize: 16,
     fontWeight: '600',

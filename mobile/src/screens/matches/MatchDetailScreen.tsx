@@ -13,6 +13,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { supabase } from '../../lib/supabase/client';
 import { Match, Proposal, Confirm } from '../../lib/types';
 import { BRAND_COLORS } from '../../config/brand';
+import { getErrorAlert } from '../../lib/errors';
 import ProposalCard from '../../components/ProposalCard';
 
 const PLACEHOLDER_IMAGE = require('../../assets/icon.png');
@@ -34,14 +35,20 @@ export default function MatchDetailScreen() {
   const [proposals, setProposals] = useState<Proposal[]>([]);
   const [confirms, setConfirms] = useState<Confirm[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [hasActiveProposal, setHasActiveProposal] = useState(false);
 
   const loadMatchData = useCallback(async () => {
+    setError(null);
+    setLoading(true);
     try {
       const {
         data: { user },
       } = await supabase.auth.getUser();
-      if (!user) return;
+      if (!user) {
+        setLoading(false);
+        return;
+      }
 
       // Load match
       const { data: matchData, error: matchError } = await supabase
@@ -52,6 +59,11 @@ export default function MatchDetailScreen() {
 
       if (matchError || !matchData) {
         console.error('Error loading match:', matchError);
+        const { message } = getErrorAlert(
+          matchError || new Error('Match not found'),
+          'Failed to load match'
+        );
+        setError(message);
         setLoading(false);
         return;
       }
@@ -96,8 +108,12 @@ export default function MatchDetailScreen() {
       if (confirmsData) {
         setConfirms(confirmsData as Confirm[]);
       }
+
+      setError(null);
     } catch (error: any) {
       console.error('Error loading match data:', error);
+      const { message } = getErrorAlert(error, 'Failed to load match details');
+      setError(message);
     } finally {
       setLoading(false);
     }
@@ -123,10 +139,15 @@ export default function MatchDetailScreen() {
     );
   }
 
-  if (!match) {
+  if (error || !match) {
     return (
       <View style={styles.container}>
-        <Text style={styles.errorText}>Match not found</Text>
+        <Text style={styles.errorText}>{error || 'Match not found'}</Text>
+        {error && (
+          <TouchableOpacity style={styles.retryButton} onPress={() => loadMatchData()}>
+            <Text style={styles.retryButtonText}>Retry</Text>
+          </TouchableOpacity>
+        )}
       </View>
     );
   }
@@ -261,9 +282,25 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   errorText: {
-    fontSize: 16,
+    fontSize: 18,
+    fontWeight: '600',
     color: BRAND_COLORS.danger,
     textAlign: 'center',
     marginTop: 40,
+    marginBottom: 16,
+    paddingHorizontal: 32,
+  },
+  retryButton: {
+    backgroundColor: BRAND_COLORS.primary,
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 8,
+    alignSelf: 'center',
+    marginTop: 8,
+  },
+  retryButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
   },
 });
