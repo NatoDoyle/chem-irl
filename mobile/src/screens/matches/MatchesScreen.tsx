@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   RefreshControl,
+  AppState,
 } from 'react-native';
 import { Image } from 'expo-image';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
@@ -267,6 +268,21 @@ export default function MatchesScreen() {
         supabase.removeChannel(ch);
       });
       channelsRef.current = [];
+    };
+  }, [loadMatches]);
+
+  // Re-subscribe to realtime when app comes to foreground
+  // This ensures we catch events that may have been missed while backgrounded
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', (nextAppState) => {
+      if (nextAppState === 'active') {
+        // App came to foreground - reload matches and re-establish subscriptions
+        loadMatches(true);
+      }
+    });
+
+    return () => {
+      subscription.remove();
     };
   }, [loadMatches]);
 

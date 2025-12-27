@@ -9,6 +9,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   Alert,
+  AppState,
 } from 'react-native';
 import { useRoute } from '@react-navigation/native';
 import { supabase } from '../../lib/supabase/client';
@@ -118,6 +119,23 @@ export default function ChatScreen() {
     const unsubscribe = subscribeToMessages();
     return unsubscribe;
   }, [loadMessages, subscribeToMessages, updateQueueSize]);
+
+  // Re-subscribe to realtime when app comes to foreground
+  // This ensures we catch messages that may have been missed while backgrounded
+  useEffect(() => {
+    const handleAppStateChange = (nextAppState: string) => {
+      if (nextAppState === 'active') {
+        // App came to foreground - reload messages to catch any missed events
+        loadMessages();
+      }
+    };
+
+    const subscription = AppState.addEventListener('change', handleAppStateChange);
+
+    return () => {
+      subscription.remove();
+    };
+  }, [loadMessages]);
 
   const handleSend = async () => {
     if (!newMessage.trim()) return;
