@@ -11,7 +11,9 @@ This checklist covers the core user loop for beta smoke testing. Focus on critic
 - [ ] `npm run use:staging` executed
 - [ ] Expo restarted after env switch
 - [ ] `npm run verify:staging` passed
-- [ ] Phones installed using: [ ] Expo Go [ ] Dev build [ ] Production build
+- [ ] Phones installed using Expo Go
+- [ ] Phones installed using Dev build
+- [ ] Phones installed using Production build
 
 ## Prerequisites
 

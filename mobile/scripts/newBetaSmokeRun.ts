@@ -36,9 +36,44 @@ try {
     // Ignore if git command fails
   }
 
+  // Try to read app version and Expo SDK version
+  let appVersion = '[version]';
+  let expoSdkVersion = '[version]';
+  try {
+    const appJsonPath = resolve(process.cwd(), 'app.json');
+    const appJson = JSON.parse(readFileSync(appJsonPath, 'utf-8'));
+    if (appJson?.expo?.version) {
+      appVersion = appJson.expo.version;
+    }
+  } catch {
+    // Ignore if app.json can't be read
+  }
+
+  try {
+    const packageJsonPath = resolve(process.cwd(), 'package.json');
+    const packageJson = JSON.parse(readFileSync(packageJsonPath, 'utf-8'));
+    if (packageJson?.dependencies?.expo) {
+      // Extract version number from semver (e.g., "~54.0.27" -> "54")
+      const match = packageJson.dependencies.expo.match(/~?(\d+)\./);
+      if (match) {
+        expoSdkVersion = match[1];
+      }
+    }
+  } catch {
+    // Ignore if package.json can't be read
+  }
+
   // Replace placeholders in template
   let content = template.replace(/\[YYYY-MM-DD\]/g, date);
   content = content.replace(/\[HH:MM\]/g, now.toTimeString().split(' ')[0].substring(0, 5)); // HH:MM
+  content = content.replace(/\[version\]/g, (match, offset, string) => {
+    // Check context to determine if it's app version or SDK version
+    const beforeMatch = string.substring(Math.max(0, offset - 20), offset);
+    if (beforeMatch.includes('Expo SDK')) {
+      return expoSdkVersion;
+    }
+    return appVersion;
+  });
 
   // Replace git commit line
   if (gitMessage) {
@@ -62,7 +97,9 @@ try {
 - [ ] \`npm run use:staging\` executed
 - [ ] Expo restarted after env switch
 - [ ] \`npm run verify:staging\` passed
-- [ ] Phones installed using: [ ] Expo Go  [ ] Dev build  [ ] Production build
+- [ ] Phones installed using Expo Go
+- [ ] Phones installed using Dev build
+- [ ] Phones installed using Production build
 
 ---
 
