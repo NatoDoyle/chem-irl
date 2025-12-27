@@ -289,20 +289,27 @@ export default function ChatScreen() {
         </View>
       )}
       <View style={styles.inputContainer}>
-        <TextInput
-          style={styles.input}
-          placeholder="Type a message..."
-          placeholderTextColor={BRAND_COLORS.text[600]}
-          value={newMessage}
-          onChangeText={setNewMessage}
-          multiline
-          maxLength={500}
-          editable={!sending}
-        />
+        <View style={styles.inputWrapper}>
+          <TextInput
+            style={styles.input}
+            placeholder="Type a message..."
+            placeholderTextColor={BRAND_COLORS.text[600]}
+            value={newMessage}
+            onChangeText={setNewMessage}
+            multiline
+            maxLength={500}
+            editable={!sending}
+          />
+          <Text style={styles.characterCount}>{newMessage.length}/500</Text>
+        </View>
         <TouchableOpacity
-          style={[styles.sendButton, (!newMessage.trim() || sending) && styles.sendButtonDisabled]}
+          style={[
+            styles.sendButton,
+            (!newMessage.trim() || sending || newMessage.length >= 500) &&
+              styles.sendButtonDisabled,
+          ]}
           onPress={handleSend}
-          disabled={!newMessage.trim() || sending}
+          disabled={!newMessage.trim() || sending || newMessage.length >= 500}
         >
           <Text style={styles.sendButtonText}>Send</Text>
         </TouchableOpacity>
@@ -354,17 +361,29 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: '#E2E8F0',
     backgroundColor: '#fff',
+    alignItems: 'flex-end',
+  },
+  inputWrapper: {
+    flex: 1,
+    marginRight: 8,
+    position: 'relative',
   },
   input: {
-    flex: 1,
     borderWidth: 1,
     borderColor: '#E2E8F0',
     borderRadius: 20,
     paddingHorizontal: 16,
     paddingVertical: 10,
+    paddingRight: 60,
     fontSize: 16,
     maxHeight: 100,
-    marginRight: 8,
+  },
+  characterCount: {
+    position: 'absolute',
+    bottom: 8,
+    right: 16,
+    fontSize: 12,
+    color: BRAND_COLORS.text[600],
   },
   sendButton: {
     backgroundColor: BRAND_COLORS.primary,
