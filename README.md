@@ -9,6 +9,7 @@
 ## 🚀 Quick Start
 
 ### Mobile App
+
 ```bash
 cd mobile
 npm install
@@ -17,6 +18,7 @@ npm start
 ```
 
 ### Website
+
 ```bash
 cd web
 npm install
@@ -68,17 +70,20 @@ Dating App/
 ## 🛠️ Tech Stack
 
 **Mobile**
+
 - React Native (Expo SDK 54)
 - TypeScript
 - React Navigation v7
 - Supabase Client
 
 **Website**
+
 - Next.js 16 (Static Export)
 - TypeScript
 - Tailwind CSS
 
 **Backend**
+
 - Supabase (PostgreSQL)
 - Supabase Auth
 - Supabase Realtime
@@ -116,10 +121,12 @@ cd web && npm run build
 ## 🚢 Deployment
 
 ### Mobile App
+
 - Build with EAS Build
 - Submit to App Store / Play Store
 
 ### Website
+
 - Deploy to Vercel (static export)
 - Or any static hosting
 

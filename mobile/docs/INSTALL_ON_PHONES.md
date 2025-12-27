@@ -19,6 +19,7 @@ npm run verify:staging
 ```
 
 **Important:** The verification script requires a `.env.seed` file with service role key:
+
 ```env
 SUPABASE_URL=https://your-staging-project.supabase.co
 SUPABASE_SERVICE_ROLE_KEY=your_service_role_key_here
@@ -39,6 +40,7 @@ See [`SUPABASE_STAGING_SETUP.md`](./SUPABASE_STAGING_SETUP.md) for detailed setu
    - Android: [Play Store](https://play.google.com/store/apps/details?id=host.exp.exponent)
 
 2. **Start Expo dev server:**
+
    ```bash
    npm start
    ```
@@ -57,22 +59,26 @@ See [`SUPABASE_STAGING_SETUP.md`](./SUPABASE_STAGING_SETUP.md) for detailed setu
 ### Troubleshooting Expo Go
 
 **"Unable to connect" or "Network request failed":**
+
 - **Try tunnel mode:** `npm start -- --tunnel`
 - **Check firewall:** Ensure port 8081 is not blocked
 - **Same network:** Ensure phone and computer are on same WiFi (for LAN mode)
 - **Restart Expo:** Press `r` in terminal or restart `npm start`
 
 **"Metro bundler error":**
+
 - Clear cache: `npm start -- --clear`
 - Check `.env.local` exists and has correct values
 - Restart Expo dev server
 
 **App loads but shows errors:**
+
 - Verify `.env.local` has correct `EXPO_PUBLIC_SUPABASE_URL` and `EXPO_PUBLIC_SUPABASE_KEY`
 - Check Supabase project is active
 - Run `npm run verify:staging` to verify setup
 
 **Deep linking not working:**
+
 - Expo Go has limited deep linking support
 - Magic links may not work reliably in Expo Go
 - Consider using EAS dev build (Option B) for full deep linking support
@@ -110,6 +116,7 @@ This repo uses the following EAS build profiles (from `eas.json`):
 ### Steps
 
 1. **Build development client:**
+
    ```bash
    # For iOS
    eas build --profile development --platform ios
@@ -123,6 +130,7 @@ This repo uses the following EAS build profiles (from `eas.json`):
    - **Android:** Download APK from EAS build page, install on device
 
 3. **Start Expo dev server:**
+
    ```bash
    npm start
    ```
@@ -141,16 +149,19 @@ This repo uses the following EAS build profiles (from `eas.json`):
 ### Troubleshooting Dev Build
 
 **Build fails:**
+
 - Check `eas.json` profile configuration
 - Verify credentials: `eas credentials`
 - Check EAS build logs for specific errors
 
 **App won't connect to dev server:**
+
 - Ensure phone and computer are on same network (or use tunnel)
 - Check firewall settings
 - Verify Expo dev server is running
 
 **Deep linking still not working:**
+
 - Verify Supabase redirect URL: `chemirl:///auth/callback` (with triple slash)
 - Check `app.json` scheme matches: `"scheme": "chemirl"`
 - Rebuild dev client after changing deep link configuration
@@ -164,11 +175,13 @@ This repo uses the following EAS build profiles (from `eas.json`):
 **Required format:** `chemirl:///auth/callback` (note the triple slash)
 
 **Configuration:**
+
 - **Supabase Dashboard:** Settings → Auth → URL Configuration → Redirect URLs
 - **Add:** `chemirl:///auth/callback`
 - **App scheme:** Defined in `app.json` as `"scheme": "chemirl"`
 
 **Why it matters:**
+
 - Magic links won't work if redirect URL doesn't match
 - Deep linking requires exact URL format
 - Test on physical device (simulators may not handle deep links correctly)
@@ -193,6 +206,7 @@ This repo uses the following EAS build profiles (from `eas.json`):
 - Use service role key only in `.env.seed` (gitignored) for `npm run verify:staging`
 
 **Correct:**
+
 ```env
 # .env.local (safe to commit template)
 EXPO_PUBLIC_SUPABASE_URL=https://project.supabase.co
@@ -200,6 +214,7 @@ EXPO_PUBLIC_SUPABASE_KEY=anon_publishable_key_here
 ```
 
 **Wrong:**
+
 ```env
 # NEVER DO THIS
 EXPO_PUBLIC_SUPABASE_SERVICE_ROLE_KEY=service_role_key_here
@@ -219,38 +234,45 @@ For two-device testing (see [`TWO_DEVICE_TEST_PLAN.md`](./TWO_DEVICE_TEST_PLAN.m
 ## Quick Reference
 
 ### Switch to Staging
+
 ```bash
 npm run use:staging
 npm start  # Restart required
 ```
 
 ### Switch to Production
+
 ```bash
 npm run use:production
 npm start  # Restart required
 ```
 
 ### Verify Staging Setup
+
 ```bash
 npm run verify:staging
 ```
 
 ### Start Expo (LAN mode)
+
 ```bash
 npm start
 ```
 
 ### Start Expo (Tunnel mode)
+
 ```bash
 npm start -- --tunnel
 ```
 
 ### Build Dev Client (iOS)
+
 ```bash
 eas build --profile development --platform ios
 ```
 
 ### Build Dev Client (Android)
+
 ```bash
 eas build --profile development --platform android
 ```
@@ -264,4 +286,3 @@ After installing on phones:
 1. **Run two-device test plan:** See [`TWO_DEVICE_TEST_PLAN.md`](./TWO_DEVICE_TEST_PLAN.md)
 2. **Record test results:** Use [`TEST_RUN_LOG_TEMPLATE.md`](./TEST_RUN_LOG_TEMPLATE.md)
 3. **Verify staging parity:** Run `npm run verify:staging` before each test session
-

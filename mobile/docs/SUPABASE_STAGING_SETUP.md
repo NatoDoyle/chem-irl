@@ -25,6 +25,7 @@ EXPO_PUBLIC_SUPABASE_KEY=your_publishable_anon_key_here
 ### ✅ **Use Separate Staging Project** (Strongly Recommended)
 
 **Use staging when:**
+
 - Testing features that create or modify data (matching, proposals, chat, photo uploads)
 - Running two-device tests that create matches/messages
 - Testing onboarding flows with multiple accounts
@@ -33,6 +34,7 @@ EXPO_PUBLIC_SUPABASE_KEY=your_publishable_anon_key_here
 - Any testing that involves creating auth users
 
 **Why staging is recommended:**
+
 1. **Destructive Operations:** The app can delete photos from storage (`storage.from('profiles').remove()`)
 2. **Test Data Pollution:** Matching, likes, proposals, and messages create real database records
 3. **Auth User Management:** Two-device testing requires creating auth users for Account A and B
@@ -42,11 +44,13 @@ EXPO_PUBLIC_SUPABASE_KEY=your_publishable_anon_key_here
 ### ⚠️ **Single Project OK** (Limited Use Cases)
 
 **Single project may be acceptable for:**
+
 - Read-only smoke tests
 - UI/UX testing with static test data already in database
 - Quick verification of RPCs/tables without creating new data
 
 **Risks of using single project for testing:**
+
 - Test matches/messages/proposals pollute production data
 - Test accounts may appear in discovery feed for real users
 - Photo deletion could accidentally remove production photos (mitigated by RLS, but risky)
@@ -201,6 +205,7 @@ EXPO_PUBLIC_SUPABASE_KEY=your_staging_anon_key_here
 ```
 
 **Get keys from:**
+
 - Supabase Dashboard → Your Project → Settings → API
 - **Project URL** → `EXPO_PUBLIC_SUPABASE_URL`
 - **anon public** key → `EXPO_PUBLIC_SUPABASE_KEY`
@@ -236,12 +241,14 @@ Copy production schema to staging:
 **Option A: Use Verification Script (Recommended)**
 
 1. Create `.env.seed` file with service role key:
+
    ```env
    SUPABASE_URL=https://your-staging-project.supabase.co
    SUPABASE_SERVICE_ROLE_KEY=your_service_role_key_here
    ```
 
 2. Run verification:
+
    ```bash
    npm run verify:staging
    ```
@@ -265,9 +272,9 @@ Run these SQL queries in Supabase SQL Editor to verify staging setup:
 ### Check Tables Exist
 
 ```sql
-SELECT table_name 
-FROM information_schema.tables 
-WHERE table_schema = 'public' 
+SELECT table_name
+FROM information_schema.tables
+WHERE table_schema = 'public'
   AND table_name IN ('profiles', 'matches', 'proposals', 'confirms', 'messages')
 ORDER BY table_name;
 ```
@@ -277,9 +284,9 @@ Expected: All 5 tables should exist.
 ### Check RLS is Enabled
 
 ```sql
-SELECT tablename, rowsecurity 
-FROM pg_tables 
-WHERE schemaname = 'public' 
+SELECT tablename, rowsecurity
+FROM pg_tables
+WHERE schemaname = 'public'
   AND tablename IN ('profiles', 'matches', 'proposals', 'confirms', 'messages');
 ```
 
@@ -312,7 +319,7 @@ Expected: `profiles` bucket exists, `public` should be `true` or policies config
 ```sql
 SELECT column_name, data_type
 FROM information_schema.columns
-WHERE table_schema = 'public' 
+WHERE table_schema = 'public'
   AND table_name = 'profiles'
 ORDER BY ordinal_position;
 ```
@@ -334,6 +341,7 @@ Expected: Query should execute without errors (may return empty if no data).
 ### Check Auth Configuration
 
 In Supabase Dashboard:
+
 - [ ] Settings → Auth → URL Configuration
 - [ ] Verify "Site URL" and "Redirect URLs" include your app scheme
 - [ ] Settings → Auth → Providers → Email
@@ -346,20 +354,24 @@ In Supabase Dashboard:
 The easiest way to switch environments is using the provided npm scripts:
 
 **Switch to Staging:**
+
 ```bash
 npm run use:staging
 ```
 
 **Switch to Production:**
+
 ```bash
 npm run use:production
 ```
 
 These scripts will:
+
 1. Copy `.env.staging` or `.env.production` to `.env.local`
 2. Display a reminder to restart Expo dev server
 
 **Important:** After switching, restart Expo dev server:
+
 ```bash
 # Stop server (Ctrl+C if running)
 npm start
@@ -368,12 +380,14 @@ npm start
 ### Setting Up Environment Files
 
 1. **Create `.env.staging`** (based on `.env.staging.example`):
+
    ```bash
    cp .env.staging.example .env.staging
    # Edit .env.staging with your staging credentials
    ```
 
 2. **Create `.env.production`** (based on `.env.production.example`):
+
    ```bash
    cp .env.production.example .env.production
    # Edit .env.production with your production credentials
@@ -388,6 +402,7 @@ npm start
 If you prefer to switch manually:
 
 **For Staging:**
+
 ```env
 # In .env.local
 EXPO_PUBLIC_SUPABASE_URL=https://staging-project.supabase.co
@@ -395,6 +410,7 @@ EXPO_PUBLIC_SUPABASE_KEY=staging_anon_key
 ```
 
 **For Production:**
+
 ```env
 # In .env.local
 EXPO_PUBLIC_SUPABASE_URL=https://production-project.supabase.co
@@ -402,6 +418,7 @@ EXPO_PUBLIC_SUPABASE_KEY=production_anon_key
 ```
 
 **Important:** Restart Expo dev server after changing `.env.local`:
+
 ```bash
 # Stop server (Ctrl+C)
 npm start
@@ -439,4 +456,3 @@ npm start
 - [Supabase Row Level Security](https://supabase.com/docs/guides/database/postgres/row-level-security)
 - [Supabase Storage](https://supabase.com/docs/guides/storage)
 - [Expo Environment Variables](https://docs.expo.dev/guides/environment-variables/)
-

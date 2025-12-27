@@ -18,6 +18,7 @@
 ## Manual Smoke Test Flow
 
 ### 1. Auth Flow
+
 - [ ] Launch app on device/simulator
 - [ ] Welcome screen displays correctly
 - [ ] Navigate to Login screen
@@ -27,6 +28,7 @@
 - [ ] App opens and user is authenticated
 
 ### 2. Onboarding Flow
+
 - [ ] Profile Setup screen loads after auth
 - [ ] Enter headline (validates min 5 chars)
 - [ ] Enter bio (validates min 20 chars)
@@ -38,6 +40,7 @@
 - [ ] Submit photos → navigates to main app
 
 ### 3. Discovery & Matching
+
 - [ ] Discover screen loads feed
 - [ ] Swipe right (like) on a profile → profile removed from feed
 - [ ] Swipe left (pass) on a profile → profile removed from feed
@@ -45,6 +48,7 @@
 - [ ] Match modal "View Match" button navigates to Match Detail
 
 ### 4. Proposals
+
 - [ ] Navigate to Matches tab → list of matches displays
 - [ ] Open a match → Match Detail screen loads
 - [ ] Tap "Propose 2-3 Times" button
@@ -59,6 +63,7 @@
 - [ ] Submit proposal → success message, returns to Match Detail
 
 ### 5. Chat
+
 - [ ] Navigate to Match Detail
 - [ ] If proposal confirmed, tap "Open Chat"
 - [ ] Chat screen loads messages (or empty state)
@@ -67,6 +72,7 @@
 - [ ] Scroll behavior works correctly
 
 ### 6. Profile Management
+
 - [ ] Navigate to Profile tab
 - [ ] Profile loads with current headline, bio, photos
 - [ ] Edit headline → save → success message, changes persist
@@ -78,12 +84,14 @@
   - [ ] Verify in database that profile.photos array is updated
 
 ### 7. Sign Out
+
 - [ ] Tap "Sign Out" button
 - [ ] User is logged out → returns to Welcome screen
 
 ## Storage Deletion Verification
 
 ### Test 1: Normal Deletion
+
 1. Open Profile screen
 2. Note a photo URL before deletion
 3. Remove photo from UI
@@ -93,6 +101,7 @@
 5. Reload app → photo should not reappear
 
 ### Test 2: Rollback Behavior (Offline)
+
 1. Put device in airplane mode
 2. Remove photo from Profile screen
 3. Verify:
@@ -103,6 +112,7 @@
 5. Photo should still be visible
 
 ### Test 3: Ownership Guard
+
 1. Manually construct a URL for a photo that belongs to a different user
 2. Attempt to delete it via storage utilities (unit test)
 3. Verify:
@@ -111,6 +121,7 @@
    - [ ] No files are deleted
 
 ### Test 4: DB Failure After Deletion
+
 1. Temporarily break database connection (or use invalid user ID)
 2. Remove photo → storage deletion succeeds
 3. Verify:
@@ -122,6 +133,7 @@
 ## Sentry Verification
 
 ### Development Environment
+
 1. Set `EXPO_PUBLIC_ENVIRONMENT=development` in `.env`
 2. Set `EXPO_PUBLIC_SENTRY_DSN` to valid DSN
 3. Start app: `npm start`
@@ -131,6 +143,7 @@
    - [ ] Error still displays to user correctly
 
 ### Production Environment
+
 1. Set `EXPO_PUBLIC_ENVIRONMENT=production` in `.env`
 2. Build app: `npm run build` or EAS build
 3. Install on device
@@ -141,6 +154,7 @@
    - [ ] Error title/tags are present
 
 ### Without Sentry DSN
+
 1. Remove `EXPO_PUBLIC_SENTRY_DSN` from `.env`
 2. Start app
 3. Verify:
@@ -153,4 +167,3 @@
 - [ ] Verify app store listing information is correct
 - [ ] Test deep linking with magic links on fresh install
 - [ ] Verify push notifications work (if implemented)
-

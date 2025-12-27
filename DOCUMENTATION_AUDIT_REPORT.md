@@ -19,34 +19,34 @@
 
 ### Root Level (11 files)
 
-| File | Reason |
-|------|--------|
-| `DOCS_INDEX.md` | Duplicate - Superseded by `docs/README.md` |
-| `DEPLOY_QUICK_START.md` | Duplicate - Content merged into `DEPLOYMENT_GUIDE.md` |
-| `ENV_QUICK_REFERENCE.md` | Duplicate - Content covered in `DOCUMENTATION.md` |
-| `GUIDE_COMPARISON.md` | Obsolete - No longer relevant |
-| `VERCEL_SETUP_CHECK.md` | Obsolete - Temporary troubleshooting doc |
-| `VERCEL_PROJECT_CHECK.md` | Duplicate/Obsolete - Temporary troubleshooting doc |
-| `VERCEL_DUPLICATE_FIX.md` | Obsolete - Temporary fix documentation |
-| `VERCEL_DEPLOYMENT_CHECKLIST.md` | Duplicate - Use `DEPLOYMENT_CHECKLIST.md` |
-| `URGENT_VERCEL_FIX.md` | Obsolete - Temporary fix documentation |
-| `FIX_VERCEL_DEPLOYMENT.md` | Obsolete - Temporary fix documentation |
+| File                             | Reason                                                |
+| -------------------------------- | ----------------------------------------------------- |
+| `DOCS_INDEX.md`                  | Duplicate - Superseded by `docs/README.md`            |
+| `DEPLOY_QUICK_START.md`          | Duplicate - Content merged into `DEPLOYMENT_GUIDE.md` |
+| `ENV_QUICK_REFERENCE.md`         | Duplicate - Content covered in `DOCUMENTATION.md`     |
+| `GUIDE_COMPARISON.md`            | Obsolete - No longer relevant                         |
+| `VERCEL_SETUP_CHECK.md`          | Obsolete - Temporary troubleshooting doc              |
+| `VERCEL_PROJECT_CHECK.md`        | Duplicate/Obsolete - Temporary troubleshooting doc    |
+| `VERCEL_DUPLICATE_FIX.md`        | Obsolete - Temporary fix documentation                |
+| `VERCEL_DEPLOYMENT_CHECKLIST.md` | Duplicate - Use `DEPLOYMENT_CHECKLIST.md`             |
+| `URGENT_VERCEL_FIX.md`           | Obsolete - Temporary fix documentation                |
+| `FIX_VERCEL_DEPLOYMENT.md`       | Obsolete - Temporary fix documentation                |
 
 ### Web Directory (10 files)
 
-| File | Reason |
-|------|--------|
-| `web/DATABASE_SETUP.md` | Duplicate - Use root `DATABASE_SETUP.md` |
-| `web/SUPABASE_SETUP.md` | Duplicate - Use root `docs/setup/SUPABASE_SETUP.md` |
-| `web/DEPLOYMENT_CHECKLIST.md` | Duplicate - Use root `docs/deployment/DEPLOYMENT_CHECKLIST.md` |
+| File                                 | Reason                                                                |
+| ------------------------------------ | --------------------------------------------------------------------- |
+| `web/DATABASE_SETUP.md`              | Duplicate - Use root `DATABASE_SETUP.md`                              |
+| `web/SUPABASE_SETUP.md`              | Duplicate - Use root `docs/setup/SUPABASE_SETUP.md`                   |
+| `web/DEPLOYMENT_CHECKLIST.md`        | Duplicate - Use root `docs/deployment/DEPLOYMENT_CHECKLIST.md`        |
 | `web/VERCEL_SINGLE_PROJECT_SETUP.md` | Duplicate - Use root `docs/deployment/VERCEL_SINGLE_PROJECT_SETUP.md` |
-| `web/VERCEL_PROJECT_CHECK.md` | Obsolete - Temporary troubleshooting doc |
-| `web/VERCEL_DUPLICATE_FIX.md` | Obsolete - Temporary fix documentation |
-| `web/URGENT_VERCEL_FIX.md` | Obsolete - Temporary fix documentation |
-| `web/FIX_VERCEL_DEPLOYMENT.md` | Obsolete - Temporary fix documentation |
-| `web/CLOUDFLARE_SETUP.md` | Duplicate - Use root `docs/infrastructure/CLOUDFLARE_SETUP.md` |
-| `web/POSTMARK_CLOUDFLARE_SETUP.md` | Duplicate - Use root `docs/setup/POSTMARK_CLOUDFLARE_SETUP.md` |
-| `web/ENV_QUICK_REFERENCE.md` | Duplicate - Content covered in `DOCUMENTATION.md` |
+| `web/VERCEL_PROJECT_CHECK.md`        | Obsolete - Temporary troubleshooting doc                              |
+| `web/VERCEL_DUPLICATE_FIX.md`        | Obsolete - Temporary fix documentation                                |
+| `web/URGENT_VERCEL_FIX.md`           | Obsolete - Temporary fix documentation                                |
+| `web/FIX_VERCEL_DEPLOYMENT.md`       | Obsolete - Temporary fix documentation                                |
+| `web/CLOUDFLARE_SETUP.md`            | Duplicate - Use root `docs/infrastructure/CLOUDFLARE_SETUP.md`        |
+| `web/POSTMARK_CLOUDFLARE_SETUP.md`   | Duplicate - Use root `docs/setup/POSTMARK_CLOUDFLARE_SETUP.md`        |
+| `web/ENV_QUICK_REFERENCE.md`         | Duplicate - Content covered in `DOCUMENTATION.md`                     |
 
 **Total deleted:** 21 files
 
@@ -56,16 +56,16 @@
 
 All moved to `docs/archive/`:
 
-| File | Reason |
-|------|--------|
-| `PHASE1_COMPLETE.md` | Historical - Phase 1 completion status |
-| `PHASE2_COMPLETE.md` | Historical - Phase 2 completion status |
-| `POLISH_COMPLETE.md` | Historical - Polish phase completion status |
-| `CLEANUP_SUMMARY.md` | Historical - Cleanup summary |
-| `DEPLOYMENT_STATUS.md` | Historical - Deployment status tracking |
-| `DEPENDENCY_STATUS.md` | Historical - Dependency status tracking |
-| `LEGACY.md` | Historical - Legacy documentation |
-| `web/LEGACY.md` → `docs/archive/web-LEGACY.md` | Historical - Web legacy docs |
+| File                                           | Reason                                      |
+| ---------------------------------------------- | ------------------------------------------- |
+| `PHASE1_COMPLETE.md`                           | Historical - Phase 1 completion status      |
+| `PHASE2_COMPLETE.md`                           | Historical - Phase 2 completion status      |
+| `POLISH_COMPLETE.md`                           | Historical - Polish phase completion status |
+| `CLEANUP_SUMMARY.md`                           | Historical - Cleanup summary                |
+| `DEPLOYMENT_STATUS.md`                         | Historical - Deployment status tracking     |
+| `DEPENDENCY_STATUS.md`                         | Historical - Dependency status tracking     |
+| `LEGACY.md`                                    | Historical - Legacy documentation           |
+| `web/LEGACY.md` → `docs/archive/web-LEGACY.md` | Historical - Web legacy docs                |
 
 **Total archived:** 8 files
 
@@ -74,21 +74,25 @@ All moved to `docs/archive/`:
 ## Moved/Organized Files
 
 ### Moved to `docs/deployment/` (4 files)
+
 - `DEPLOYMENT_GUIDE.md` → `docs/deployment/DEPLOYMENT_GUIDE.md`
 - `DEPLOYMENT_CHECKLIST.md` → `docs/deployment/DEPLOYMENT_CHECKLIST.md`
 - `DEPLOYMENT_TROUBLESHOOTING.md` → `docs/deployment/DEPLOYMENT_TROUBLESHOOTING.md`
 - `VERCEL_SINGLE_PROJECT_SETUP.md` → `docs/deployment/VERCEL_SINGLE_PROJECT_SETUP.md`
 
 ### Moved to `docs/setup/` (2 files)
+
 - `SUPABASE_SETUP.md` → `docs/setup/SUPABASE_SETUP.md`
 - `POSTMARK_CLOUDFLARE_SETUP.md` → `docs/setup/POSTMARK_CLOUDFLARE_SETUP.md`
 
 ### Moved to `docs/development/` (3 files)
+
 - `DEVELOPING.md` → `docs/development/DEVELOPING.md`
 - `GIT_PUSH_TROUBLESHOOTING.md` → `docs/development/GIT_PUSH_TROUBLESHOOTING.md`
 - `REPO_STATE_SYSTEM_EXPLANATION.md` → `docs/development/REPO_STATE_SYSTEM_EXPLANATION.md`
 
 ### Moved to `docs/infrastructure/` (2 files)
+
 - `CLOUDFLARE_SETUP.md` → `docs/infrastructure/CLOUDFLARE_SETUP.md`
 - `SECURITY_AUDIT.md` → `docs/infrastructure/SECURITY_AUDIT.md`
 
@@ -99,30 +103,36 @@ All moved to `docs/archive/`:
 ## Updated Files
 
 ### `README.md`
+
 - **Changes:**
   - Added link to `docs/README.md` documentation index
   - Removed references to deleted files
 
 ### `DOCUMENTATION.md`
+
 - **Changes:**
   - Added link to detailed deployment guide in `docs/deployment/DEPLOYMENT_GUIDE.md`
 
 ### `docs/deployment/DEPLOYMENT_GUIDE.md`
+
 - **Changes:**
   - Updated path references to `DATABASE_SETUP.md` (now `../../DATABASE_SETUP.md`)
   - Updated env var name from `EXPO_PUBLIC_SUPABASE_ANON_KEY` to `EXPO_PUBLIC_SUPABASE_KEY` (matches actual usage)
   - Updated support links to use relative paths
 
 ### `web/README.md`
+
 - **Changes:**
   - Updated reference to `DATABASE_SETUP.md` (now `../DATABASE_SETUP.md`)
 
 ### `docs/deployment/DEPLOYMENT_CHECKLIST.md`
+
 - **Changes:**
   - Verified all commands and references are accurate
   - Path references checked
 
 ### `docs/setup/SUPABASE_SETUP.md`
+
 - **Changes:**
   - Path references verified
   - Commands verified against actual setup
@@ -132,6 +142,7 @@ All moved to `docs/archive/`:
 ## New Files
 
 ### `docs/README.md`
+
 - **Purpose:** Documentation index and navigation hub
 - **Contents:**
   - Quick links to all documentation
@@ -140,9 +151,11 @@ All moved to `docs/archive/`:
   - Getting started guide
 
 ### `DOCUMENTATION_AUDIT_REPORT.md` (this file)
+
 - **Purpose:** Complete documentation audit report with all changes and counts
 
 ### `REPO_DOCUMENTATION_AUDIT.md`
+
 - **Purpose:** Internal audit inventory (for reference during audit process)
 
 ---
@@ -199,18 +212,21 @@ All moved to `docs/archive/`:
 ## Verification
 
 ### Commands Verified
+
 - ✅ All npm scripts referenced in docs exist in respective `package.json` files
 - ✅ EAS commands match actual `mobile/eas.json` profiles (`development`, `preview`, `production`)
 - ✅ Vercel commands and configuration verified
 - ✅ Environment variable names match actual code usage
 
 ### File Paths Verified
+
 - ✅ All internal links resolve correctly
 - ✅ All referenced files exist
 - ✅ No broken references to deleted files
 - ✅ Relative paths updated for moved files
 
 ### Accuracy Checks
+
 - ✅ Environment variable setup matches actual requirements
 - ✅ Deployment steps verified against current setup
 - ✅ Database setup instructions accurate
@@ -236,9 +252,11 @@ All moved to `docs/archive/`:
 ## Migration Notes
 
 ### Breaking Changes
+
 - None - All links updated to point to new locations
 
 ### Reference Updates Required
+
 - ✅ All internal documentation links updated
 - ✅ `README.md` updated with new structure
 - ✅ `web/README.md` path references updated
@@ -268,4 +286,3 @@ All changes made in single audit session:
 5. Created `docs/README.md` as documentation index
 6. Updated all path references in affected files
 7. Verified all commands and file paths are accurate
-

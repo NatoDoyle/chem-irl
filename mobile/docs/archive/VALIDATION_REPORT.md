@@ -83,4 +83,3 @@ Ready to implement MVP gap fixes in order:
 3. ✅ ProposeScreen date/time picker
 4. ✅ Error handling centralization
 5. ✅ Placeholder image replacement
-

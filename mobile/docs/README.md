@@ -5,17 +5,21 @@ This directory contains all documentation for the Chem IRL mobile app.
 ## Quick Links
 
 ### Setup & Installation
+
 - **[Install on Phones](./INSTALL_ON_PHONES.md)** - Step-by-step guide for installing the app on physical devices (Expo Go and EAS dev builds)
 - **[Supabase Staging Setup](./SUPABASE_STAGING_SETUP.md)** - How to set up and switch between staging and production Supabase projects
 
 ### Testing
+
 - **[Two-Device Test Plan](./TWO_DEVICE_TEST_PLAN.md)** - Comprehensive testing workflow for validating app features with two devices
 - **[Test Run Log Template](./TEST_RUN_LOG_TEMPLATE.md)** - Template for recording test sessions
 
 ### Release
+
 - **[Release Checklist](./RELEASE_CHECKLIST.md)** - Pre-build verification steps before building for production
 
 ### Archive
+
 - **[Archive](./archive/)** - Historical documentation and implementation summaries (for reference only)
 
 ## Documentation Structure
@@ -44,4 +48,3 @@ docs/
 2. **Staging environment**: See [Supabase Staging Setup](./SUPABASE_STAGING_SETUP.md)
 3. **Testing**: Run `npm run test:two-device` for workflow, then follow [Two-Device Test Plan](./TWO_DEVICE_TEST_PLAN.md)
 4. **Before release**: Complete [Release Checklist](./RELEASE_CHECKLIST.md)
-

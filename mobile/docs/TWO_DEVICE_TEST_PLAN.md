@@ -5,11 +5,13 @@
 ### Accounts
 
 **Account A (Phone A):**
+
 - Email: `your.email+userA@gmail.com` (using Gmail plus-addressing)
 - Or create a separate test account
 - Complete full onboarding
 
 **Account B (Phone B):**
+
 - Email: `your.email+userB@gmail.com` (using Gmail plus-addressing)
 - Or create a separate test account
 - Complete full onboarding
@@ -29,6 +31,7 @@
 ### 1. Auth & Deep Linking ✅
 
 **Phone A:**
+
 - [ ] Launch app → Welcome screen appears
 - [ ] Navigate to Login screen
 - [ ] Enter Account A email
@@ -39,9 +42,11 @@
 - [ ] User is authenticated and sees onboarding or main app
 
 **Phone B:**
+
 - [ ] Repeat above steps with Account B email
 
 **Session Persistence:**
+
 - [ ] Force close app on Phone A
 - [ ] Reopen app → User remains authenticated (no login required)
 - [ ] Repeat on Phone B
@@ -51,6 +56,7 @@
 ### 2. Onboarding ✅
 
 **Phone A:**
+
 - [ ] Profile Setup screen appears (if not completed)
 - [ ] Enter headline (min 5 characters)
 - [ ] Enter bio (min 20 characters)
@@ -59,6 +65,7 @@
 - [ ] Tap Continue → Navigates to main app (Discover tab)
 
 **Phone B:**
+
 - [ ] Complete onboarding with different headline/bio/photos
 
 ---
@@ -66,27 +73,32 @@
 ### 3. Discovery & Matching ✅
 
 **Prerequisites:**
+
 - [ ] Both users have completed onboarding
 - [ ] Both users are in discoverable state (check preferences/filters)
 - [ ] Both users have compatible preferences (gender/orientation/distance)
 
 **Phone A:**
+
 - [ ] Navigate to Discover tab
 - [ ] Swipe right (like) on Phone B's profile
 - [ ] Profile disappears from feed
 
 **Phone B:**
+
 - [ ] Navigate to Discover tab
 - [ ] Swipe right (like) on Phone A's profile
 - [ ] **Match modal should appear** ✅
 - [ ] Tap "View Match" → Navigates to Match Detail screen
 
 **Phone A:**
+
 - [ ] Navigate to Matches tab
 - [ ] Phone B should appear in matches list
 - [ ] Tap match → Match Detail screen loads
 
 **Verification:**
+
 - [ ] Both users see the match in their Matches tab
 - [ ] Match Detail shows correct other user's info
 
@@ -95,11 +107,13 @@
 ### 4. Proposals ✅
 
 **Phone A:**
+
 - [ ] Navigate to Matches tab → Open match with Phone B
 - [ ] Tap "Propose 2-3 Times" button
 - [ ] Date/Time picker appears
 
 **Date/Time Picker Constraints:**
+
 - [ ] Can only select dates within next 7 days ✅
 - [ ] Can select start time
 - [ ] Can select end time (must be after start time) ✅
@@ -113,6 +127,7 @@
 - [ ] Submit proposal → Success message appears
 
 **Phone B:**
+
 - [ ] Navigate to Matches tab → Open match with Phone A
 - [ ] Proposal appears with time windows
 - [ ] Can confirm or decline proposal
@@ -122,11 +137,13 @@
 ### 5. Chat (Real-time) ✅
 
 **Phone A:**
+
 - [ ] Navigate to Match Detail with Phone B
 - [ ] If proposal confirmed, tap "Open Chat"
 - [ ] Chat screen loads (empty or with messages)
 
 **Real-time Testing:**
+
 - [ ] Phone A: Type a message and send
 - [ ] Phone B: Message appears immediately (no refresh needed) ✅
 - [ ] Phone B: Reply with a message
@@ -134,6 +151,7 @@
 - [ ] Scroll behavior works correctly
 
 **Offline Testing:**
+
 - [ ] Phone A: Turn on airplane mode
 - [ ] Phone A: Send message → Should show error or queue message
 - [ ] Phone A: Turn off airplane mode
@@ -145,30 +163,36 @@
 ### 6. Profile Edit & Photo Management ✅
 
 **Phone A:**
+
 - [ ] Navigate to Profile tab
 - [ ] Profile loads with current data (headline, bio, photos)
 
 **Edit Profile:**
+
 - [ ] Change headline → Save → Success message
 - [ ] Change bio → Save → Success message
 - [ ] Reload app → Changes persist ✅
 
 **Photo Operations:**
+
 - [ ] Add new photo → Photo uploads and appears
 - [ ] Remove photo → Photo disappears from UI
 - [ ] Verify in Supabase Storage: File is deleted from bucket ✅
 - [ ] Verify in database: `profiles.photos` array updated ✅
 
 **Rollback Testing (Photo Deletion):**
+
 - [ ] Phone A: Turn on airplane mode
 - [ ] Phone A: Remove photo → Error appears, photo reappears (rollback) ✅
 - [ ] Phone A: Turn off airplane mode
 - [ ] Phone A: Remove photo → Success, file deleted
 
 **Ownership Guard:**
+
 - [ ] (Unit test covers this) ✅
 
 **DB Failure After Deletion:**
+
 - [ ] (Edge case - verify error message shows warning about storage deletion)
 
 ---
@@ -176,17 +200,20 @@
 ### 7. Sentry Verification (Production Builds Only) ⚠️
 
 **Prerequisites:**
+
 - [ ] `EXPO_PUBLIC_ENVIRONMENT=production` in `.env`
 - [ ] `EXPO_PUBLIC_SENTRY_DSN` is set
 - [ ] Build production app: `eas build --platform ios` or `--platform android`
 
 **Testing:**
+
 - [ ] Trigger an error (e.g., network error in Discover screen)
 - [ ] Check Sentry Dashboard → Error event appears ✅
 - [ ] Verify stack trace is readable
 - [ ] Verify error title/tags are present
 
 **Development Build:**
+
 - [ ] Set `EXPO_PUBLIC_ENVIRONMENT=development`
 - [ ] Trigger error → Error should NOT appear in Sentry ✅
 - [ ] Error still displays to user correctly
@@ -232,6 +259,7 @@ Check the following:
    - [ ] Check `city_id` or location data matches
 
 **Quick Debug Steps:**
+
 1. Use Debug Screen (if enabled) to check current user ID
 2. Query Supabase directly: `SELECT * FROM profiles WHERE user_id IN (...)` to verify both profiles exist
 3. Check discovery feed RPC: `SELECT * FROM get_discovery_feed(...)` to see who appears
@@ -242,10 +270,12 @@ Check the following:
 ## Quick Reset for Testing
 
 Use the Debug Screen (DEV builds only) to quickly reset state:
+
 - Clear AsyncStorage / local cache
 - Reset onboarding state (set `completion_pct < 100`)
 - Sign out
 
 Or manually:
+
 - Delete app and reinstall
 - Or manually update `profiles.completion_pct` in Supabase to reset onboarding

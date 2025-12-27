@@ -29,11 +29,13 @@
      - Storage deletion (success, invalid URL, ownership mismatch, storage errors)
 
 **Files changed:**
+
 - `mobile/src/lib/storage.ts` (new)
 - `mobile/src/lib/__tests__/storage.test.ts` (new)
 - `mobile/src/screens/profile/ProfileScreen.tsx` (updated `removePhoto` function)
 
 **Error handling:**
+
 - If storage deletion fails → restore photo in UI, show error, don't update DB
 - If DB update fails after storage deletion → restore photo in UI, show warning about storage deletion
 - Ownership validation prevents accidental deletion of other users' photos
@@ -61,17 +63,20 @@
    - `mobile/ENV_SETUP.md` - Added Sentry setup instructions
 
 **Files changed:**
+
 - `mobile/index.ts` (added Sentry initialization)
 - `mobile/src/lib/errors.ts` (added Sentry capture in `getErrorAlert`)
 - `mobile/README.md` (added Sentry env vars)
 - `mobile/ENV_SETUP.md` (added Sentry setup)
 
 **How it works:**
+
 - Errors are automatically captured when `getErrorAlert()` is called (used in Discover, Matches, Chat, Propose, Profile screens)
 - Unhandled errors are captured by Sentry's React Native integration
 - Only logs in production environment (controlled by `EXPO_PUBLIC_ENVIRONMENT`)
 
 **Setup:**
+
 1. Create account at https://sentry.io
 2. Create a project and get DSN
 3. Add to `.env`:
@@ -85,6 +90,7 @@
 ## Quality Checks ✅
 
 All checks passing:
+
 - ✅ Lint: 0 errors
 - ✅ Type-check: No type errors
 - ✅ Tests: 30/30 passing (14 existing + 16 new storage tests)
@@ -94,6 +100,7 @@ All checks passing:
 ## Summary of File Changes
 
 ### Part A - Photo Deletion
+
 - **New files:**
   - `mobile/src/lib/storage.ts` (100 lines)
   - `mobile/src/lib/__tests__/storage.test.ts` (141 lines)
@@ -101,6 +108,7 @@ All checks passing:
   - `mobile/src/screens/profile/ProfileScreen.tsx` (updated `removePhoto` function, ~40 lines changed)
 
 ### Part B - Error Logging
+
 - **Modified files:**
   - `mobile/index.ts` (~15 lines added)
   - `mobile/src/lib/errors.ts` (~10 lines added)
@@ -108,4 +116,3 @@ All checks passing:
   - `mobile/ENV_SETUP.md` (~5 lines added)
 
 **Total:** 2 new files, 5 modified files
-

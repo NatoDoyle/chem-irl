@@ -13,6 +13,7 @@
 **Current maturity level:** **Partially built MVP** - The app has complete navigation architecture, working authentication (magic links), onboarding flow, discovery feed with swipe mechanics, matching system, proposal creation/confirmation, and real-time chat. However, some screens are stubs (ProfileScreen), and several features need polish (error handling, offline support, photo management). The app is functional end-to-end but lacks production-level error resilience and some UI polish.
 
 **Evidence:**
+
 - All navigation stacks are defined and functional (`mobile/src/navigation/*`)
 - Auth flow complete with deep linking (`mobile/src/lib/auth.ts`, `mobile/App.tsx`)
 - Discovery, matches, proposals, and chat screens all have working implementations
@@ -74,6 +75,7 @@ npm install
 ```
 
 **Requirements:**
+
 - Node.js (version inferred from package.json: any recent LTS compatible with Expo 54)
 - npm or yarn
 - For iOS: macOS with Xcode (via Expo Go or EAS)
@@ -143,17 +145,21 @@ npm run web
 ### Navigation Structure
 
 **Root:** `App.tsx` uses `NavigationContainer` with conditional rendering:
+
 - **No session** → `AuthNavigator` (stack)
 - **Session but `profile.completion_pct < 100`** → `OnboardingNavigator` (stack)
 - **Session and profile complete** → `MainNavigator` (bottom tabs)
 
 **AuthNavigator** (`mobile/src/navigation/AuthNavigator.tsx`):
+
 - `Welcome` → `Login` → `MagicLinkSent`
 
 **OnboardingNavigator** (`mobile/src/navigation/OnboardingNavigator.tsx`):
+
 - `ProfileSetup` → `Photos`
 
 **MainNavigator** (`mobile/src/navigation/MainNavigator.tsx`):
+
 - Bottom tabs:
   - **Discover** (DiscoverScreen) - swipe feed
   - **Matches** (MatchesStackNavigator - nested stack):
@@ -170,11 +176,13 @@ npm run web
 **Pattern:** React hooks (useState, useEffect, useCallback) + local component state. **No global state management library** (Redux, Zustand, Context API for app-wide state).
 
 **Session state:** Managed in `App.tsx`:
+
 - `useState<Session | null>(null)` for current session
 - `useState<boolean>(false)` for `profileComplete`
 - Updated via `supabase.auth.onAuthStateChange()` listener
 
 **Screen-level state:** Each screen manages its own data:
+
 - `DiscoverScreen`: `feed` state, `loading`, `matchModalVisible`
 - `MatchesScreen`: `matches` state, `loading`, `refreshing`
 - `ChatScreen`: `messages` state, real-time subscription
@@ -187,6 +195,7 @@ npm run web
 **Direct Supabase integration** - no API abstraction layer. All screens call Supabase client directly.
 
 **Client initialization:** `mobile/src/lib/supabase/client.ts`
+
 - Creates Supabase client with `LargeSecureStore` (AES-256 encrypted AsyncStorage)
 - Auto-refresh tokens enabled
 - Session persistence enabled
@@ -197,12 +206,14 @@ npm run web
 **Auth headers:** Automatic via Supabase JS client (JWT in Authorization header)
 
 **API calls pattern:**
+
 - **RPC functions:** `supabase.rpc('get_discovery_feed', {...})`, `supabase.rpc('create_like_and_check_match', {...})`
 - **Queries:** `supabase.from('table').select().eq(...)`
 - **Mutations:** `supabase.from('table').insert(...)`, `.update(...)`, `.upsert(...)`
 - **Real-time:** `supabase.channel(...).on('postgres_changes', ...).subscribe()`
 
 **Example locations:**
+
 - `mobile/src/screens/discover/DiscoverScreen.tsx:31` - RPC call for feed
 - `mobile/src/screens/discover/DiscoverScreen.tsx:83` - RPC for like/match
 - `mobile/src/screens/matches/ChatScreen.tsx:52` - Real-time subscription
@@ -215,6 +226,7 @@ npm run web
 **Pattern:** Try-catch blocks in async functions, `Alert.alert()` for user feedback, console.error for debugging.
 
 **Utilities:** `mobile/src/lib/errors.ts` provides:
+
 - `formatError()` - converts unknown error to string
 - `getUserErrorMessage()` - maps common errors to user-friendly messages
 - `isRecoverableError()` - checks if error is retryable
@@ -222,6 +234,7 @@ npm run web
 **Usage:** Most screens use inline try-catch with `Alert.alert()`. `errors.ts` utilities are defined but **not widely used** (only imported in screens implicitly, if at all).
 
 **Evidence:**
+
 - `mobile/src/screens/discover/DiscoverScreen.tsx:36` - `Alert.alert('Error', 'Failed to load discovery feed')`
 - `mobile/src/screens/auth/LoginScreen.tsx:44` - `Alert.alert('Error', result.error || 'Failed to send magic link')`
 - No retry logic observed in screens
@@ -230,13 +243,15 @@ npm run web
 
 ### Local Persistence
 
-**Storage solution:** 
+**Storage solution:**
+
 - **Session tokens:** `LargeSecureStore` (AES-256 encrypted AsyncStorage)
   - Encryption key stored in Expo SecureStore (2048 byte limit)
   - Session data stored in AsyncStorage (encrypted)
   - Implementation: `mobile/src/lib/supabase/client.ts:17-62`
 
 **What is stored:**
+
 - Supabase auth session (JWT tokens, user data) - handled by Supabase client via `LargeSecureStore`
 - No other app data is explicitly persisted (no user preferences cache, no feed cache, no offline message queue)
 
@@ -248,30 +263,32 @@ npm run web
 
 ## E. Features & Screens (inventory)
 
-| Screen/Feature | Route Name | File Path | Purpose | Data Sources | Status |
-|----------------|------------|-----------|---------|--------------|--------|
-| **Welcome** | `Welcome` | `src/screens/auth/WelcomeScreen.tsx` | Landing page with tagline, "Get Started" button | None (static) | ✅ Implemented |
-| **Login** | `Login` | `src/screens/auth/LoginScreen.tsx` | Email input, sends magic link | `sendMagicLink()` → Supabase Auth | ✅ Implemented |
-| **Magic Link Sent** | `MagicLinkSent` | `src/screens/auth/MagicLinkSentScreen.tsx` | Confirmation screen after email sent | Route params (email) | ✅ Implemented |
-| **Profile Setup** | `ProfileSetup` | `src/screens/onboarding/ProfileSetupScreen.tsx` | Collect headline + bio, saves to `profiles` | `supabase.from('profiles').upsert()` | ✅ Implemented |
-| **Photos** | `Photos` | `src/screens/onboarding/PhotosScreen.tsx` | Photo upload (1-6 photos), saves to Storage + `profiles.photos` | `supabase.storage.from('profiles')`, `profiles` table | ✅ Implemented |
-| **Discover** | `Discover` | `src/screens/discover/DiscoverScreen.tsx` | Swipeable feed, like/pass actions | `supabase.rpc('get_discovery_feed')`, `supabase.rpc('create_like_and_check_match')` | ✅ Implemented |
-| **Matches List** | `MatchesList` | `src/screens/matches/MatchesScreen.tsx` | List of all open matches | `supabase.from('matches').select()` | ✅ Implemented |
-| **Match Detail** | `MatchDetail` | `src/screens/matches/MatchDetailScreen.tsx` | View match, proposals, confirms, navigate to propose/chat | `matches`, `proposals`, `confirms`, `profiles` tables | ✅ Implemented |
-| **Propose** | `Propose` | `src/screens/matches/ProposeScreen.tsx` | Create proposal with 2-3 time windows, date types, note | `supabase.from('proposals').insert()` | ✅ Implemented (simplified date picker) |
-| **Chat** | `Chat` | `src/screens/matches/ChatScreen.tsx` | Real-time messaging via Supabase Realtime | `supabase.from('messages')`, `supabase.channel()` subscription | ✅ Implemented |
-| **Profile** | `Profile` | `src/screens/profile/ProfileScreen.tsx` | User profile view/edit | None | 🚧 Stub ("coming soon" placeholder) |
-| **Match Modal** | N/A (component) | `src/components/MatchModal.tsx` | Modal shown when match occurs | Props (matchId) | ✅ Implemented |
-| **Discovery Card Stack** | N/A (component) | `src/components/DiscoveryCardStack.tsx` | Swipeable card stack with pan gestures | Props (feed array) | ✅ Implemented |
-| **Proposal Card** | N/A (component) | `src/components/ProposalCard.tsx` | Displays proposal with time windows, confirm actions | `supabase.from('confirms').insert()`, `proposals.update()` | ✅ Implemented |
+| Screen/Feature           | Route Name      | File Path                                       | Purpose                                                         | Data Sources                                                                        | Status                                  |
+| ------------------------ | --------------- | ----------------------------------------------- | --------------------------------------------------------------- | ----------------------------------------------------------------------------------- | --------------------------------------- |
+| **Welcome**              | `Welcome`       | `src/screens/auth/WelcomeScreen.tsx`            | Landing page with tagline, "Get Started" button                 | None (static)                                                                       | ✅ Implemented                          |
+| **Login**                | `Login`         | `src/screens/auth/LoginScreen.tsx`              | Email input, sends magic link                                   | `sendMagicLink()` → Supabase Auth                                                   | ✅ Implemented                          |
+| **Magic Link Sent**      | `MagicLinkSent` | `src/screens/auth/MagicLinkSentScreen.tsx`      | Confirmation screen after email sent                            | Route params (email)                                                                | ✅ Implemented                          |
+| **Profile Setup**        | `ProfileSetup`  | `src/screens/onboarding/ProfileSetupScreen.tsx` | Collect headline + bio, saves to `profiles`                     | `supabase.from('profiles').upsert()`                                                | ✅ Implemented                          |
+| **Photos**               | `Photos`        | `src/screens/onboarding/PhotosScreen.tsx`       | Photo upload (1-6 photos), saves to Storage + `profiles.photos` | `supabase.storage.from('profiles')`, `profiles` table                               | ✅ Implemented                          |
+| **Discover**             | `Discover`      | `src/screens/discover/DiscoverScreen.tsx`       | Swipeable feed, like/pass actions                               | `supabase.rpc('get_discovery_feed')`, `supabase.rpc('create_like_and_check_match')` | ✅ Implemented                          |
+| **Matches List**         | `MatchesList`   | `src/screens/matches/MatchesScreen.tsx`         | List of all open matches                                        | `supabase.from('matches').select()`                                                 | ✅ Implemented                          |
+| **Match Detail**         | `MatchDetail`   | `src/screens/matches/MatchDetailScreen.tsx`     | View match, proposals, confirms, navigate to propose/chat       | `matches`, `proposals`, `confirms`, `profiles` tables                               | ✅ Implemented                          |
+| **Propose**              | `Propose`       | `src/screens/matches/ProposeScreen.tsx`         | Create proposal with 2-3 time windows, date types, note         | `supabase.from('proposals').insert()`                                               | ✅ Implemented (simplified date picker) |
+| **Chat**                 | `Chat`          | `src/screens/matches/ChatScreen.tsx`            | Real-time messaging via Supabase Realtime                       | `supabase.from('messages')`, `supabase.channel()` subscription                      | ✅ Implemented                          |
+| **Profile**              | `Profile`       | `src/screens/profile/ProfileScreen.tsx`         | User profile view/edit                                          | None                                                                                | 🚧 Stub ("coming soon" placeholder)     |
+| **Match Modal**          | N/A (component) | `src/components/MatchModal.tsx`                 | Modal shown when match occurs                                   | Props (matchId)                                                                     | ✅ Implemented                          |
+| **Discovery Card Stack** | N/A (component) | `src/components/DiscoveryCardStack.tsx`         | Swipeable card stack with pan gestures                          | Props (feed array)                                                                  | ✅ Implemented                          |
+| **Proposal Card**        | N/A (component) | `src/components/ProposalCard.tsx`               | Displays proposal with time windows, confirm actions            | `supabase.from('confirms').insert()`, `proposals.update()`                          | ✅ Implemented                          |
 
 **Status Legend:**
+
 - ✅ **Implemented** - Fully functional with API integration
 - 🚧 **Stub** - Placeholder UI, no functionality
 - ⚠️ **Partial** - Partially functional, missing features
 - ❌ **Broken** - Known bugs or non-functional
 
 **Additional Notes:**
+
 - **ProposeScreen** uses a simplified date picker (hardcoded times 1-3 days ahead, 6-8 PM). Comment at line 42-43 indicates "For MVP, use a simple date picker approach. In production, use a proper date/time picker."
 - **ChatScreen** implements real-time subscriptions correctly but has no message read receipts or typing indicators.
 - **ProfileScreen** is completely stubbed - shows "Profile screen coming soon..." and only has a Sign Out button.
@@ -285,6 +302,7 @@ npm run web
 **Method:** Email magic links (passwordless authentication)
 
 **Flow:**
+
 1. User enters email on `LoginScreen`
 2. `sendMagicLink(email)` called (`mobile/src/lib/auth.ts:40`)
 3. Supabase sends email with deep link: `chemirl://auth/callback?access_token=...&refresh_token=...`
@@ -294,6 +312,7 @@ npm run web
 7. `App.tsx` detects session via `onAuthStateChange` listener
 
 **File references:**
+
 - Login UI: `mobile/src/screens/auth/LoginScreen.tsx`
 - Auth logic: `mobile/src/lib/auth.ts`
 - Deep link handling: `mobile/App.tsx:91-105`
@@ -306,10 +325,12 @@ npm run web
 **Storage:** JWT tokens stored in `LargeSecureStore` (AES-256 encrypted AsyncStorage)
 
 **Token types:**
+
 - `access_token` - Short-lived JWT (default: 1 hour, Supabase configurable)
 - `refresh_token` - Long-lived token for obtaining new access tokens
 
 **Refresh logic:**
+
 - Auto-refresh enabled (`autoRefreshToken: true` in client config)
 - `App.tsx:19-25` starts/stops auto-refresh based on `AppState` (active/background)
 - Manual refresh handled by Supabase client automatically
@@ -323,6 +344,7 @@ npm run web
 **Database mapping:** User data stored in Supabase `profiles` table (not `users` - that's Supabase Auth table).
 
 **Profile structure** (from `mobile/src/lib/types.ts:30-38`):
+
 - `user_id` (UUID, foreign key to auth.users)
 - `prompts` (JSONB: `{ headline: string, bio: string }`)
 - `availability` (JSONB: flexible structure)
@@ -332,7 +354,8 @@ npm run web
 
 **Profile completion check:** `App.tsx:41-56` queries `profiles.completion_pct` to gate access to main app. If `completion_pct >= 100`, user sees `MainNavigator`, otherwise `OnboardingNavigator`.
 
-**Evidence:** 
+**Evidence:**
+
 - TypeScript types: `mobile/src/lib/types.ts:30-38`
 - Profile completion check: `mobile/App.tsx:41-56`
 - Profile creation: `mobile/src/screens/onboarding/ProfileSetupScreen.tsx:65-72`
@@ -346,6 +369,7 @@ npm run web
 **No external component library** - custom components built with React Native primitives.
 
 **Brand system:** `mobile/src/config/brand.ts` defines:
+
 - Colors: `BRAND_COLORS.primary = '#1453FF'`, text colors, success/warning/danger
 - Brand messages: proposal errors, speed messages, report messages
 - Brand info: name, tagline, description
@@ -357,6 +381,7 @@ npm run web
 **Location:** `mobile/src/components/`
 
 **Components:**
+
 1. **DiscoveryCard** (`DiscoveryCard.tsx`) - Displays single profile card with photo, headline, bio, availability, scores (action_speed, profile_quality, reliability), Like/Pass buttons
 2. **DiscoveryCardStack** (`DiscoveryCardStack.tsx`) - Stack of swipeable cards using `PanResponder` and `Animated`
 3. **MatchModal** (`MatchModal.tsx`) - Modal shown when match occurs ("It's a Match!")
@@ -371,6 +396,7 @@ npm run web
 **Pattern:** No global theme object (except brand colors). Each screen/component has its own `styles` object.
 
 **Color usage:** Brand colors imported from `config/brand.ts`:
+
 - `BRAND_COLORS.primary` - Primary blue (#1453FF)
 - `BRAND_COLORS.text[900]` - Dark text
 - `BRAND_COLORS.text[600]` - Light text
@@ -387,18 +413,21 @@ npm run web
 ### Test Setup
 
 **Unit tests:** `mobile/jest.unit.config.js`
+
 - Environment: Node.js (no React Native)
 - Transform: `babel-jest`
 - Test match: `src/lib/__tests__/**/*.test.ts`, `src/config/__tests__/**/*.test.ts`
 - Setup file: `jest.unit.setup.js` (mocks React Native, SecureStore, AsyncStorage, crypto)
 
 **React Native tests:** `mobile/jest.native.config.js`
+
 - Preset: `jest-expo`
 - For component/integration tests (not actively used based on file structure)
 
 **Test runner:** Jest 29.7.0
 
 **Scripts:**
+
 - `npm test` → `test:unit` (default)
 - `npm run test:unit` - Unit tests
 - `npm run test:native` - React Native tests
@@ -406,11 +435,13 @@ npm run web
 ### Current Test Files
 
 Found in `mobile/src/lib/__tests__/`:
+
 1. **auth.test.ts** - Tests `sendMagicLink()`, `handleMagicLink()` with mocked Supabase
 2. **supabase-client.test.ts** - Tests client initialization, env var usage
 3. **types.test.ts** - Type validation tests
 
 Found in `mobile/src/config/__tests__/`:
+
 1. **brand.test.ts** - Brand constants tests
 
 **Test count:** 14 tests total (verified via `npm test` output in conversation history)
@@ -420,6 +451,7 @@ Found in `mobile/src/config/__tests__/`:
 ### Lint / Format / Typecheck Setup
 
 **ESLint:**
+
 - Config: `mobile/.eslintrc.js`
 - Preset: `eslint-config-expo` (v10)
 - Plugins: `prettier`, `@typescript-eslint`
@@ -427,10 +459,12 @@ Found in `mobile/src/config/__tests__/`:
 - Script: `npm run lint`, `npm run lint:fix`
 
 **Prettier:**
+
 - Integrated via ESLint plugin
 - Scripts: `npm run format`, `npm run format:check`
 
 **TypeScript:**
+
 - Config: `mobile/tsconfig.json` (extends `expo/tsconfig.base`, `strict: true`)
 - Script: `npm run type-check`
 - Status: All files are `.ts`/`.tsx`, no `.js` files (except config files)
@@ -574,23 +608,26 @@ Found in `mobile/src/config/__tests__/`:
 ## Appendix: Key Files Reference
 
 ### Entry Points
+
 - `mobile/App.tsx` - Root component, navigation routing
 - `mobile/index.ts` - Expo entry point (register root component)
 - `mobile/app.json` - Expo configuration
 
 ### Core Infrastructure
+
 - `mobile/src/lib/supabase/client.ts` - Supabase client setup
 - `mobile/src/lib/auth.ts` - Auth functions
 - `mobile/src/lib/types.ts` - TypeScript types
 - `mobile/src/config/brand.ts` - Brand constants
 
 ### Navigation
+
 - `mobile/src/navigation/AuthNavigator.tsx`
 - `mobile/src/navigation/OnboardingNavigator.tsx`
 - `mobile/src/navigation/MainNavigator.tsx`
 
 ### Critical Screens
+
 - `mobile/src/screens/discover/DiscoverScreen.tsx` - Main discovery feed
 - `mobile/src/screens/matches/ChatScreen.tsx` - Real-time chat
 - `mobile/src/screens/profile/ProfileScreen.tsx` - **NEEDS IMPLEMENTATION**
-
