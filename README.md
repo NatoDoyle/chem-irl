@@ -49,6 +49,7 @@ See [ARCHITECTURE_PIVOT_PLAN.md](./ARCHITECTURE_PIVOT_PLAN.md) for detailed arch
 ## 📚 Documentation
 
 - **[Complete Documentation](./DOCUMENTATION.md)** - Full technical documentation
+- **[Documentation Index](./docs/README.md)** - Organized documentation structure
 - **[Architecture Plan](./ARCHITECTURE_PIVOT_PLAN.md)** - Architecture decisions
 - **[Quick Start Guide](./PIVOT_QUICK_START.md)** - Quick reference
 - **[Mobile App README](./mobile/README.md)** - Mobile app setup
@@ -86,6 +87,14 @@ Dating App/
 ## 📖 Setup
 
 See [DOCUMENTATION.md](./DOCUMENTATION.md) for complete setup instructions.
+
+## 🔍 Documentation Quality
+
+Run the documentation link checker to validate all markdown links:
+
+```bash
+npm run docs:check
+```
 
 ### Quick Setup
 

@@ -91,7 +91,7 @@ npm run build
 
 The `db/` directory contains database migrations that are shared with the mobile app. These should be run in Supabase SQL Editor (not part of website deployment).
 
-See [DATABASE_SETUP.md](./DATABASE_SETUP.md) for database setup instructions.
+See [`../DATABASE_SETUP.md`](../DATABASE_SETUP.md) for database setup instructions.
 
 ## Notes
 
@@ -104,7 +104,7 @@ See [DATABASE_SETUP.md](./DATABASE_SETUP.md) for database setup instructions.
 
 - [Main Documentation](../DOCUMENTATION.md) - Complete technical docs
 - [Mobile App README](../mobile/README.md) - Mobile app setup
-- [Database Setup](./DATABASE_SETUP.md) - Database migrations
+- [Database Setup](../DATABASE_SETUP.md) - Database migrations
 
 ## Contributing
 

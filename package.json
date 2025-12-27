@@ -1,0 +1,12 @@
+{
+  "name": "chem-irl",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "docs:check": "tsx scripts/check-markdown-links.ts"
+  },
+  "devDependencies": {
+    "tsx": "^4.21.0",
+    "typescript": "^5.9.3"
+  }
+}
