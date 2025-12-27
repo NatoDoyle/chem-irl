@@ -17,6 +17,12 @@ import { supabase } from '../../lib/supabase/client';
 import { BRAND_COLORS } from '../../config/brand';
 import { getErrorAlert, isRecoverableError } from '../../lib/errors';
 import { enqueue, processQueue, QueuedProposal } from '../../lib/offlineQueue';
+import {
+  localDateToUTC,
+  isWithinSevenDays,
+  isValidTimeWindow,
+  formatProposalTime,
+} from '../../lib/timezone';
 
 type ProposeRouteParams = {
   matchId: string;
@@ -200,20 +206,20 @@ export default function ProposeScreen() {
     const finalStartTime = tempWindow.startTime;
     const finalEndTime = tempWindow.endTime;
 
-    // Validate: start < end
-    if (finalStartTime >= finalEndTime) {
+    // Convert to UTC ISO strings for storage
+    const startUTC = localDateToUTC(finalStartTime);
+    const endUTC = localDateToUTC(finalEndTime);
+
+    // Validate: start < end (using timezone-aware validation)
+    if (!isValidTimeWindow(startUTC, endUTC)) {
       Alert.alert('Error', 'End time must be after start time');
       setPickerMode(null);
       setTempWindow(null);
       return;
     }
 
-    // Validate: within 7 days
-    const now = new Date();
-    const sevenDaysFromNow = new Date(now);
-    sevenDaysFromNow.setDate(sevenDaysFromNow.getDate() + 7);
-
-    if (finalStartTime > sevenDaysFromNow || finalStartTime < now) {
+    // Validate: within 7 days (using timezone-aware validation)
+    if (!isWithinSevenDays(startUTC)) {
       Alert.alert('Error', 'All time windows must be within the next 7 days');
       setPickerMode(null);
       setTempWindow(null);
@@ -222,8 +228,8 @@ export default function ProposeScreen() {
 
     // Check for overlapping windows
     const newWindow = {
-      start: finalStartTime.toISOString(),
-      end: finalEndTime.toISOString(),
+      start: startUTC,
+      end: endUTC,
     };
 
     const hasOverlap = selectedWindows.some((window) => {
@@ -273,15 +279,8 @@ export default function ProposeScreen() {
       return;
     }
 
-    // Validate all windows are within 7 days
-    const now = new Date();
-    const sevenDaysFromNow = new Date(now);
-    sevenDaysFromNow.setDate(sevenDaysFromNow.getDate() + 7);
-
-    const invalidWindow = selectedWindows.find((window) => {
-      const windowDate = new Date(window.start);
-      return windowDate > sevenDaysFromNow || windowDate < now;
-    });
+    // Validate all windows are within 7 days (using timezone-aware validation)
+    const invalidWindow = selectedWindows.find((window) => !isWithinSevenDays(window.start));
 
     if (invalidWindow) {
       Alert.alert('Error', 'All time windows must be within the next 7 days');
@@ -300,17 +299,18 @@ export default function ProposeScreen() {
       } = await supabase.auth.getUser();
       if (!user) return;
 
-      // Calculate expiry (72 hours from now)
+      // Calculate expiry (72 hours from now) and convert to UTC
       const expiresAt = new Date();
       expiresAt.setHours(expiresAt.getHours() + 72);
+      const expiresAtUTC = localDateToUTC(expiresAt);
 
       const { error } = await supabase.from('proposals').insert({
         match_id: matchId,
         sender_id: user.id,
-        windows: selectedWindows,
+        windows: selectedWindows, // Already in UTC format
         date_types: selectedDateTypes,
         note: note.trim() || null,
-        expires_at: expiresAt.toISOString(),
+        expires_at: expiresAtUTC,
         status: 'active',
       });
 
@@ -323,11 +323,11 @@ export default function ProposeScreen() {
             type: 'proposal',
             match_id: matchId,
             sender_id: user.id,
-            windows: selectedWindows,
+            windows: selectedWindows, // Already in UTC format
             date_types: selectedDateTypes,
             note: note.trim() || null,
-            expires_at: expiresAt.toISOString(),
-            createdAt: new Date().toISOString(),
+            expires_at: expiresAtUTC,
+            createdAt: localDateToUTC(new Date()),
           };
           await enqueue(queuedProposal);
           Alert.alert('Proposal queued', "Your proposal will be sent when you're back online.");
@@ -357,17 +357,18 @@ export default function ProposeScreen() {
         if (user) {
           const expiresAt = new Date();
           expiresAt.setHours(expiresAt.getHours() + 72);
+          const expiresAtUTC = localDateToUTC(expiresAt);
 
           const queuedProposal: QueuedProposal = {
             id: `${Date.now()}-${Math.random()}`,
             type: 'proposal',
             match_id: matchId,
             sender_id: user.id,
-            windows: selectedWindows,
+            windows: selectedWindows, // Already in UTC format
             date_types: selectedDateTypes,
             note: note.trim() || null,
-            expires_at: expiresAt.toISOString(),
-            createdAt: new Date().toISOString(),
+            expires_at: expiresAtUTC,
+            createdAt: localDateToUTC(new Date()),
           };
           await enqueue(queuedProposal);
           Alert.alert('Proposal queued', "Your proposal will be sent when you're back online.");
@@ -384,16 +385,8 @@ export default function ProposeScreen() {
     }
   };
 
-  const formatTime = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleString('en-US', {
-      weekday: 'short',
-      month: 'short',
-      day: 'numeric',
-      hour: 'numeric',
-      minute: '2-digit',
-    });
-  };
+  // Use timezone utility for consistent timezone-aware formatting
+  const formatTime = formatProposalTime;
 
   return (
     <ScrollView style={styles.container}>

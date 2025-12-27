@@ -4,6 +4,7 @@ import { BRAND_COLORS } from '../config/brand';
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase/client';
 import { Alert } from 'react-native';
+import { formatProposalTime } from '../lib/timezone';
 
 interface ProposalCardProps {
   proposal: Proposal;
@@ -101,16 +102,8 @@ export default function ProposalCard({
     onNoneSuits();
   };
 
-  const formatTime = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleString('en-US', {
-      weekday: 'short',
-      month: 'short',
-      day: 'numeric',
-      hour: 'numeric',
-      minute: '2-digit',
-    });
-  };
+  // Use timezone utility for consistent timezone-aware formatting
+  const formatTime = formatProposalTime;
 
   if (isConfirmed) {
     return (
