@@ -18,6 +18,7 @@ import { BRAND_COLORS } from '../../config/brand';
 import { getErrorAlert } from '../../lib/errors';
 
 const REFRESH_THROTTLE_MS = 10000; // 10 seconds - minimum time between auto-refreshes
+const REALTIME_DEBOUNCE_MS = 750; // 750ms debounce for realtime subscription callbacks
 
 const PLACEHOLDER_IMAGE = require('../../assets/icon.png');
 
@@ -41,6 +42,8 @@ export default function MatchesScreen() {
   const [error, setError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const lastFetchTimeRef = useRef<number>(0);
+  const debounceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const userIdRef = useRef<string | null>(null);
 
   const loadMatches = useCallback(
     async (skipLoadingState: boolean = false) => {
@@ -100,6 +103,10 @@ export default function MatchesScreen() {
         setMatches(matchesWithProfiles);
         setError(null);
         lastFetchTimeRef.current = Date.now();
+        // Store user ID for subscription setup
+        if (user) {
+          userIdRef.current = user.id;
+        }
       } catch (error: any) {
         console.error('Error loading matches:', error);
         const { message } = getErrorAlert(error, 'Failed to load matches');
@@ -115,7 +122,98 @@ export default function MatchesScreen() {
     loadMatches();
   }, [loadMatches]);
 
+  // Set up realtime subscription for new matches
+  // This provides instant updates when a new match is created, even when user is already on the screen.
+  // We use focus-refresh as a fallback for when realtime fails or user switches tabs.
+  useEffect(() => {
+    // Wait for initial load to complete and get user ID
+    if (!userIdRef.current) {
+      return;
+    }
+
+    const userId = userIdRef.current;
+
+    // Debounced callback to refresh matches list on realtime events
+    // Debouncing prevents multiple rapid fetches during bursts (e.g., multiple matches created quickly)
+    const debouncedRefresh = () => {
+      if (debounceTimeoutRef.current) {
+        clearTimeout(debounceTimeoutRef.current);
+      }
+      debounceTimeoutRef.current = setTimeout(() => {
+        loadMatches(true); // Skip loading state during realtime updates
+      }, REALTIME_DEBOUNCE_MS);
+    };
+
+    // Subscribe to matches table changes
+    // Filter: matches where current user is either user_a or user_b
+    // Since Supabase realtime filters can't easily do OR conditions, we subscribe to both
+    // and deduplicate via debouncing
+    const channel = supabase
+      .channel(`matches:${userId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'matches',
+          filter: `user_a=eq.${userId}`,
+        },
+        () => {
+          debouncedRefresh();
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'matches',
+          filter: `user_b=eq.${userId}`,
+        },
+        () => {
+          debouncedRefresh();
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'matches',
+          filter: `user_a=eq.${userId}`,
+        },
+        () => {
+          debouncedRefresh();
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'matches',
+          filter: `user_b=eq.${userId}`,
+        },
+        () => {
+          debouncedRefresh();
+        }
+      )
+      .subscribe();
+
+    // Cleanup on unmount
+    return () => {
+      if (debounceTimeoutRef.current) {
+        clearTimeout(debounceTimeoutRef.current);
+      }
+      supabase.removeChannel(channel);
+    };
+  }, [loadMatches]);
+
   // Refresh matches when screen comes into focus, but throttle to avoid excessive calls
+  // This complements realtime subscriptions by catching updates when:
+  // - User switches back to the app/tab (realtime may have missed events while backgrounded)
+  // - Realtime subscription fails or is delayed
+  // Throttling (10s) prevents excessive network calls when rapidly switching tabs.
   useFocusEffect(
     useCallback(() => {
       const now = Date.now();
