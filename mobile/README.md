@@ -21,6 +21,8 @@ npm install
 
 ### 2. Environment Variables
 
+**Quick start:** See [Auth Magic Link: Staging Checklist](./docs/AUTH_MAGIC_LINK_STAGING.md) for step-by-step magic link setup.
+
 Create a `.env` file in the `mobile/` directory:
 
 ```env
@@ -211,6 +213,7 @@ See [`docs/README.md`](./docs/README.md) for complete documentation index.
 **Quick links:**
 
 - **[Install on Phones](./docs/INSTALL_ON_PHONES.md)** - Expo Go and EAS dev build installation
+- **[Auth Magic Link: Staging Checklist](./docs/AUTH_MAGIC_LINK_STAGING.md)** - Step-by-step magic link deep linking setup
 - **[Supabase Staging Setup](./docs/SUPABASE_STAGING_SETUP.md)** - Staging project setup and environment switching
 - **[Two-Device Test Plan](./docs/TWO_DEVICE_TEST_PLAN.md)** - Step-by-step testing workflow
 - **[Test Run Log Template](./docs/TEST_RUN_LOG_TEMPLATE.md)** - Template for recording test sessions
