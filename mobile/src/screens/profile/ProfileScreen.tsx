@@ -167,11 +167,15 @@ export default function ProfileScreen() {
         return;
       }
 
+      // Sanitize user inputs before storing
+      const sanitizedHeadline = sanitizeText(headlineTrimmed);
+      const sanitizedBio = sanitizeMultilineText(bioTrimmed);
+
       const { error } = await supabase.from('profiles').upsert({
         user_id: user.id,
         prompts: {
-          headline: headlineTrimmed,
-          bio: bioTrimmed,
+          headline: sanitizedHeadline,
+          bio: sanitizedBio,
         },
         photos: photos,
         completion_pct: photos.length >= 1 ? 100 : 50,

@@ -153,7 +153,8 @@ export default function ChatScreen() {
     // Update throttle to prevent next call for 500ms
     sendThrottleRef.current.execute();
 
-    const messageContent = newMessage.trim();
+    // Sanitize message content before storing
+    const messageContent = sanitizeText(newMessage.trim());
     setNewMessage('');
     setSending(true);
 
