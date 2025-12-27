@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -37,6 +37,8 @@ export default function ProfileScreen() {
   );
   // Store original URIs for failed uploads so we can retry without re-selection
   const [failedUploadURIs, setFailedUploadURIs] = useState<Map<number, string>>(new Map());
+  // Track if reconciliation has been run in this session (component-level cache)
+  const reconciliationRunRef = useRef(false);
 
   useEffect(() => {
     loadProfile();
@@ -72,9 +74,11 @@ export default function ProfileScreen() {
         const loadedPhotos = (profile.photos as string[]) || [];
         setPhotos(loadedPhotos);
 
-        // Run reconciliation if needed (cached to max once per 24h)
+        // Run reconciliation if needed (cached to max once per 24h AND once per session)
+        // Component-level cache prevents multiple runs if user navigates away/back
         const shouldReconcile = await shouldRunReconciliation();
-        if (shouldReconcile && loadedPhotos.length > 0) {
+        if (shouldReconcile && !reconciliationRunRef.current && loadedPhotos.length > 0) {
+          reconciliationRunRef.current = true; // Mark as run in this session
           const reconcileResult = await reconcilePhotos(loadedPhotos, user.id);
           await markReconciliationComplete();
 
