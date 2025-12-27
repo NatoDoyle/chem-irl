@@ -21,6 +21,8 @@ import {
   markReconciliationComplete,
 } from '../../lib/reconcilePhotos';
 
+type PhotoUploadState = 'idle' | 'uploading' | 'success' | 'error';
+
 export default function ProfileScreen() {
   const [headline, setHeadline] = useState('');
   const [bio, setBio] = useState('');
@@ -28,6 +30,10 @@ export default function ProfileScreen() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
+  // Track upload state per photo (by index)
+  const [photoUploadStates, setPhotoUploadStates] = useState<Map<number, PhotoUploadState>>(
+    new Map()
+  );
 
   useEffect(() => {
     loadProfile();
@@ -198,6 +204,9 @@ export default function ProfileScreen() {
 
   const uploadPhoto = async (uri: string) => {
     setUploading(true);
+    const tempIndex = photos.length; // Index where photo will be added
+    setPhotoUploadStates((prev) => new Map(prev).set(tempIndex, 'uploading'));
+
     try {
       const {
         data: { user },
@@ -205,6 +214,11 @@ export default function ProfileScreen() {
       if (!user) {
         Alert.alert('Error', 'Not authenticated');
         setUploading(false);
+        setPhotoUploadStates((prev) => {
+          const newMap = new Map(prev);
+          newMap.delete(tempIndex);
+          return newMap;
+        });
         return;
       }
 
@@ -223,6 +237,7 @@ export default function ProfileScreen() {
         });
 
       if (uploadError) {
+        setPhotoUploadStates((prev) => new Map(prev).set(tempIndex, 'error'));
         Alert.alert('Error', uploadError.message);
         setUploading(false);
         return;
@@ -236,11 +251,33 @@ export default function ProfileScreen() {
       // Limit to 6 photos max
       const updatedPhotos = [...photos, publicUrl].slice(0, 6);
       setPhotos(updatedPhotos);
+
+      // Mark upload as success, then clear after a brief delay
+      setPhotoUploadStates((prev) => new Map(prev).set(tempIndex, 'success'));
+      setTimeout(() => {
+        setPhotoUploadStates((prev) => {
+          const newMap = new Map(prev);
+          newMap.delete(tempIndex);
+          return newMap;
+        });
+      }, 1000);
     } catch (error: any) {
+      setPhotoUploadStates((prev) => new Map(prev).set(tempIndex, 'error'));
       Alert.alert('Error', error.message || 'Failed to upload photo');
     } finally {
       setUploading(false);
     }
+  };
+
+  const retryUpload = async (index: number) => {
+    // For retry, we'd need to store the original URI, which we don't currently do
+    // For now, remove the error state and let user pick again
+    setPhotoUploadStates((prev) => {
+      const newMap = new Map(prev);
+      newMap.delete(index);
+      return newMap;
+    });
+    Alert.alert('Retry', 'Please select the photo again to retry upload');
   };
 
   const removePhoto = async (index: number) => {
@@ -346,18 +383,40 @@ export default function ProfileScreen() {
 
         <Text style={styles.label}>Photos</Text>
         <View style={styles.photosContainer}>
-          {photos.map((photo, index) => (
-            <View key={index} style={styles.photoWrapper}>
-              <Image source={{ uri: photo }} style={styles.photo} />
-              <TouchableOpacity
-                style={styles.removePhotoButton}
-                onPress={() => removePhoto(index)}
-                disabled={saving}
-              >
-                <Text style={styles.removePhotoText}>×</Text>
-              </TouchableOpacity>
-            </View>
-          ))}
+          {photos.map((photo, index) => {
+            const uploadState = photoUploadStates.get(index);
+            const isUploading = uploadState === 'uploading';
+            return (
+              <View key={index} style={styles.photoWrapper}>
+                <Image source={{ uri: photo }} style={styles.photo} />
+                {uploadState === 'uploading' && (
+                  <View style={styles.uploadOverlay}>
+                    <ActivityIndicator color="#fff" size="small" />
+                  </View>
+                )}
+                {uploadState === 'success' && (
+                  <View style={[styles.uploadOverlay, styles.successOverlay]}>
+                    <Text style={styles.checkmark}>✓</Text>
+                  </View>
+                )}
+                {uploadState === 'error' && (
+                  <View style={[styles.uploadOverlay, styles.errorOverlay]}>
+                    <Text style={styles.errorText}>!</Text>
+                    <TouchableOpacity style={styles.retryButton} onPress={() => retryUpload(index)}>
+                      <Text style={styles.retryText}>Retry</Text>
+                    </TouchableOpacity>
+                  </View>
+                )}
+                <TouchableOpacity
+                  style={styles.removePhotoButton}
+                  onPress={() => removePhoto(index)}
+                  disabled={saving || isUploading}
+                >
+                  <Text style={styles.removePhotoText}>×</Text>
+                </TouchableOpacity>
+              </View>
+            );
+          })}
           {photos.length < 6 && (
             <TouchableOpacity
               style={styles.addPhotoButton}
@@ -448,6 +507,47 @@ const styles = StyleSheet.create({
     height: 125,
     borderRadius: 8,
     backgroundColor: '#E2E8F0',
+  },
+  uploadOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 1,
+  },
+  successOverlay: {
+    backgroundColor: 'rgba(34, 197, 94, 0.8)',
+  },
+  errorOverlay: {
+    backgroundColor: 'rgba(239, 68, 68, 0.8)',
+    flexDirection: 'column',
+    gap: 8,
+  },
+  checkmark: {
+    color: '#fff',
+    fontSize: 32,
+    fontWeight: 'bold',
+  },
+  errorText: {
+    color: '#fff',
+    fontSize: 24,
+    fontWeight: 'bold',
+  },
+  retryButton: {
+    backgroundColor: '#fff',
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 4,
+  },
+  retryText: {
+    color: BRAND_COLORS.primary,
+    fontSize: 12,
+    fontWeight: '600',
   },
   removePhotoButton: {
     position: 'absolute',
