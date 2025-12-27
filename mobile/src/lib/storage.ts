@@ -11,26 +11,61 @@ import { supabase } from './supabase/client';
  * @returns Storage path or null if URL doesn't match expected format
  */
 export function extractStoragePathFromUrl(url: string, bucket: string = 'profiles'): string | null {
+  // Validate input
+  if (!url || typeof url !== 'string' || url.trim().length === 0) {
+    return null;
+  }
+
+  // Basic validation: URL should contain supabase.co domain
+  if (!url.includes('supabase.co')) {
+    return null;
+  }
+
+  // Basic validation: URL should contain expected path segments
+  if (!url.includes('/storage/v1/object/public/')) {
+    return null;
+  }
+
   try {
     const urlObj = new URL(url);
-    const pathParts = urlObj.pathname.split('/');
 
-    // Path should be: /storage/v1/object/public/<bucket>/<path>
-    const publicIndex = pathParts.indexOf('public');
-    if (publicIndex === -1 || publicIndex >= pathParts.length - 2) {
+    // Validate URL has expected hostname pattern (contains .supabase.co)
+    if (!urlObj.hostname.includes('.supabase.co')) {
       return null;
     }
 
-    const bucketIndex = publicIndex + 1;
-    if (pathParts[bucketIndex] !== bucket) {
+    const pathParts = urlObj.pathname.split('/').filter((part) => part.length > 0);
+
+    // Expected path structure: storage/v1/object/public/<bucket>/<path>
+    // After split('/'), empty strings are filtered, so we look for: ['storage', 'v1', 'object', 'public', bucket, ...path]
+    const storageIndex = pathParts.indexOf('storage');
+    if (storageIndex === -1) {
+      return null;
+    }
+
+    // Validate path structure: storage/v1/object/public
+    const expectedStructure = ['storage', 'v1', 'object', 'public'];
+    const actualStructure = pathParts.slice(storageIndex, storageIndex + 4);
+    if (JSON.stringify(actualStructure) !== JSON.stringify(expectedStructure)) {
+      return null;
+    }
+
+    // Find bucket (should be at index storageIndex + 4)
+    const bucketIndex = storageIndex + 4;
+    if (bucketIndex >= pathParts.length || pathParts[bucketIndex] !== bucket) {
       return null;
     }
 
     // Everything after bucket is the path
-    const path = pathParts.slice(bucketIndex + 1).join('/');
+    const pathPartsAfterBucket = pathParts.slice(bucketIndex + 1);
+    if (pathPartsAfterBucket.length === 0) {
+      return null;
+    }
+
+    const path = pathPartsAfterBucket.join('/');
     return path || null;
   } catch {
-    // Invalid URL
+    // Invalid URL format
     return null;
   }
 }
