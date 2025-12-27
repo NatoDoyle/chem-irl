@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { createThrottle } from '../../lib/throttle';
 import {
   View,
   Text,
@@ -34,6 +35,8 @@ export default function ChatScreen() {
   const [sending, setSending] = useState(false);
   const [queueSize, setQueueSize] = useState(0);
   const [queuedMessages, setQueuedMessages] = useState<Map<string, QueuedMessage>>(new Map());
+  // Throttle message sending to prevent spam (min 500ms between messages)
+  const sendThrottleRef = useRef(createThrottle(() => {}, 500));
 
   const loadMessages = useCallback(async () => {
     try {
@@ -140,6 +143,14 @@ export default function ChatScreen() {
 
   const handleSend = async () => {
     if (!newMessage.trim()) return;
+
+    // Prevent rapid successive messages (rate limiting)
+    if (sendThrottleRef.current.isThrottled()) {
+      return;
+    }
+
+    // Update throttle to prevent next call for 500ms
+    sendThrottleRef.current.execute();
 
     const messageContent = newMessage.trim();
     setNewMessage('');

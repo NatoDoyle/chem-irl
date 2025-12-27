@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import {
   View,
   Text,
@@ -17,6 +17,7 @@ import { supabase } from '../../lib/supabase/client';
 import { BRAND_COLORS } from '../../config/brand';
 import { getErrorAlert, isRecoverableError } from '../../lib/errors';
 import { enqueue, processQueue, QueuedProposal } from '../../lib/offlineQueue';
+import { createThrottle } from '../../lib/throttle';
 import {
   localDateToUTC,
   isWithinSevenDays,
@@ -45,6 +46,8 @@ export default function ProposeScreen() {
   const [note, setNote] = useState('');
   const [loading, setLoading] = useState(false);
   const [pickerMode, setPickerMode] = useState<PickerMode>(null);
+  // Throttle proposal submission to prevent spam (min 2 seconds between proposals)
+  const submitThrottleRef = useRef(createThrottle(() => {}, 2000));
   const [tempWindow, setTempWindow] = useState<{
     date: Date;
     startTime: Date;
@@ -278,6 +281,15 @@ export default function ProposeScreen() {
       Alert.alert('Error', 'Please select exactly 2-3 time windows');
       return;
     }
+
+    // Prevent rapid successive proposal submissions (rate limiting)
+    if (submitThrottleRef.current.isThrottled()) {
+      Alert.alert('Please wait', 'You can only submit proposals every 2 seconds');
+      return;
+    }
+
+    // Update throttle to prevent next call for 2 seconds
+    submitThrottleRef.current.execute();
 
     // Validate all windows are within 7 days (using timezone-aware validation)
     const invalidWindow = selectedWindows.find((window) => !isWithinSevenDays(window.start));

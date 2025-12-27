@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { View, Text, StyleSheet, ActivityIndicator, Alert, TouchableOpacity } from 'react-native';
 import { supabase } from '../../lib/supabase/client';
 import { FeedItem } from '../../lib/types';
@@ -7,6 +7,7 @@ import MatchModal from '../../components/MatchModal';
 import { BRAND_COLORS } from '../../config/brand';
 import { getErrorAlert } from '../../lib/errors';
 import ConnectionStatus from '../../components/ConnectionStatus';
+import { createThrottle } from '../../lib/throttle';
 
 type FeedItemWithPhotos = FeedItem & { photos: string[] };
 
@@ -22,6 +23,8 @@ export default function DiscoverScreen() {
   const [newMatchId, setNewMatchId] = useState<string | null>(null);
   const [hasMore, setHasMore] = useState(true);
   const [seenUserIds, setSeenUserIds] = useState<Set<string>>(new Set());
+  // Throttle like actions to prevent spam (min 1 second between likes)
+  const likeThrottleRef = useRef(createThrottle(() => {}, 1000));
 
   const loadFeed = useCallback(
     async (reset: boolean = false) => {
@@ -135,6 +138,14 @@ export default function DiscoverScreen() {
   }, [loadFeed]);
 
   const handleLike = async (userId: string) => {
+    // Prevent rapid successive likes (rate limiting)
+    if (likeThrottleRef.current.isThrottled()) {
+      return;
+    }
+
+    // Update throttle to prevent next call for 1 second
+    likeThrottleRef.current.execute();
+
     try {
       const {
         data: { user },
