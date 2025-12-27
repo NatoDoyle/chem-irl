@@ -24,6 +24,8 @@ export default function PhotosScreen() {
   const [photoUploadStates, setPhotoUploadStates] = useState<Map<number, PhotoUploadState>>(
     new Map()
   );
+  // Store original URIs for failed uploads so we can retry without re-selection
+  const [failedUploadURIs, setFailedUploadURIs] = useState<Map<number, string>>(new Map());
 
   useEffect(() => {
     loadExistingPhotos();
@@ -106,6 +108,8 @@ export default function PhotosScreen() {
 
       if (uploadError) {
         setPhotoUploadStates((prev) => new Map(prev).set(tempIndex, 'error'));
+        // Store URI for retry
+        setFailedUploadURIs((prev) => new Map(prev).set(tempIndex, uri));
         Alert.alert('Error', uploadError.message);
         setUploading(false);
         return;
@@ -154,6 +158,12 @@ export default function PhotosScreen() {
       }
 
       setPhotos(updatedPhotos);
+      // Clear stored URI on success
+      setFailedUploadURIs((prev) => {
+        const newMap = new Map(prev);
+        newMap.delete(tempIndex);
+        return newMap;
+      });
       // Mark upload as success, then clear after a brief delay
       setPhotoUploadStates((prev) => new Map(prev).set(tempIndex, 'success'));
       setTimeout(() => {
@@ -165,6 +175,8 @@ export default function PhotosScreen() {
       }, 1000);
     } catch (error: any) {
       setPhotoUploadStates((prev) => new Map(prev).set(tempIndex, 'error'));
+      // Store URI for retry
+      setFailedUploadURIs((prev) => new Map(prev).set(tempIndex, uri));
       Alert.alert('Error', error.message || 'Failed to upload photo');
     } finally {
       setUploading(false);
@@ -172,14 +184,20 @@ export default function PhotosScreen() {
   };
 
   const retryUpload = async (index: number) => {
-    // For retry, we'd need to store the original URI, which we don't currently do
-    // For now, remove the error state and let user pick again
-    setPhotoUploadStates((prev) => {
-      const newMap = new Map(prev);
-      newMap.delete(index);
-      return newMap;
-    });
-    Alert.alert('Retry', 'Please select the photo again to retry upload');
+    const storedURI = failedUploadURIs.get(index);
+    if (!storedURI) {
+      Alert.alert('Error', 'Photo URI not found. Please select the photo again.');
+      // Clean up error state if no URI stored
+      setPhotoUploadStates((prev) => {
+        const newMap = new Map(prev);
+        newMap.delete(index);
+        return newMap;
+      });
+      return;
+    }
+
+    // Re-upload using stored URI
+    await uploadPhoto(storedURI);
   };
 
   const handleContinue = async () => {
