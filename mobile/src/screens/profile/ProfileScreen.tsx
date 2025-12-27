@@ -248,6 +248,18 @@ export default function ProfileScreen() {
         data: { publicUrl },
       } = supabase.storage.from('profiles').getPublicUrl(fileName);
 
+      // Check for duplicate photo URL
+      if (photos.includes(publicUrl)) {
+        setPhotoUploadStates((prev) => {
+          const newMap = new Map(prev);
+          newMap.delete(tempIndex);
+          return newMap;
+        });
+        Alert.alert('Duplicate photo', 'This photo is already in your profile.');
+        setUploading(false);
+        return;
+      }
+
       // Limit to 6 photos max
       const updatedPhotos = [...photos, publicUrl].slice(0, 6);
       setPhotos(updatedPhotos);

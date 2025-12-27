@@ -124,6 +124,19 @@ export default function PhotosScreen() {
         .single();
 
       const existingPhotos = (profileData?.photos as string[]) || [];
+
+      // Check for duplicate photo URL
+      if (existingPhotos.includes(publicUrl) || photos.includes(publicUrl)) {
+        setPhotoUploadStates((prev) => {
+          const newMap = new Map(prev);
+          newMap.delete(tempIndex);
+          return newMap;
+        });
+        Alert.alert('Duplicate photo', 'This photo is already in your profile.');
+        setUploading(false);
+        return;
+      }
+
       // Limit to 6 photos max
       const updatedPhotos = [...existingPhotos, publicUrl].slice(0, 6);
 
