@@ -177,6 +177,30 @@ eas submit --platform android
    - Run `npm run test:log:new` to generate a prefilled test run log
    - Or use [`docs/TEST_RUN_LOG_TEMPLATE.md`](./docs/TEST_RUN_LOG_TEMPLATE.md) manually
 
+### Beta smoke run
+
+Quick smoke test of the core user loop:
+
+```bash
+# Switch to staging environment
+npm run use:staging
+
+# Restart Expo dev server (required after env switch)
+npm start
+
+# Verify staging setup
+npm run verify:staging
+
+# Generate new beta smoke test log
+npm run test:beta:smoke:new
+```
+
+**Next steps:**
+
+- Install on phones using [`docs/INSTALL_ON_PHONES.md`](./docs/INSTALL_ON_PHONES.md)
+- Follow [`docs/BETA_SMOKE_CHECKLIST.md`](./docs/BETA_SMOKE_CHECKLIST.md) for the complete test workflow
+- Generated logs are saved to `test_runs/beta_smoke/`
+
 ### Documentation
 
 See [`docs/README.md`](./docs/README.md) for complete documentation index.
