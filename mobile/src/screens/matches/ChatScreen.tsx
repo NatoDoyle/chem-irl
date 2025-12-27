@@ -17,6 +17,7 @@ import { Message } from '../../lib/types';
 import { BRAND_COLORS } from '../../config/brand';
 import { getErrorAlert, isRecoverableError } from '../../lib/errors';
 import { enqueue, processQueue, getQueueSize, QueuedMessage } from '../../lib/offlineQueue';
+import ConnectionStatus from '../../components/ConnectionStatus';
 
 type ChatRouteParams = {
   matchId: string;
@@ -284,6 +285,7 @@ export default function ChatScreen() {
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       keyboardVerticalOffset={90}
     >
+      <ConnectionStatus />
       {messages.length === 0 && !loading ? (
         <View style={styles.emptyContainer}>
           <Text style={styles.emptyText}>No messages yet</Text>

@@ -6,6 +6,7 @@ import DiscoveryCardStack from '../../components/DiscoveryCardStack';
 import MatchModal from '../../components/MatchModal';
 import { BRAND_COLORS } from '../../config/brand';
 import { getErrorAlert } from '../../lib/errors';
+import ConnectionStatus from '../../components/ConnectionStatus';
 
 type FeedItemWithPhotos = FeedItem & { photos: string[] };
 
@@ -215,6 +216,7 @@ export default function DiscoverScreen() {
 
   return (
     <View style={styles.container}>
+      <ConnectionStatus />
       <DiscoveryCardStack
         feed={feed}
         onLike={handleLike}
