@@ -323,6 +323,17 @@ export default function ProfileScreen() {
       return;
     }
 
+    // Prevent deletion if this photo or any photo is currently uploading
+    const uploadState = photoUploadStates.get(index);
+    if (uploadState === 'uploading' || uploading) {
+      const { title, message } = getErrorAlert(
+        'Cannot delete photo while upload is in progress',
+        'Upload in Progress'
+      );
+      Alert.alert(title, message);
+      return;
+    }
+
     // Optimistically update UI
     const updatedPhotos = photos.filter((_, i) => i !== index);
     setPhotos(updatedPhotos);
