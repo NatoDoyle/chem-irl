@@ -1,7 +1,14 @@
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, View, AppState } from 'react-native';
+import {
+  ActivityIndicator,
+  View,
+  AppState,
+  Text,
+  TouchableOpacity,
+  StyleSheet,
+} from 'react-native';
 import * as Linking from 'expo-linking';
 import { supabase } from './src/lib/supabase/client';
 import { Session } from '@supabase/supabase-js';
@@ -9,6 +16,7 @@ import { handleMagicLink } from './src/lib/auth';
 import AuthNavigator from './src/navigation/AuthNavigator';
 import OnboardingNavigator from './src/navigation/OnboardingNavigator';
 import MainNavigator from './src/navigation/MainNavigator';
+import { isSessionExpiredError } from './src/lib/errors';
 
 const Stack = createNativeStackNavigator();
 
@@ -28,37 +36,67 @@ export default function App() {
   const [session, setSession] = useState<Session | null>(null);
   const [profileComplete, setProfileComplete] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [sessionExpired, setSessionExpired] = useState(false);
 
   useEffect(() => {
     // Check for existing session and profile completion
     const checkSessionAndProfile = async () => {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
+      try {
+        const {
+          data: { session },
+          error: sessionError,
+        } = await supabase.auth.getSession();
 
-      if (session) {
-        // Check if profile is complete
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('completion_pct')
-          .eq('user_id', session.user.id)
-          .single();
-
-        // If profile is complete, user can access main app
-        // Otherwise, they'll need to complete onboarding
-        if (profile && profile.completion_pct >= 100) {
-          setSession(session);
-          setProfileComplete(true);
-        } else {
-          // Profile incomplete - will show onboarding
-          setSession(session); // Still have session, but profile incomplete
-          setProfileComplete(false);
+        // Check if session retrieval failed due to expiry
+        if (sessionError && isSessionExpiredError(sessionError)) {
+          setSessionExpired(true);
+          setSession(null);
+          setLoading(false);
+          return;
         }
-      } else {
-        setSession(null);
-      }
 
-      setLoading(false);
+        if (session) {
+          // Check if profile is complete
+          const { data: profile, error: profileError } = await supabase
+            .from('profiles')
+            .select('completion_pct')
+            .eq('user_id', session.user.id)
+            .single();
+
+          // If profile fetch failed, don't treat as session expiry
+          // User can still navigate, profile will show error state
+          if (profileError && isSessionExpiredError(profileError)) {
+            setSessionExpired(true);
+            setSession(null);
+            setLoading(false);
+            return;
+          }
+
+          // If profile is complete, user can access main app
+          // Otherwise, they'll need to complete onboarding
+          if (profile && profile.completion_pct >= 100) {
+            setSession(session);
+            setProfileComplete(true);
+            setSessionExpired(false);
+          } else {
+            // Profile incomplete - will show onboarding
+            setSession(session); // Still have session, but profile incomplete
+            setProfileComplete(false);
+            setSessionExpired(false);
+          }
+        } else {
+          setSession(null);
+          setSessionExpired(false);
+        }
+      } catch (error) {
+        // If error indicates session expiry, handle it
+        if (isSessionExpiredError(error)) {
+          setSessionExpired(true);
+          setSession(null);
+        }
+      } finally {
+        setLoading(false);
+      }
     };
 
     checkSessionAndProfile();
@@ -66,24 +104,62 @@ export default function App() {
     // Listen for auth changes
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      if (session) {
-        // Check profile completion on auth change
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('completion_pct')
-          .eq('user_id', session.user.id)
-          .single();
+    } = supabase.auth.onAuthStateChange(async (event, session) => {
+      // Handle session expiry events
+      if (event === 'SIGNED_OUT' || event === 'TOKEN_REFRESHED' || !session) {
+        if (event === 'SIGNED_OUT' || !session) {
+          // Check if this is due to expiry or explicit sign out
+          // Try to get session to check for expiry error
+          try {
+            const { error: sessionError } = await supabase.auth.getSession();
 
-        if (profile && profile.completion_pct >= 100) {
-          setSession(session);
-          setProfileComplete(true);
-        } else {
-          setSession(session);
-          setProfileComplete(false);
+            if (sessionError && isSessionExpiredError(sessionError)) {
+              setSessionExpired(true);
+            }
+          } catch (error) {
+            if (isSessionExpiredError(error)) {
+              setSessionExpired(true);
+            }
+          }
         }
-      } else {
         setSession(null);
+        setProfileComplete(false);
+        return;
+      }
+
+      if (session) {
+        try {
+          // Check profile completion on auth change
+          const { data: profile, error: profileError } = await supabase
+            .from('profiles')
+            .select('completion_pct')
+            .eq('user_id', session.user.id)
+            .single();
+
+          // If profile fetch failed due to session expiry, handle it
+          if (profileError && isSessionExpiredError(profileError)) {
+            setSessionExpired(true);
+            setSession(null);
+            setProfileComplete(false);
+            return;
+          }
+
+          if (profile && profile.completion_pct >= 100) {
+            setSession(session);
+            setProfileComplete(true);
+            setSessionExpired(false);
+          } else {
+            setSession(session);
+            setProfileComplete(false);
+            setSessionExpired(false);
+          }
+        } catch (error) {
+          if (isSessionExpiredError(error)) {
+            setSessionExpired(true);
+            setSession(null);
+            setProfileComplete(false);
+          }
+        }
       }
     });
 
@@ -110,6 +186,27 @@ export default function App() {
     };
   }, []);
 
+  // Handle session expiry - show clear message and allow re-auth
+  if (sessionExpired) {
+    return (
+      <View style={styles.expiredContainer}>
+        <Text style={styles.expiredTitle}>Session Expired</Text>
+        <Text style={styles.expiredMessage}>
+          Your session has expired. Please sign in again to continue.
+        </Text>
+        <TouchableOpacity
+          style={styles.signInButton}
+          onPress={() => {
+            setSessionExpired(false);
+            setSession(null);
+          }}
+        >
+          <Text style={styles.signInButtonText}>Sign In</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
   if (loading) {
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
@@ -134,3 +231,40 @@ export default function App() {
     </NavigationContainer>
   );
 }
+
+const styles = StyleSheet.create({
+  expiredContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 24,
+    backgroundColor: '#fff',
+  },
+  expiredTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#0F172A',
+    marginBottom: 16,
+    textAlign: 'center',
+  },
+  expiredMessage: {
+    fontSize: 16,
+    color: '#475569',
+    textAlign: 'center',
+    marginBottom: 32,
+    lineHeight: 24,
+  },
+  signInButton: {
+    backgroundColor: '#1453FF',
+    paddingVertical: 14,
+    paddingHorizontal: 32,
+    borderRadius: 8,
+    minWidth: 200,
+    alignItems: 'center',
+  },
+  signInButtonText: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: '600',
+  },
+});

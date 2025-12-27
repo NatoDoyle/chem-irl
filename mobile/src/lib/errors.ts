@@ -45,6 +45,27 @@ export function isRecoverableError(error: unknown): boolean {
 }
 
 /**
+ * Check if error indicates session expiry
+ */
+export function isSessionExpiredError(error: unknown): boolean {
+  if (error instanceof Error) {
+    const message = error.message.toLowerCase();
+    const code = (error as any).code?.toLowerCase() || '';
+    // Common session expiry indicators
+    return (
+      message.includes('session') ||
+      message.includes('expired') ||
+      message.includes('token') ||
+      message.includes('invalid refresh token') ||
+      message.includes('jwt expired') ||
+      code === 'invalid_grant' ||
+      code === 'token_expired'
+    );
+  }
+  return false;
+}
+
+/**
  * Get user-friendly error message
  */
 export function getUserErrorMessage(error: unknown): string {
