@@ -8,8 +8,8 @@ import {
   ScrollView,
   Alert,
   ActivityIndicator,
-  Image,
 } from 'react-native';
+import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
 import { supabase } from '../../lib/supabase/client';
 import { BRAND_COLORS } from '../../config/brand';
@@ -400,7 +400,12 @@ export default function ProfileScreen() {
             const isUploading = uploadState === 'uploading';
             return (
               <View key={index} style={styles.photoWrapper}>
-                <Image source={{ uri: photo }} style={styles.photo} />
+                <Image
+                  source={{ uri: photo }}
+                  style={styles.photo}
+                  contentFit="cover"
+                  cachePolicy="memory-disk"
+                />
                 {uploadState === 'uploading' && (
                   <View style={styles.uploadOverlay}>
                     <ActivityIndicator color="#fff" size="small" />

@@ -1,4 +1,5 @@
-import { View, Text, StyleSheet, Image, TouchableOpacity, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
+import { Image } from 'expo-image';
 import { FeedItem } from '../lib/types';
 import { BRAND_COLORS } from '../config/brand';
 
@@ -11,13 +12,15 @@ interface DiscoveryCardProps {
 const PLACEHOLDER_IMAGE = require('../../assets/icon.png');
 
 export default function DiscoveryCard({ item, onLike, onPass }: DiscoveryCardProps) {
-  const primaryPhoto = item.photos[0] || Image.resolveAssetSource(PLACEHOLDER_IMAGE).uri;
+  const primaryPhoto = item.photos[0] || null;
 
   return (
     <View style={styles.card}>
       <Image
-        source={item.photos[0] ? { uri: primaryPhoto } : PLACEHOLDER_IMAGE}
+        source={primaryPhoto ? { uri: primaryPhoto } : PLACEHOLDER_IMAGE}
         style={styles.image}
+        contentFit="cover"
+        cachePolicy="memory-disk"
       />
 
       <View style={styles.overlay}>

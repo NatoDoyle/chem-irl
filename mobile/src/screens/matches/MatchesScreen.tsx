@@ -6,9 +6,9 @@ import {
   FlatList,
   TouchableOpacity,
   ActivityIndicator,
-  Image,
   RefreshControl,
 } from 'react-native';
+import { Image } from 'expo-image';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { supabase } from '../../lib/supabase/client';
@@ -43,6 +43,8 @@ const MatchItem = memo(
       <Image
         source={item.otherUserPhoto ? { uri: item.otherUserPhoto } : PLACEHOLDER_IMAGE}
         style={styles.avatar}
+        contentFit="cover"
+        cachePolicy="memory-disk"
       />
       <View style={styles.matchInfo}>
         <Text style={styles.matchName}>{item.otherUserName}</Text>

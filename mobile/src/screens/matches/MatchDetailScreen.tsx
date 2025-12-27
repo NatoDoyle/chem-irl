@@ -4,10 +4,10 @@ import {
   Text,
   StyleSheet,
   ScrollView,
-  Image,
   TouchableOpacity,
   ActivityIndicator,
 } from 'react-native';
+import { Image } from 'expo-image';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { supabase } from '../../lib/supabase/client';
@@ -208,6 +208,8 @@ export default function MatchDetailScreen() {
         <Image
           source={otherUserPhoto ? { uri: otherUserPhoto } : PLACEHOLDER_IMAGE}
           style={styles.avatar}
+          contentFit="cover"
+          cachePolicy="memory-disk"
         />
         <Text style={styles.name}>{otherUserName}</Text>
       </View>
