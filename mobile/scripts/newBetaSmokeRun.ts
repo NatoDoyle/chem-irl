@@ -47,11 +47,22 @@ try {
     content = content.replace(/\[hash\] - \[short commit message\]/g, gitHash);
   }
 
-  // Add beta smoke header at the top
+  // Add beta smoke header and pre-flight section at the top
   const betaHeader = `# Beta Smoke Test Run
 
 **Test Type:** Beta Smoke (Core Loop Only)  
 **Checklist:** See [BETA_SMOKE_CHECKLIST.md](../docs/BETA_SMOKE_CHECKLIST.md)
+
+---
+
+## Pre-flight Checks
+
+**⚠️  Complete before starting tests to avoid common setup mistakes:**
+
+- [ ] \`npm run use:staging\` executed
+- [ ] Expo restarted after env switch
+- [ ] \`npm run verify:staging\` passed
+- [ ] Phones installed using: [ ] Expo Go  [ ] Dev build  [ ] Production build
 
 ---
 

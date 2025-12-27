@@ -4,12 +4,18 @@
 
 This checklist covers the core user loop for beta smoke testing. Focus on critical path functionality only.
 
+## Pre-flight Checks
+
+**⚠️ Complete before starting tests to avoid common setup mistakes:**
+
+- [ ] `npm run use:staging` executed
+- [ ] Expo restarted after env switch
+- [ ] `npm run verify:staging` passed
+- [ ] Phones installed using: [ ] Expo Go [ ] Dev build [ ] Production build
+
 ## Prerequisites
 
-- [ ] Staging environment set up: `npm run use:staging`
-- [ ] Staging verified: `npm run verify:staging`
 - [ ] Two test accounts ready (use Gmail plus-addressing: `email+userA@gmail.com`, `email+userB@gmail.com`)
-- [ ] Both devices installed with app (Expo Go or dev build)
 - [ ] Both devices on same network (or tunnel mode for Expo)
 
 ---
