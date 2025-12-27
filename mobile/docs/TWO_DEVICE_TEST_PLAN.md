@@ -1,5 +1,7 @@
 # Two-Device Testing Plan
 
+**Last verified:** 2025-01-28
+
 ## Setup
 
 ### Accounts

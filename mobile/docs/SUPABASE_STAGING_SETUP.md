@@ -1,5 +1,7 @@
 # Supabase Staging Project Setup
 
+**Last verified:** 2025-01-28
+
 ## Overview
 
 This guide explains when and how to set up a separate Supabase staging project for testing the mobile app.

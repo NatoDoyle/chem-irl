@@ -1,5 +1,7 @@
 # Install App on Phones
 
+**Last verified:** 2025-01-28
+
 This guide covers installing the mobile app on physical devices for testing.
 
 ## Prerequisites

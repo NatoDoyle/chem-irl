@@ -1,5 +1,7 @@
 # Mobile App Release Checklist
 
+**Last verified:** 2025-01-28
+
 ## Pre-Build Checks
 
 - [ ] Verify Node.js version matches project requirements (check `package.json` engines if specified)
