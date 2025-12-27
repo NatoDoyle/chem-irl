@@ -1,6 +1,6 @@
-import { NavigationContainer } from '@react-navigation/native';
+import { NavigationContainer, NavigationContainerRef } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import {
   ActivityIndicator,
   View,
@@ -50,6 +50,7 @@ export default function App() {
   const [sessionExpired, setSessionExpired] = useState(false);
   const [profileError, setProfileError] = useState<string | null>(null);
   const [retryAttempts, setRetryAttempts] = useState(0);
+  const navigationRef = useRef<NavigationContainerRef<any>>(null);
 
   // Retry logic with exponential backoff
   const checkSessionAndProfile = useCallback(async (attempt: number = 0): Promise<void> => {
@@ -255,10 +256,8 @@ export default function App() {
         console.log('Notification received:', notification);
       },
       (notification) => {
-        // Notification tapped - handle deep link
-        // Note: Navigation ref would be needed for deep linking
-        // For now, just log - can be enhanced with navigation ref
-        handleNotificationTap(notification);
+        // Notification tapped - handle deep link with navigation ref
+        handleNotificationTap(notification, navigationRef.current);
       }
     );
 
@@ -339,7 +338,7 @@ export default function App() {
   const screenOptions = { headerShown: false };
 
   return (
-    <NavigationContainer>
+    <NavigationContainer ref={navigationRef}>
       <Stack.Navigator screenOptions={screenOptions}>
         {!session ? (
           <Stack.Screen name="Auth" component={AuthNavigator} />

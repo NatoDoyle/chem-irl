@@ -12,7 +12,7 @@ import {
   Alert,
   AppState,
 } from 'react-native';
-import { useRoute } from '@react-navigation/native';
+import { useRoute, useFocusEffect } from '@react-navigation/native';
 import { supabase } from '../../lib/supabase/client';
 import { Message } from '../../lib/types';
 import { BRAND_COLORS } from '../../config/brand';
@@ -46,6 +46,26 @@ export default function ChatScreen() {
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const currentUserIdRef = useRef<string | null>(null);
 
+  // Mark messages as read
+  const markMessagesRead = useCallback(async () => {
+    try {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) {
+        return;
+      }
+
+      // Call RPC to mark messages as read
+      await supabase.rpc('mark_messages_read', {
+        p_match_id: matchId,
+      });
+    } catch (error) {
+      // Silently fail - read receipts are nice-to-have
+      console.error('Error marking messages as read:', error);
+    }
+  }, [matchId]);
+
   const loadMessages = useCallback(async () => {
     try {
       const { data, error } = await supabase
@@ -62,12 +82,15 @@ export default function ChatScreen() {
       }
 
       setMessages((data as Message[]) || []);
+
+      // Mark messages as read after loading
+      await markMessagesRead();
     } catch (error: any) {
       console.error('Error loading messages:', error);
     } finally {
       setLoading(false);
     }
-  }, [matchId]);
+  }, [matchId, markMessagesRead]);
 
   const subscribeToMessages = useCallback(async () => {
     // Get current user ID for typing indicator
@@ -78,7 +101,7 @@ export default function ChatScreen() {
       currentUserIdRef.current = user.id;
     }
 
-    // Subscribe to message changes
+    // Subscribe to message changes (INSERT and UPDATE for read_at)
     const channel = supabase
       .channel(`match:${matchId}`)
       .on(
@@ -91,11 +114,34 @@ export default function ChatScreen() {
         },
         (payload) => {
           const newMessage = payload.new as Message;
-          setMessages((prev) => [...prev, newMessage]);
-          // Scroll to bottom
+          setMessages((prev) => {
+            // Avoid duplicates
+            if (prev.some((msg) => msg.message_id === newMessage.message_id)) {
+              return prev;
+            }
+            return [...prev, newMessage];
+          });
+          // Mark as read and scroll to bottom
+          markMessagesRead();
           setTimeout(() => {
             flatListRef.current?.scrollToEnd({ animated: true });
           }, 100);
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'messages',
+          filter: `match_id=eq.${matchId}`,
+        },
+        (payload) => {
+          // Update read_at for messages
+          const updatedMessage = payload.new as Message;
+          setMessages((prev) =>
+            prev.map((msg) => (msg.message_id === updatedMessage.message_id ? updatedMessage : msg))
+          );
         }
       )
       .subscribe();
@@ -161,7 +207,7 @@ export default function ChatScreen() {
         typingChannelRef.current = null;
       }
     };
-  }, [matchId]);
+  }, [matchId, markMessagesRead]);
 
   // Load queue size on mount and after processing
   const updateQueueSize = useCallback(async () => {
@@ -210,7 +256,14 @@ export default function ChatScreen() {
         clearTimeout(typingTimeoutRef.current);
       }
     };
-  }, [loadMessages, subscribeToMessages, updateQueueSize]);
+  }, [loadMessages, subscribeToMessages, updateQueueSize, markMessagesRead]);
+
+  // Mark messages as read when screen comes into focus
+  useFocusEffect(
+    useCallback(() => {
+      markMessagesRead();
+    }, [markMessagesRead])
+  );
 
   // Re-subscribe to realtime when app comes to foreground
   // This ensures we catch messages that may have been missed while backgrounded
@@ -419,18 +472,39 @@ export default function ChatScreen() {
     const isOwn = item.sender_id === currentUserId;
     const isQueued = queuedMessages.has(item.message_id);
 
+    // Find the last outgoing message to show read receipt
+    const allOutgoing = allMessages
+      .filter((msg) => msg.sender_id === currentUserId)
+      .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+    const lastOutgoingMessage = allOutgoing[0] || null;
+    const showReadReceipt =
+      isOwn && item.message_id === lastOutgoingMessage?.message_id && item.read_at;
+
     return (
       <View style={[styles.messageContainer, isOwn ? styles.ownMessage : styles.otherMessage]}>
         <Text style={[styles.messageText, isOwn ? styles.ownMessageText : styles.otherMessageText]}>
           {item.content}
         </Text>
         {isQueued && <Text style={styles.queuedIndicator}>Queued (will send when online)</Text>}
-        <Text style={styles.messageTime}>
-          {new Date(item.created_at).toLocaleTimeString('en-US', {
-            hour: 'numeric',
-            minute: '2-digit',
-          })}
-        </Text>
+        <View style={styles.messageFooter}>
+          <Text style={styles.messageTime}>
+            {new Date(item.created_at).toLocaleTimeString('en-US', {
+              hour: 'numeric',
+              minute: '2-digit',
+            })}
+          </Text>
+          {showReadReceipt && (
+            <Text style={styles.readReceipt}>
+              Seen{' '}
+              {item.read_at
+                ? new Date(item.read_at).toLocaleTimeString('en-US', {
+                    hour: 'numeric',
+                    minute: '2-digit',
+                  })
+                : ''}
+            </Text>
+          )}
+        </View>
       </View>
     );
   };
@@ -534,10 +608,22 @@ const styles = StyleSheet.create({
   otherMessageText: {
     color: BRAND_COLORS.text[900],
   },
+  messageFooter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginTop: 4,
+  },
   messageTime: {
     fontSize: 12,
     opacity: 0.7,
     color: BRAND_COLORS.text[600],
+  },
+  readReceipt: {
+    fontSize: 11,
+    opacity: 0.6,
+    color: BRAND_COLORS.text[600],
+    fontStyle: 'italic',
   },
   inputContainer: {
     flexDirection: 'row',

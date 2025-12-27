@@ -80,10 +80,11 @@ export default function ProposalCard({
         (confirm) => confirm.proposal_id === proposal.proposal_id
       );
       if (alreadyConfirmed) {
-        Alert.alert(
-          'Already Confirmed',
-          'This proposal has already been confirmed. Please refresh to see the latest status.'
+        const { title, message } = getErrorAlert(
+          'This proposal has already been confirmed. Please refresh to see the latest status.',
+          'Already Confirmed'
         );
+        Alert.alert(title, message);
         setLoading(false);
         onConfirm(); // Refresh parent component
         return;
@@ -91,10 +92,11 @@ export default function ProposalCard({
 
       // Also check if proposal status is already confirmed
       if (proposal.status === 'confirmed') {
-        Alert.alert(
-          'Already Confirmed',
-          'This proposal has already been confirmed. Please refresh to see the latest status.'
+        const { title, message } = getErrorAlert(
+          'This proposal has already been confirmed. Please refresh to see the latest status.',
+          'Already Confirmed'
         );
+        Alert.alert(title, message);
         setLoading(false);
         onConfirm(); // Refresh parent component
         return;
@@ -109,12 +111,12 @@ export default function ProposalCard({
         matchId: matchId.substring(0, 8),
       });
 
-      // Create confirm record
-      const { error } = await supabase.from('confirms').insert({
-        proposal_id: proposal.proposal_id,
-        match_id: matchId,
-        confirmer_id: user.id,
-        chosen_window: chosenWindow,
+      // Use RPC function for atomic confirmation (prevents race conditions)
+      const { data, error } = await supabase.rpc('confirm_proposal', {
+        p_proposal_id: proposal.proposal_id,
+        p_match_id: matchId,
+        p_confirmer_id: user.id,
+        p_chosen_window: chosenWindow,
       });
 
       if (error) {
@@ -124,14 +126,31 @@ export default function ProposalCard({
         return;
       }
 
-      // Update proposal status
-      await supabase
-        .from('proposals')
-        .update({ status: 'confirmed' })
-        .eq('proposal_id', proposal.proposal_id);
+      // Check if already confirmed (RPC returns success: false with already_confirmed: true)
+      if (data && !data.success && data.already_confirmed) {
+        const { title, message } = getErrorAlert(
+          'This proposal has already been confirmed. Please refresh to see the latest status.',
+          'Already Confirmed'
+        );
+        Alert.alert(title, message);
+        setLoading(false);
+        onConfirm(); // Refresh to show latest state
+        return;
+      }
 
-      Alert.alert('Success', 'Date confirmed! Chat is now unlocked.');
-      onConfirm();
+      // Success - proposal confirmed atomically
+      if (data && data.success) {
+        Alert.alert('Success', 'Date confirmed! Chat is now unlocked.');
+        onConfirm();
+      } else {
+        // Unexpected response format
+        const { title, message } = getErrorAlert(
+          'Unexpected response from server',
+          'Failed to confirm proposal'
+        );
+        Alert.alert(title, message);
+        setLoading(false);
+      }
     } catch (error: any) {
       const { title, message } = getErrorAlert(error, 'Failed to confirm proposal');
       Alert.alert(title, message);

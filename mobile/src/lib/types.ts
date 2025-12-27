@@ -91,4 +91,5 @@ export interface Message {
   content: string;
   bytes: number;
   created_at: string;
+  read_at?: string | null;
 }

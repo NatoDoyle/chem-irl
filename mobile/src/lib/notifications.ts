@@ -96,7 +96,7 @@ export async function getPushToken(): Promise<string | null> {
 /**
  * Register device token with Supabase
  * This should be called after user logs in
- * The token will be stored in a user_devices table (to be created in backend)
+ * The token is stored in push_tokens table
  */
 export async function registerDeviceToken(): Promise<boolean> {
   try {
@@ -107,29 +107,51 @@ export async function registerDeviceToken(): Promise<boolean> {
       return false;
     }
 
-    // Check if we've already sent this token
-    const tokenSent = await AsyncStorage.getItem(NOTIFICATION_TOKEN_SENT_KEY);
     const token = await getPushToken();
-
     if (!token) {
       return false;
     }
 
-    // If token hasn't changed and we've already sent it, skip
+    // Check if we've already registered this exact token
+    const tokenSent = await AsyncStorage.getItem(NOTIFICATION_TOKEN_SENT_KEY);
     if (tokenSent === token) {
-      return true;
+      // Token already registered - verify it still exists in DB
+      const { error: checkError } = await supabase
+        .from('push_tokens')
+        .select('id')
+        .eq('expo_push_token', token)
+        .eq('user_id', user.id)
+        .eq('enabled', true)
+        .limit(1)
+        .single();
+
+      if (!checkError) {
+        // Token exists and is enabled, skip re-registration
+        return true;
+      }
+      // Token not found in DB, re-register
     }
 
-    // TODO: Store token in Supabase user_devices table
-    // For now, we'll just mark it as sent
-    // In production, you would:
-    // 1. Create a user_devices table with columns: user_id, device_token, platform, created_at
-    // 2. Upsert the token: supabase.from('user_devices').upsert({ user_id: user.id, device_token: token, platform: Platform.OS })
-    // 3. Set up Supabase webhooks to send notifications when matches/proposals/messages are created
+    // Upsert token to push_tokens table
+    const { error: upsertError } = await supabase.from('push_tokens').upsert(
+      {
+        user_id: user.id,
+        expo_push_token: token,
+        platform: Platform.OS,
+        enabled: true,
+      },
+      {
+        onConflict: 'expo_push_token',
+      }
+    );
 
+    if (upsertError) {
+      console.error('Error upserting push token:', upsertError);
+      return false;
+    }
+
+    // Mark as sent
     await AsyncStorage.setItem(NOTIFICATION_TOKEN_SENT_KEY, token);
-    console.log('Device token registered (stored locally, backend integration pending)');
-
     return true;
   } catch (error) {
     console.error('Error registering device token:', error);
@@ -139,6 +161,7 @@ export async function registerDeviceToken(): Promise<boolean> {
 
 /**
  * Unregister device token (on logout)
+ * Marks token as disabled in database and clears local storage
  */
 export async function unregisterDeviceToken(): Promise<void> {
   try {
@@ -146,53 +169,90 @@ export async function unregisterDeviceToken(): Promise<void> {
       data: { user },
     } = await supabase.auth.getUser();
     if (!user) {
+      // Even if no user, clear local storage
+      await AsyncStorage.removeItem(NOTIFICATION_TOKEN_KEY);
+      await AsyncStorage.removeItem(NOTIFICATION_TOKEN_SENT_KEY);
       return;
     }
 
     const token = await AsyncStorage.getItem(NOTIFICATION_TOKEN_KEY);
-    if (!token) {
-      return;
+    if (token) {
+      // Mark token as disabled in database (don't delete, allows re-enabling)
+      await supabase
+        .from('push_tokens')
+        .update({ enabled: false })
+        .eq('expo_push_token', token)
+        .eq('user_id', user.id);
     }
-
-    // TODO: Remove token from Supabase user_devices table
-    // supabase.from('user_devices').delete().eq('user_id', user.id).eq('device_token', token);
 
     // Clear local storage
     await AsyncStorage.removeItem(NOTIFICATION_TOKEN_KEY);
     await AsyncStorage.removeItem(NOTIFICATION_TOKEN_SENT_KEY);
   } catch (error) {
     console.error('Error unregistering device token:', error);
+    // Still clear local storage even if DB update fails
+    await AsyncStorage.removeItem(NOTIFICATION_TOKEN_KEY);
+    await AsyncStorage.removeItem(NOTIFICATION_TOKEN_SENT_KEY);
   }
 }
 
 /**
  * Handle notification tap (deep link to relevant screen)
  * This should be called from App.tsx when app receives a notification
+ *
+ * Navigation structure:
+ * - Main (Tab Navigator)
+ *   - MatchesStack (Stack Navigator)
+ *     - MatchDetail
+ *     - Chat
  */
 export function handleNotificationTap(
   notification: Notifications.Notification,
   navigation?: any
 ): void {
+  if (!navigation) {
+    console.warn('Navigation ref not available for notification deep link');
+    return;
+  }
+
   const data = notification.request.content.data;
 
   // Deep link based on notification type
   if (data?.type === 'match' && data?.matchId) {
-    // Navigate to match detail
-    navigation?.navigate('MatchesStack', {
-      screen: 'MatchDetail',
-      params: { matchId: data.matchId },
+    // Navigate to Main tab, then to MatchDetail
+    navigation.navigate('Main', {
+      screen: 'MatchesStack',
+      params: {
+        screen: 'MatchDetail',
+        params: { matchId: data.matchId },
+      },
     });
   } else if (data?.type === 'message' && data?.matchId) {
-    // Navigate to chat
-    navigation?.navigate('MatchesStack', {
-      screen: 'Chat',
-      params: { matchId: data.matchId },
+    // Navigate to Main tab, then to Chat
+    navigation.navigate('Main', {
+      screen: 'MatchesStack',
+      params: {
+        screen: 'Chat',
+        params: { matchId: data.matchId },
+      },
     });
   } else if (data?.type === 'proposal' && data?.matchId) {
-    // Navigate to match detail (proposals are shown there)
-    navigation?.navigate('MatchesStack', {
-      screen: 'MatchDetail',
-      params: { matchId: data.matchId },
+    // Navigate to Main tab, then to MatchDetail (proposals are shown there)
+    navigation.navigate('Main', {
+      screen: 'MatchesStack',
+      params: {
+        screen: 'MatchDetail',
+        params: { matchId: data.matchId },
+      },
+    });
+  } else if (data?.type === 'confirm' && data?.matchId) {
+    // Navigate to Main tab, then to MatchDetail
+    navigation.navigate('Main', {
+      screen: 'MatchesStack',
+      params: {
+        screen: 'MatchDetail',
+        params: { matchId: data.matchId },
+      },
     });
   }
 }

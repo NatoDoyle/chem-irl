@@ -1,0 +1,8 @@
+# Supabase project configuration
+# This file configures Supabase CLI behavior
+
+[functions.push]
+# Disable JWT verification for webhook endpoint
+# Webhooks use shared secret (x-webhook-secret header) instead
+verify_jwt = false
+

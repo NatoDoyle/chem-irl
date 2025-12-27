@@ -16,18 +16,25 @@ export function extractStoragePathFromUrl(url: string, bucket: string = 'profile
     return null;
   }
 
+  // Enhanced validation: Check for valid URL format before parsing
+  // Must start with http:// or https://
+  const trimmedUrl = url.trim();
+  if (!trimmedUrl.match(/^https?:\/\//i)) {
+    return null;
+  }
+
   // Basic validation: URL should contain supabase.co domain
-  if (!url.includes('supabase.co')) {
+  if (!trimmedUrl.includes('supabase.co')) {
     return null;
   }
 
   // Basic validation: URL should contain expected path segments
-  if (!url.includes('/storage/v1/object/public/')) {
+  if (!trimmedUrl.includes('/storage/v1/object/public/')) {
     return null;
   }
 
   try {
-    const urlObj = new URL(url);
+    const urlObj = new URL(trimmedUrl);
 
     // Validate URL has expected hostname pattern (contains .supabase.co)
     if (!urlObj.hostname.includes('.supabase.co')) {
@@ -132,9 +139,8 @@ export async function deletePhotoFromStorage(
   }
 
   // Verify deletion succeeded
-  // Supabase remove() returns an array of deleted file objects on success
+  // Supabase remove() returns an array of FileObject[] with deleted file paths (as objects with 'name' property)
   // If data is null/undefined, deletion may have failed
-  // The presence of data (even empty array) indicates Supabase accepted the request
   if (data === null || data === undefined) {
     return {
       success: false,
@@ -142,9 +148,28 @@ export async function deletePhotoFromStorage(
     };
   }
 
-  // If we got a response with no error, deletion request was accepted
-  // The caller will only update DB if this returns success=true
-  // This ensures we never update DB without confirming storage deletion succeeded
+  // Verify that our specific path was actually deleted
+  // The data array contains FileObject[] where each object has a 'name' property with the path
+  const deletedFiles = data as { name: string }[];
+  const wasDeleted = deletedFiles.some((file) => file.name === path);
 
+  if (!wasDeleted && deletedFiles.length === 0) {
+    // Empty array means no files were deleted (file may not have existed)
+    return {
+      success: false,
+      error: 'Photo deletion failed. File may not exist in storage.',
+    };
+  }
+
+  if (!wasDeleted) {
+    // Files were deleted, but not our target path
+    // This shouldn't happen, but handle it gracefully
+    return {
+      success: false,
+      error: 'Photo deletion verification failed. Deleted file path does not match expected path.',
+    };
+  }
+
+  // Success: Our specific path was confirmed deleted
   return { success: true };
 }

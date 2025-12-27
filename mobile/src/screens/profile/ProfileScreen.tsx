@@ -26,6 +26,7 @@ import {
 } from '../../lib/reconcilePhotos';
 
 type PhotoUploadState = 'idle' | 'uploading' | 'success' | 'error';
+type PhotoDeletionState = 'idle' | 'deleting';
 
 export default function ProfileScreen() {
   const [headline, setHeadline] = useState('');
@@ -36,6 +37,9 @@ export default function ProfileScreen() {
   const [uploading, setUploading] = useState(false);
   // Track upload state per photo (by index)
   const [photoUploadStates, setPhotoUploadStates] = useState<Map<number, PhotoUploadState>>(
+    new Map()
+  );
+  const [photoDeletionStates, setPhotoDeletionStates] = useState<Map<number, PhotoDeletionState>>(
     new Map()
   );
   // Store original URIs for failed uploads so we can retry without re-selection
@@ -133,7 +137,8 @@ export default function ProfileScreen() {
       }
     } catch (error: any) {
       console.error('Error loading profile:', error);
-      Alert.alert('Error', error.message || 'Failed to load profile');
+      const { title, message } = getErrorAlert(error, 'Failed to load profile');
+      Alert.alert(title, message);
     } finally {
       setLoading(false);
     }
@@ -164,7 +169,8 @@ export default function ProfileScreen() {
         data: { user },
       } = await supabase.auth.getUser();
       if (!user) {
-        Alert.alert('Error', 'Not authenticated');
+        const { title, message } = getErrorAlert('Not authenticated', 'Authentication Error');
+        Alert.alert(title, message);
         setSaving(false);
         return;
       }
@@ -228,7 +234,8 @@ export default function ProfileScreen() {
         data: { user },
       } = await supabase.auth.getUser();
       if (!user) {
-        Alert.alert('Error', 'Not authenticated');
+        const { title, message } = getErrorAlert('Not authenticated', 'Authentication Error');
+        Alert.alert(title, message);
         setUploading(false);
         setPhotoUploadStates((prev) => {
           const newMap = new Map(prev);
@@ -308,7 +315,8 @@ export default function ProfileScreen() {
       setPhotoUploadStates((prev) => new Map(prev).set(tempIndex, 'error'));
       // Store URI for retry
       setFailedUploadURIs((prev) => new Map(prev).set(tempIndex, uri));
-      Alert.alert('Error', error.message || 'Failed to upload photo');
+      const { title, message } = getErrorAlert(error, 'Failed to upload photo');
+      Alert.alert(title, message);
     } finally {
       setUploading(false);
     }
@@ -317,7 +325,11 @@ export default function ProfileScreen() {
   const retryUpload = async (index: number) => {
     const storedURI = failedUploadURIs.get(index);
     if (!storedURI) {
-      Alert.alert('Error', 'Photo URI not found. Please select the photo again.');
+      const { title, message } = getErrorAlert(
+        'Photo URI not found. Please select the photo again.',
+        'Upload Error'
+      );
+      Alert.alert(title, message);
       // Clean up error state if no URI stored
       setPhotoUploadStates((prev) => {
         const newMap = new Map(prev);
@@ -337,6 +349,12 @@ export default function ProfileScreen() {
       return;
     }
 
+    // Prevent deletion if this photo is already being deleted
+    const deletionState = photoDeletionStates.get(index);
+    if (deletionState === 'deleting') {
+      return; // Already deleting, ignore duplicate request
+    }
+
     // Prevent deletion if this photo or any photo is currently uploading
     const uploadState = photoUploadStates.get(index);
     if (uploadState === 'uploading' || uploading) {
@@ -347,6 +365,9 @@ export default function ProfileScreen() {
       Alert.alert(title, message);
       return;
     }
+
+    // Mark as deleting to prevent duplicate deletions
+    setPhotoDeletionStates((prev) => new Map(prev).set(index, 'deleting'));
 
     // Optimistically update UI
     const updatedPhotos = photos.filter((_, i) => i !== index);
@@ -359,7 +380,8 @@ export default function ProfileScreen() {
       if (!user) {
         // Restore photo if not authenticated
         setPhotos(photos);
-        Alert.alert('Error', 'Not authenticated');
+        const { title, message } = getErrorAlert('Not authenticated', 'Authentication Error');
+        Alert.alert(title, message);
         return;
       }
 
@@ -400,6 +422,13 @@ export default function ProfileScreen() {
       setPhotos(photos);
       const { title, message } = getErrorAlert(error, 'Failed to delete photo');
       Alert.alert(title, message);
+    } finally {
+      // Clear deletion state
+      setPhotoDeletionStates((prev) => {
+        const newMap = new Map(prev);
+        newMap.delete(index);
+        return newMap;
+      });
     }
   };
 
@@ -451,7 +480,9 @@ export default function ProfileScreen() {
         <View style={styles.photosContainer}>
           {photos.map((photo, index) => {
             const uploadState = photoUploadStates.get(index);
+            const deletionState = photoDeletionStates.get(index);
             const isUploading = uploadState === 'uploading';
+            const isDeleting = deletionState === 'deleting';
             return (
               <View key={index} style={styles.photoWrapper}>
                 <Image
@@ -463,6 +494,12 @@ export default function ProfileScreen() {
                 {uploadState === 'uploading' && (
                   <View style={styles.uploadOverlay}>
                     <ActivityIndicator color="#fff" size="small" />
+                  </View>
+                )}
+                {isDeleting && (
+                  <View style={styles.uploadOverlay}>
+                    <ActivityIndicator color="#fff" size="small" />
+                    <Text style={styles.deletingText}>Deleting...</Text>
                   </View>
                 )}
                 {uploadState === 'success' && (
@@ -481,7 +518,7 @@ export default function ProfileScreen() {
                 <TouchableOpacity
                   style={styles.removePhotoButton}
                   onPress={() => removePhoto(index)}
-                  disabled={saving || isUploading}
+                  disabled={saving || isUploading || isDeleting}
                 >
                   <Text style={styles.removePhotoText}>×</Text>
                 </TouchableOpacity>
@@ -590,6 +627,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     zIndex: 1,
+  },
+  deletingText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: '600',
+    marginTop: 4,
   },
   successOverlay: {
     backgroundColor: 'rgba(34, 197, 94, 0.8)',

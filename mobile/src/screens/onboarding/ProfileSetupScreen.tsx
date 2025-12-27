@@ -39,17 +39,29 @@ export default function ProfileSetupScreen() {
     const bioTrimmed = bio.trim();
 
     if (!headlineTrimmed || !bioTrimmed) {
-      Alert.alert('Error', 'Please fill in both headline and bio');
+      const { title, message } = getErrorAlert(
+        'Please fill in both headline and bio',
+        'Validation Error'
+      );
+      Alert.alert(title, message);
       return;
     }
 
     if (headlineTrimmed.length < 5) {
-      Alert.alert('Error', 'Headline must be at least 5 characters');
+      const { title, message } = getErrorAlert(
+        'Headline must be at least 5 characters',
+        'Validation Error'
+      );
+      Alert.alert(title, message);
       return;
     }
 
     if (bioTrimmed.length < 20) {
-      Alert.alert('Error', 'Bio must be at least 20 characters');
+      const { title, message } = getErrorAlert(
+        'Bio must be at least 20 characters',
+        'Validation Error'
+      );
+      Alert.alert(title, message);
       return;
     }
 
@@ -59,7 +71,8 @@ export default function ProfileSetupScreen() {
         data: { user },
       } = await supabase.auth.getUser();
       if (!user) {
-        Alert.alert('Error', 'Not authenticated');
+        const { title, message } = getErrorAlert('Not authenticated', 'Authentication Error');
+        Alert.alert(title, message);
         setLoading(false);
         return;
       }

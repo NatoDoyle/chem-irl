@@ -95,7 +95,11 @@ describe('Storage utilities', () => {
 
     it('should delete photo with valid URL and matching user ID', async () => {
       // Supabase returns an array of deleted file objects on success
-      mockRemove.mockResolvedValue({ data: [], error: null });
+      // Each object has a 'name' property with the deleted path
+      mockRemove.mockResolvedValue({
+        data: [{ name: 'user-id-123/image.jpg' }],
+        error: null,
+      });
       const url =
         'https://abc123.supabase.co/storage/v1/object/public/profiles/user-id-123/image.jpg';
 
@@ -136,6 +140,53 @@ describe('Storage utilities', () => {
 
       expect(result.success).toBe(false);
       expect(result.error).toBe('Storage error');
+      expect(mockRemove).toHaveBeenCalledWith(['user-id-123/image.jpg']);
+    });
+
+    it('should return error when storage deletion returns empty array (file not found)', async () => {
+      mockRemove.mockResolvedValue({
+        data: [],
+        error: null,
+      });
+      const url =
+        'https://abc123.supabase.co/storage/v1/object/public/profiles/user-id-123/image.jpg';
+
+      const result = await deletePhotoFromStorage(url, 'user-id-123');
+
+      expect(result.success).toBe(false);
+      expect(result.error).toBe('Photo deletion failed. File may not exist in storage.');
+      expect(mockRemove).toHaveBeenCalledWith(['user-id-123/image.jpg']);
+    });
+
+    it('should return error when deleted path does not match expected path', async () => {
+      mockRemove.mockResolvedValue({
+        data: [{ name: 'user-id-123/different-image.jpg' }],
+        error: null,
+      });
+      const url =
+        'https://abc123.supabase.co/storage/v1/object/public/profiles/user-id-123/image.jpg';
+
+      const result = await deletePhotoFromStorage(url, 'user-id-123');
+
+      expect(result.success).toBe(false);
+      expect(result.error).toBe(
+        'Photo deletion verification failed. Deleted file path does not match expected path.'
+      );
+      expect(mockRemove).toHaveBeenCalledWith(['user-id-123/image.jpg']);
+    });
+
+    it('should return error when storage deletion returns null data', async () => {
+      mockRemove.mockResolvedValue({
+        data: null,
+        error: null,
+      });
+      const url =
+        'https://abc123.supabase.co/storage/v1/object/public/profiles/user-id-123/image.jpg';
+
+      const result = await deletePhotoFromStorage(url, 'user-id-123');
+
+      expect(result.success).toBe(false);
+      expect(result.error).toBe('Photo deletion failed. No response from storage.');
       expect(mockRemove).toHaveBeenCalledWith(['user-id-123/image.jpg']);
     });
   });
