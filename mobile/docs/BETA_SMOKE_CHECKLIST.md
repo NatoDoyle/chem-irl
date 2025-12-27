@@ -203,11 +203,16 @@ This checklist covers the core user loop for beta smoke testing. Focus on critic
 
 - [ ] All core loop steps (1-7) completed successfully on both devices
 - [ ] No data loss observed (profile updates persist, photos upload/delete correctly)
-- [ ] Realtime match appears within 1 second after mutual like
-- [ ] Realtime chat messages delivered immediately (< 1 second)
+- [ ] Realtime match appears within 5 seconds after mutual like
+- [ ] Realtime chat messages delivered within 5 seconds
 - [ ] Deep linking works (magic link opens app and authenticates)
 - [ ] Session persists after app restart
 - [ ] Photo deletion removes file from storage (verified in Supabase)
+
+### ⚠️ DEGRADED Performance
+
+- [ ] Realtime match/chat delivered between 1–5 seconds (functional but slower than target)
+- [ ] Target: realtime delivery within 1 second (note if exceeded in log)
 
 ### ❌ FAIL Conditions
 
