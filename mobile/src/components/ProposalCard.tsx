@@ -5,6 +5,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase/client';
 import { Alert } from 'react-native';
 import { formatProposalTime } from '../lib/timezone';
+import { getErrorAlert } from '../lib/errors';
 
 interface ProposalCardProps {
   proposal: Proposal;
@@ -77,7 +78,8 @@ export default function ProposalCard({
       });
 
       if (error) {
-        Alert.alert('Error', error.message);
+        const { title, message } = getErrorAlert(error, 'Failed to confirm proposal');
+        Alert.alert(title, message);
         setLoading(false);
         return;
       }
@@ -91,7 +93,8 @@ export default function ProposalCard({
       Alert.alert('Success', 'Date confirmed! Chat is now unlocked.');
       onConfirm();
     } catch (error: any) {
-      Alert.alert('Error', error.message || 'Failed to confirm');
+      const { title, message } = getErrorAlert(error, 'Failed to confirm proposal');
+      Alert.alert(title, message);
     } finally {
       setLoading(false);
     }

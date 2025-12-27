@@ -13,6 +13,7 @@ import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { supabase } from '../../lib/supabase/client';
 import { BRAND_COLORS } from '../../config/brand';
+import { getErrorAlert } from '../../lib/errors';
 
 type OnboardingStackParamList = {
   ProfileSetup: undefined;
@@ -72,7 +73,8 @@ export default function ProfileSetupScreen() {
       });
 
       if (error) {
-        Alert.alert('Error', error.message);
+        const { title, message } = getErrorAlert(error, 'Failed to create profile');
+        Alert.alert(title, message);
         setLoading(false);
         return;
       }
@@ -80,7 +82,8 @@ export default function ProfileSetupScreen() {
       // Navigate to photos screen
       navigation.navigate('Photos' as any);
     } catch (error: any) {
-      Alert.alert('Error', error.message || 'Something went wrong');
+      const { title, message } = getErrorAlert(error, 'Failed to create profile');
+      Alert.alert(title, message);
     } finally {
       setLoading(false);
     }

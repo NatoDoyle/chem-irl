@@ -170,14 +170,16 @@ export default function ProfileScreen() {
       });
 
       if (error) {
-        Alert.alert('Error', error.message);
+        const { title, message } = getErrorAlert(error, 'Failed to update profile');
+        Alert.alert(title, message);
         setSaving(false);
         return;
       }
 
       Alert.alert('Success', 'Profile updated successfully');
     } catch (error: any) {
-      Alert.alert('Error', error.message || 'Failed to save profile');
+      const { title, message } = getErrorAlert(error, 'Failed to update profile');
+      Alert.alert(title, message);
     } finally {
       setSaving(false);
     }
