@@ -22,12 +22,10 @@
 ### 1. Auth Flow
 
 - [ ] Launch app on device/simulator
-- [ ] Welcome screen displays correctly
-- [ ] Navigate to Login screen
-- [ ] Enter email and send magic link
-- [ ] Magic Link Sent screen displays correctly
-- [ ] Open magic link from email
-- [ ] App opens and user is authenticated
+- [ ] AuthGate screen displays correctly (Sign up / Log in buttons)
+- [ ] Sign up flow: Email → OTP code → Phone → SMS code → Name → Onboarding
+- [ ] Log in flow: Phone → SMS code → Main app (or onboarding if incomplete)
+- [ ] OTP codes are entered in-app (no browser redirects)
 
 ### 2. Onboarding Flow
 

@@ -4,10 +4,10 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { AuthStackParamList } from '../../navigation/AuthNavigator';
 import { BRAND, BRAND_COLORS } from '../../config/brand';
 
-type WelcomeScreenNavigationProp = NativeStackNavigationProp<AuthStackParamList, 'Welcome'>;
+type AuthGateScreenNavigationProp = NativeStackNavigationProp<AuthStackParamList, 'AuthGate'>;
 
-export default function WelcomeScreen() {
-  const navigation = useNavigation<WelcomeScreenNavigationProp>();
+export default function AuthGateScreen() {
+  const navigation = useNavigation<AuthGateScreenNavigationProp>();
 
   return (
     <View style={styles.container}>
@@ -15,9 +15,20 @@ export default function WelcomeScreen() {
         <Text style={styles.title}>{BRAND.tagline}</Text>
         <Text style={styles.description}>{BRAND.description}</Text>
       </View>
-      <TouchableOpacity style={styles.button} onPress={() => navigation.navigate('Login')}>
-        <Text style={styles.buttonText}>Get Started</Text>
-      </TouchableOpacity>
+      <View style={styles.buttonContainer}>
+        <TouchableOpacity
+          style={[styles.button, styles.buttonPrimary]}
+          onPress={() => navigation.navigate('SignUpEmail')}
+        >
+          <Text style={styles.buttonTextPrimary}>Sign up</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.button, styles.buttonSecondary]}
+          onPress={() => navigation.navigate('LoginPhone')}
+        >
+          <Text style={styles.buttonTextSecondary}>Log in</Text>
+        </TouchableOpacity>
+      </View>
     </View>
   );
 }
@@ -48,15 +59,30 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 26,
   },
+  buttonContainer: {
+    gap: 16,
+  },
   button: {
-    backgroundColor: BRAND_COLORS.primary,
     paddingVertical: 16,
     paddingHorizontal: 32,
     borderRadius: 8,
     alignItems: 'center',
   },
-  buttonText: {
+  buttonPrimary: {
+    backgroundColor: BRAND_COLORS.primary,
+  },
+  buttonSecondary: {
+    backgroundColor: 'transparent',
+    borderWidth: 2,
+    borderColor: BRAND_COLORS.primary,
+  },
+  buttonTextPrimary: {
     color: '#fff',
+    fontSize: 18,
+    fontWeight: '600',
+  },
+  buttonTextSecondary: {
+    color: BRAND_COLORS.primary,
     fontSize: 18,
     fontWeight: '600',
   },

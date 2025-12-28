@@ -21,7 +21,7 @@ npm install
 
 ### 2. Environment Variables
 
-**Quick start:** See [Auth Magic Link: Staging Checklist](./docs/AUTH_MAGIC_LINK_STAGING.md) for step-by-step magic link setup.
+**Quick start:** See [OTP-Based Authentication Setup](./docs/README.md#otp-based-authentication-setup) for step-by-step OTP setup.
 
 Create a `.env` file in the `mobile/` directory:
 
@@ -30,8 +30,7 @@ EXPO_PUBLIC_SUPABASE_URL=your_supabase_project_url
 EXPO_PUBLIC_SUPABASE_KEY=your_supabase_publishable_key
 EXPO_PUBLIC_APP_URL=https://chemirl.app
 
-# Magic link redirect (mobile deep link)
-EXPO_PUBLIC_AUTH_REDIRECT_URL=chemirl://auth/callback
+# Optional: Error logging with Sentry (see below)
 
 # Optional: Error logging with Sentry
 EXPO_PUBLIC_SENTRY_DSN=your_sentry_dsn_here
@@ -86,7 +85,7 @@ mobile/
 
 ### ✅ Fully Implemented
 
-- Auth flow (magic link with deep linking)
+- Auth flow (email OTP + phone SMS, code-only, no browser redirects)
 - Navigation structure (Auth → Onboarding → Main)
 - Discovery feed with swipe mechanics
 - Like/Match system
@@ -128,17 +127,14 @@ const { data, error } = await supabase
   .insert({ ... });
 ```
 
-### Deep Linking
+### Authentication
 
-Magic links use the scheme `chemirl://auth/callback`. Configure in `app.json`:
+The app uses code-only OTP authentication:
 
-```json
-{
-  "expo": {
-    "scheme": "chemirl"
-  }
-}
-```
+- **Sign up:** Email OTP → Phone SMS OTP → Name entry → Onboarding
+- **Log in:** Phone SMS OTP → Main app (or onboarding if incomplete)
+
+No deep linking or browser redirects required. Users enter codes directly in the app.
 
 ## Building for Production
 
@@ -213,7 +209,7 @@ See [`docs/README.md`](./docs/README.md) for complete documentation index.
 **Quick links:**
 
 - **[Install on Phones](./docs/INSTALL_ON_PHONES.md)** - Expo Go and EAS dev build installation
-- **[Auth Magic Link: Staging Checklist](./docs/AUTH_MAGIC_LINK_STAGING.md)** - Step-by-step magic link deep linking setup
+- **[Supabase OTP Template Checklist](./docs/SUPABASE_OTP_TEMPLATE_CHECKLIST.md)** - Step-by-step email template configuration
 - **[Supabase Staging Setup](./docs/SUPABASE_STAGING_SETUP.md)** - Staging project setup and environment switching
 - **[Two-Device Test Plan](./docs/TWO_DEVICE_TEST_PLAN.md)** - Step-by-step testing workflow
 - **[Test Run Log Template](./docs/TEST_RUN_LOG_TEMPLATE.md)** - Template for recording test sessions

@@ -56,3 +56,4 @@ $$;
 -- Grant execute permission to authenticated users
 GRANT EXECUTE ON FUNCTION mark_messages_read(UUID) TO authenticated;
 
+

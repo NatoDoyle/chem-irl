@@ -5,50 +5,53 @@ import {
   StyleSheet,
   TextInput,
   TouchableOpacity,
-  Alert,
   ActivityIndicator,
+  Alert,
 } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
-import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { AuthStackParamList } from '../../navigation/AuthNavigator';
-import { sendMagicLink } from '../../lib/auth';
+import { completeSignup } from '../../lib/auth';
+import { getErrorAlert } from '../../lib/errors';
 import { BRAND_COLORS } from '../../config/brand';
+import { sanitizeText } from '../../lib/sanitize';
 
-type LoginScreenNavigationProp = NativeStackNavigationProp<AuthStackParamList, 'Login'>;
-
-export default function LoginScreen() {
-  const navigation = useNavigation<LoginScreenNavigationProp>();
-  const [email, setEmail] = useState('');
+export default function NameEnterScreen() {
+  // Navigation handled by App.tsx after signup completion
+  const [fullName, setFullName] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const handleLogin = async () => {
-    const emailTrimmed = email.trim();
+  const handleContinue = async () => {
+    const nameTrimmed = fullName.trim();
 
-    if (!emailTrimmed) {
-      Alert.alert('Error', 'Please enter your email address');
-      return;
-    }
-
-    // Basic email validation
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(emailTrimmed)) {
-      Alert.alert('Error', 'Please enter a valid email address');
+    if (!nameTrimmed || nameTrimmed.length < 2) {
+      const { title, message } = getErrorAlert(
+        new Error('Please enter your full name (at least 2 characters)'),
+        'Validation Error'
+      );
+      Alert.alert(title, message);
       return;
     }
 
     setLoading(true);
     try {
-      const result = await sendMagicLink(emailTrimmed);
+      // Sanitize name before storing
+      const sanitizedName = sanitizeText(nameTrimmed);
+
+      const result = await completeSignup(sanitizedName);
 
       if (!result.success) {
-        Alert.alert('Error', result.error || 'Failed to send magic link');
+        const { title, message } = getErrorAlert(
+          new Error(result.error || 'Failed to complete signup'),
+          'Error'
+        );
+        Alert.alert(title, message);
         setLoading(false);
         return;
       }
 
-      navigation.navigate('MagicLinkSent', { email: emailTrimmed });
+      // Signup complete - App.tsx will handle routing based on profile completion
+      // Navigation will be handled automatically by App.tsx auth state listener
     } catch (error: any) {
-      Alert.alert('Error', error.message || 'Something went wrong');
+      const { title, message } = getErrorAlert(error, 'Error');
+      Alert.alert(title, message);
     } finally {
       setLoading(false);
     }
@@ -57,30 +60,29 @@ export default function LoginScreen() {
   return (
     <View style={styles.container}>
       <View style={styles.content}>
-        <Text style={styles.title}>Sign in to Chem IRL</Text>
-        <Text style={styles.subtitle}>Enter your email to receive a magic link</Text>
+        <Text style={styles.title}>What's your name?</Text>
+        <Text style={styles.subtitle}>Enter your full name to complete signup</Text>
 
         <TextInput
           style={styles.input}
-          placeholder="Email address"
+          placeholder="Full name"
           placeholderTextColor={BRAND_COLORS.text[600]}
-          value={email}
-          onChangeText={setEmail}
-          keyboardType="email-address"
-          autoCapitalize="none"
-          autoComplete="email"
+          value={fullName}
+          onChangeText={setFullName}
+          autoCapitalize="words"
+          autoComplete="name"
           editable={!loading}
         />
 
         <TouchableOpacity
           style={[styles.button, loading && styles.buttonDisabled]}
-          onPress={handleLogin}
+          onPress={handleContinue}
           disabled={loading}
         >
           {loading ? (
             <ActivityIndicator color="#fff" />
           ) : (
-            <Text style={styles.buttonText}>Send Magic Link</Text>
+            <Text style={styles.buttonText}>Continue</Text>
           )}
         </TouchableOpacity>
       </View>

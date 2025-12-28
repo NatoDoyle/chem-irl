@@ -35,13 +35,14 @@
 **Phone A:**
 
 - [ ] Launch app → Welcome screen appears
-- [ ] Navigate to Login screen
+- [ ] Tap "Sign up" button
 - [ ] Enter Account A email
-- [ ] Tap "Send Magic Link"
-- [ ] Magic Link Sent screen appears
-- [ ] Open email app
-- [ ] Tap magic link → App opens automatically
-- [ ] User is authenticated and sees onboarding or main app
+- [ ] Tap "Continue" → Receive OTP code via email
+- [ ] Enter 6-digit code from email → Email verified
+- [ ] Enter phone number → Receive SMS code
+- [ ] Enter 6-digit code from SMS → Phone verified
+- [ ] Enter full name → Signup complete
+- [ ] User sees onboarding or main app
 
 **Phone B:**
 

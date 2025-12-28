@@ -50,81 +50,97 @@ docs/
 3. **Testing**: Run `npm run test:two-device` for workflow, then follow [Two-Device Test Plan](./TWO_DEVICE_TEST_PLAN.md)
 4. **Before release**: Complete [Release Checklist](./RELEASE_CHECKLIST.md)
 
-## Magic Link Redirect Setup
+## OTP-Based Authentication Setup
 
-Magic link authentication uses deep linking to redirect users back into the mobile app after clicking the email link.
+The app uses email OTP and phone SMS for authentication. Users enter verification codes directly in the app (no browser redirects).
 
-### Configuration
+### Supabase Configuration
 
-1. **Set environment variable** in `.env` or `.env.local`:
+1. **Enable Phone Auth Provider (Twilio Verify):**
+   - **Create Twilio Account and Verify Service:**
+     - Sign up at https://www.twilio.com/try-twilio
+     - Go to Twilio Console → **Verify** → **Create new**
+     - Enable SMS channel, copy Service SID (starts with `VA...`)
+   - **Get Twilio Credentials:**
+     - In Twilio Console → **Account** → **Account Info**
+     - Copy Account SID (starts with `AC...`) and Auth Token
+   - **Configure in Supabase:**
+     - Go to Supabase Dashboard → Authentication → Providers
+     - Enable **Phone** provider
+     - Select **"Twilio Verify"** from SMS Provider dropdown (not "Twilio")
+     - Enter Account SID, Auth Token, and Verify Service SID
+     - Click **"Save"**
+   - **Note:** Twilio Verify handles SMS formatting automatically - no custom template needed
+   - **See [Supabase Dashboard Checklist](./SUPABASE_DASHBOARD_CHECKLIST.md) for detailed Twilio Verify setup**
 
-   ```bash
-   EXPO_PUBLIC_AUTH_REDIRECT_URL=chemirl://auth/callback
-   ```
+2. **Configure Email OTP Template:**
+   - Go to Supabase Dashboard → Authentication → Email Templates
+   - Edit the **Magic Link** template (this is used for OTP emails)
+   - **IMPORTANT:** The template must include `{{ .Token }}` to display the 6-digit OTP code
+   - **CRITICAL:** Do NOT include any login links or `{{ .SiteURL }}` / `{{ .RedirectTo }}` variables
+   - The email should contain ONLY the OTP code, not a clickable link
+   - Example template:
 
-   If not set, the app will fallback to `Linking.createURL('/auth/callback')` which generates the URL based on the app scheme.
+     ```
+     Your verification code is: {{ .Token }}
 
-2. **Configure Supabase Redirect URLs**:
+     Enter this code in the app to verify your email.
 
-   Add the following redirect URLs in your Supabase project settings:
+     This code expires in 1 hour.
+     ```
 
-   **Staging/Development:**
-   - `chemirl://auth/callback`
-   - `exp://localhost:8081/--/auth/callback` (for Expo Go)
+   - The code should be displayed as plain text, not as a clickable link
+   - Users enter the code directly in the app - no browser redirects
+   - **See [Supabase OTP Template Checklist](./SUPABASE_OTP_TEMPLATE_CHECKLIST.md) for detailed step-by-step instructions**
 
-   **Production:**
-   - `chemirl://auth/callback`
+3. **SMS Template (Twilio Verify):**
+   - **Note:** If using Twilio Verify (recommended), SMS formatting is handled automatically
+   - No custom SMS template configuration needed
+   - Twilio Verify sends codes in a standard format
+   - If using a different SMS provider (not Twilio Verify), configure template with `{{ .Token }}` placeholder
 
-   **Where to add:**
-   - Supabase Dashboard → Authentication → URL Configuration → Redirect URLs
-   - Add each URL on a new line
+### Database Migrations
 
-3. **Verify app scheme** in `app.json`:
+Run both migrations in order:
 
-   ```json
-   {
-     "expo": {
-       "scheme": "chemirl"
-     }
-   }
-   ```
+```bash
+# 1. Add full_name and signup_completed columns
+psql -h your-db-host -U postgres -d your-db-name -f db/auth_otp_migration.sql
 
-   The scheme must match the URL scheme used in `EXPO_PUBLIC_AUTH_REDIRECT_URL`.
+# 2. Create trigger to auto-create profiles rows for new auth users
+psql -h your-db-host -U postgres -d your-db-name -f db/profiles_auto_create_trigger.sql
+```
 
-### Deep Link Handling
+**Migration 1** adds:
 
-The app automatically handles deep links via `App.tsx`:
+- `full_name` column to `profiles` table
+- `signup_completed` boolean flag to `profiles` table
 
-- Initial URL on app launch: `Linking.getInitialURL()`
-- URL changes while app is running: `Linking.addEventListener('url')`
-- Both routes to `handleMagicLink()` which extracts tokens and sets the session
+**Migration 2** creates:
+
+- Database trigger that automatically creates `users` and `profiles` rows when a new auth user is created
+- Ensures every authenticated user has a corresponding profile row
+
+### Authentication Flow
+
+**Sign Up:**
+
+1. User enters email → receives 6-digit code via email
+2. User enters code → email verified
+3. User enters phone number → receives 6-digit code via SMS
+4. User enters code → phone verified → signup complete
+
+**Log In:**
+
+1. User enters phone number → receives 6-digit code via SMS
+2. User enters code → authenticated
 
 ### Testing
 
-1. Send a magic link from the login screen
-2. Open the email link on a device with the app installed
-3. The app should open and authenticate automatically
-4. If using Expo Go, use the `exp://` URL format
-
-### Troubleshooting: Still Redirecting to Website
-
-If clicking the magic link still redirects to the website instead of opening the app:
-
-1. **Redirect URL not allowlisted in Supabase:**
-   - Go to Supabase Dashboard → Authentication → URL Configuration → Redirect URLs
-   - Ensure `chemirl://auth/callback` is added (one per line)
-   - For Expo Go development, also add `exp://localhost:8081/--/auth/callback`
-   - Save changes and try again
-
-2. **Environment variable not loaded / Metro not restarted:**
-   - Verify `EXPO_PUBLIC_AUTH_REDIRECT_URL` is set in `.env` or `.env.local`
-   - If using `switchEnv` script, ensure the variable is in `.env.staging` or `.env.production`
-   - **Restart Metro bundler** after changing environment variables:
-     ```bash
-     # Stop current server (Ctrl+C), then:
-     npm start
-     ```
-   - Expo only loads `EXPO_PUBLIC_*` variables at build/start time, not dynamically
+1. Ensure SMS provider is configured and has credits
+2. Test email OTP: Enter email, check inbox for code
+3. Test phone OTP: Enter phone, check SMS for code
+4. Verify codes are 6 digits and work correctly
 
 ## Sentry Setup
 

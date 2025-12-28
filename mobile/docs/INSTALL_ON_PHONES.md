@@ -81,9 +81,9 @@ See [`SUPABASE_STAGING_SETUP.md`](./SUPABASE_STAGING_SETUP.md) for detailed setu
 
 **Deep linking not working:**
 
-- Expo Go has limited deep linking support
-- Magic links may not work reliably in Expo Go
-- Consider using EAS dev build (Option B) for full deep linking support
+- Expo Go supports OTP authentication (code entry in-app)
+- No deep linking required for OTP flow
+- EAS dev build recommended for production-like testing
 
 ---
 
@@ -143,7 +143,7 @@ This repo uses the following EAS build profiles (from `eas.json`):
 
 ### Benefits of Dev Build
 
-- ✅ Full deep linking support (magic links work reliably)
+- ✅ Full OTP authentication support (email + phone SMS)
 - ✅ Native modules work (e.g., Sentry, image picker)
 - ✅ Production-like performance
 - ✅ Can test on physical devices without Expo Go limitations
@@ -162,31 +162,33 @@ This repo uses the following EAS build profiles (from `eas.json`):
 - Check firewall settings
 - Verify Expo dev server is running
 
-**Deep linking still not working:**
+**OTP codes not working:**
 
-- Verify Supabase redirect URL: `chemirl:///auth/callback` (with triple slash)
-- Check `app.json` scheme matches: `"scheme": "chemirl"`
-- Rebuild dev client after changing deep link configuration
+- Verify Supabase email template uses `{{ .Token }}` (not `{{ .SiteURL }}` or `{{ .RedirectTo }}`)
+- Check email template instructs user to enter code (not click link)
+- Verify phone provider is enabled in Supabase Dashboard
+- Check SMS provider credentials are correct
 
 ---
 
 ## Gotchas
 
-### Deep Link / Magic Link Redirect URL
+### Email OTP Template Configuration
 
-**Required format:** `chemirl:///auth/callback` (note the triple slash)
+**Required:** Email template must be code-only (no links)
 
 **Configuration:**
 
-- **Supabase Dashboard:** Settings → Auth → URL Configuration → Redirect URLs
-- **Add:** `chemirl:///auth/callback`
-- **App scheme:** Defined in `app.json` as `"scheme": "chemirl"`
+- **Supabase Dashboard:** Authentication → Email Templates → Magic Link template
+- **Template must include:** `{{ .Token }}` for OTP code
+- **Template must NOT include:** `{{ .SiteURL }}`, `{{ .RedirectTo }}`, or any clickable links
+- **Template should say:** "Enter this code in the app" (not "Click this link")
 
 **Why it matters:**
 
-- Magic links won't work if redirect URL doesn't match
-- Deep linking requires exact URL format
-- Test on physical device (simulators may not handle deep links correctly)
+- OTP emails must contain only the code (no browser redirects)
+- Users enter codes directly in the app
+- See [Supabase OTP Template Checklist](./SUPABASE_OTP_TEMPLATE_CHECKLIST.md) for detailed instructions
 
 ### Environment Variables Only Load on Expo Restart
 

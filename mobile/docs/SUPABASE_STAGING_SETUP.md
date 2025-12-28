@@ -130,9 +130,9 @@ The mobile app uses the following database resources:
 
 ### Auth
 
-- **Supabase Auth** - User authentication via magic links
+- **Supabase Auth** - User authentication via email OTP and phone SMS
 - **Files:**
-  - `src/lib/auth.ts` - auth functions
+  - `src/lib/auth.ts` - auth functions (OTP-based, no magic links)
   - `App.tsx` - session management
 
 ## Staging Parity Checklist
@@ -176,14 +176,16 @@ When setting up staging, ensure the following matches production:
 
 ### Auth Configuration
 
-- [ ] **Email Auth:**
+- [ ] **Email OTP:**
   - [ ] Email provider configured
-  - [ ] Email templates configured (magic link)
-  - [ ] Redirect URL configured: `chemirl:///auth/callback`
+  - [ ] Email templates configured (see Email Template Configuration below)
+  - [ ] **CRITICAL:** Email template uses `{{ .Token }}` for OTP code
+  - [ ] **CRITICAL:** Email template does NOT include `{{ .SiteURL }}` or `{{ .RedirectTo }}` login links
+  - [ ] Email template instructs user to enter code in app (not click a link)
 
-- [ ] **Deep Linking:**
-  - [ ] App scheme `chemirl://` configured in Supabase
-  - [ ] Redirect URLs match mobile app configuration
+- [ ] **Phone OTP:**
+  - [ ] Phone provider enabled (Twilio, MessageBird, etc.)
+  - [ ] SMS template configured with `{{ .Token }}` placeholder
 
 ## Setup Procedure
 
@@ -229,8 +231,55 @@ Copy production schema to staging:
 ### 5. Configure Auth
 
 - [ ] Set up email provider (or use Supabase default)
-- [ ] Configure redirect URL: `chemirl:///auth/callback`
-- [ ] Configure email templates (magic link)
+- [ ] **Configure Email OTP Template** (see detailed instructions below)
+- [ ] **Enable Phone Auth Provider (Twilio Verify):**
+  - **Create Twilio Verify Service:**
+    - Go to Twilio Console → **Verify** → **Create new**
+    - Enable SMS channel, copy Service SID (starts with `VA...`)
+  - **Get Twilio Credentials:**
+    - In Twilio Console → **Account** → **Account Info**
+    - Copy Account SID (starts with `AC...`) and Auth Token
+  - **Configure in Supabase:**
+    - Go to Authentication → Providers
+    - Enable **Phone** provider
+    - Select **"Twilio Verify"** from SMS Provider dropdown
+    - Enter Account SID, Auth Token, and Verify Service SID
+    - Click **"Save"**
+  - **Note:** Twilio Verify handles SMS formatting automatically - no custom template needed
+
+#### Email Template Configuration (CRITICAL)
+
+**Location:** Supabase Dashboard → Authentication → Email Templates → **Magic Link** template
+
+**⚠️ IMPORTANT:** The "Magic Link" template is used for OTP emails. You must modify it to be code-only.
+
+**Required Changes:**
+
+1. **Include OTP Code:**
+   - Template MUST include `{{ .Token }}` to display the 6-digit OTP code
+   - Example: `Your verification code is: {{ .Token }}`
+
+2. **Remove Login Links:**
+   - **DO NOT** include `{{ .SiteURL }}` or `{{ .RedirectTo }}` variables
+   - **DO NOT** include any clickable login links or buttons
+   - **DO NOT** include text like "Click here to sign in" or "Open this link"
+
+3. **Template Example:**
+
+   ```
+   Your Chem IRL verification code is: {{ .Token }}
+
+   Enter this code in the app to verify your email.
+
+   This code expires in 1 hour.
+
+   If you didn't request this code, you can safely ignore this email.
+   ```
+
+4. **Verification:**
+   - After saving, send a test OTP email
+   - Verify email contains ONLY the code (no links)
+   - Verify email instructs user to enter code in app
 
 ### 6. Deploy RPC Functions
 
@@ -344,10 +393,13 @@ Expected: Query should execute without errors (may return empty if no data).
 
 In Supabase Dashboard:
 
-- [ ] Settings → Auth → URL Configuration
-- [ ] Verify "Site URL" and "Redirect URLs" include your app scheme
 - [ ] Settings → Auth → Providers → Email
 - [ ] Verify email provider is enabled
+- [ ] Settings → Auth → Providers → Phone
+- [ ] Verify phone provider is enabled (if using phone auth)
+- [ ] Settings → Auth → Email Templates → Magic Link template
+- [ ] Verify template uses `{{ .Token }}` (not `{{ .SiteURL }}` or `{{ .RedirectTo }}`)
+- [ ] See [Supabase OTP Template Checklist](./SUPABASE_OTP_TEMPLATE_CHECKLIST.md) for detailed verification
 
 ## Switching Between Staging and Production
 
@@ -446,11 +498,12 @@ npm start
 - Check bucket name is exactly `profiles`
 - Verify storage policies allow access
 
-### Auth redirect not working
+### Email OTP not working
 
-- Verify redirect URL in Supabase: `chemirl:///auth/callback`
-- Check app scheme in `app.json` matches
-- Ensure deep linking is configured correctly
+- Verify email template uses `{{ .Token }}` (not `{{ .SiteURL }}` or `{{ .RedirectTo }}`)
+- Check email template instructs user to enter code (not click link)
+- See [Supabase OTP Template Checklist](./SUPABASE_OTP_TEMPLATE_CHECKLIST.md) for detailed verification
+- Verify email provider is enabled in Authentication → Providers
 
 ## Additional Resources
 

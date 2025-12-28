@@ -51,8 +51,10 @@ This checklist covers the core user loop for beta smoke testing. Focus on critic
 **Device A:**
 
 - [ ] Launch app → Welcome/Login screen appears
-- [ ] Enter email, tap "Send Magic Link"
-- [ ] Open email, tap magic link → App opens and authenticates
+- [ ] Tap "Sign up" → Enter email → Receive OTP code
+- [ ] Enter 6-digit code from email → Email verified
+- [ ] Enter phone number → Receive SMS code
+- [ ] Enter 6-digit code from SMS → Phone verified → Signup complete
 - [ ] **Recording required** if deep linking fails
 - [ ] Force close app, reopen → Session persists (still logged in)
 

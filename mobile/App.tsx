@@ -9,10 +9,10 @@ import {
   TouchableOpacity,
   StyleSheet,
 } from 'react-native';
-import * as Linking from 'expo-linking';
+// Linking import removed - no longer using deep links for auth
 import { supabase } from './src/lib/supabase/client';
 import { Session } from '@supabase/supabase-js';
-import { handleMagicLink } from './src/lib/auth';
+// Magic link handling removed - using OTP code entry instead
 import AuthNavigator from './src/navigation/AuthNavigator';
 import OnboardingNavigator from './src/navigation/OnboardingNavigator';
 import MainNavigator from './src/navigation/MainNavigator';
@@ -50,6 +50,7 @@ export default function App() {
   const [sessionExpired, setSessionExpired] = useState(false);
   const [profileError, setProfileError] = useState<string | null>(null);
   const [retryAttempts, setRetryAttempts] = useState(0);
+  const [signupIncomplete, setSignupIncomplete] = useState(false);
   const navigationRef = useRef<NavigationContainerRef<any>>(null);
 
   // Retry logic with exponential backoff
@@ -70,10 +71,10 @@ export default function App() {
       }
 
       if (session) {
-        // Check if profile is complete
+        // Check if profile is complete and signup is completed
         const { data: profile, error: profileError } = await supabase
           .from('profiles')
-          .select('completion_pct')
+          .select('completion_pct, signup_completed')
           .eq('user_id', session.user.id)
           .single();
 
@@ -110,15 +111,26 @@ export default function App() {
         // Success - profile loaded
         setProfileError(null);
         setRetryAttempts(0);
-        if (profile && profile.completion_pct >= 100) {
+        // Check both signup_completed and profile completion
+        const isSignupComplete = profile?.signup_completed === true;
+        const isProfileComplete = profile?.completion_pct >= 100;
+
+        if (isSignupComplete && isProfileComplete) {
+          // Fully signed up and profile complete - show main app
           setSession(session);
           setProfileComplete(true);
           setSessionExpired(false);
-        } else {
-          // Profile incomplete - will show onboarding
+        } else if (isSignupComplete && !isProfileComplete) {
+          // Signup complete but profile incomplete - show onboarding
           setSession(session);
           setProfileComplete(false);
           setSessionExpired(false);
+        } else {
+          // Signup not complete - user must complete phone verification
+          setSession(session);
+          setProfileComplete(false);
+          setSessionExpired(false);
+          setSignupIncomplete(true);
         }
         setLoading(false);
       } else {
@@ -205,10 +217,10 @@ export default function App() {
           });
         }
         try {
-          // Check profile completion on auth change
+          // Check profile completion and signup status on auth change
           const { data: profile, error: profileError } = await supabase
             .from('profiles')
-            .select('completion_pct')
+            .select('completion_pct, signup_completed')
             .eq('user_id', session.user.id)
             .single();
 
@@ -220,14 +232,25 @@ export default function App() {
             return;
           }
 
-          if (profile && profile.completion_pct >= 100) {
+          const isSignupComplete = profile?.signup_completed === true;
+          const isProfileComplete = profile?.completion_pct >= 100;
+
+          if (isSignupComplete && isProfileComplete) {
             setSession(session);
             setProfileComplete(true);
             setSessionExpired(false);
-          } else {
+            setSignupIncomplete(false);
+          } else if (isSignupComplete && !isProfileComplete) {
             setSession(session);
             setProfileComplete(false);
             setSessionExpired(false);
+            setSignupIncomplete(false);
+          } else {
+            // Signup not complete - user must complete phone verification
+            setSession(session);
+            setProfileComplete(false);
+            setSessionExpired(false);
+            setSignupIncomplete(true);
           }
         } catch (error) {
           if (isSessionExpiredError(error)) {
@@ -239,15 +262,7 @@ export default function App() {
       }
     });
 
-    // Handle deep links (magic links)
-    const handleInitialURL = async () => {
-      const initialUrl = await Linking.getInitialURL();
-      if (initialUrl && initialUrl.includes('access_token')) {
-        await handleMagicLink(initialUrl);
-      }
-    };
-
-    handleInitialURL();
+    // Deep link handling removed - using OTP code entry instead of magic links
 
     // Setup notification listeners
     const notificationCleanup = setupNotificationListeners(
@@ -261,16 +276,8 @@ export default function App() {
       }
     );
 
-    // Listen for deep links while app is running
-    const linkingSubscription = Linking.addEventListener('url', async (event) => {
-      if (event.url.includes('access_token')) {
-        await handleMagicLink(event.url);
-      }
-    });
-
     return () => {
       subscription.unsubscribe();
-      linkingSubscription.remove();
       notificationCleanup();
     };
   }, [checkSessionAndProfile]);
@@ -340,7 +347,7 @@ export default function App() {
   return (
     <NavigationContainer ref={navigationRef}>
       <Stack.Navigator screenOptions={screenOptions}>
-        {!session ? (
+        {!session || signupIncomplete ? (
           <Stack.Screen name="Auth" component={AuthNavigator} />
         ) : !profileComplete ? (
           <Stack.Screen name="Onboarding" component={OnboardingNavigator} />

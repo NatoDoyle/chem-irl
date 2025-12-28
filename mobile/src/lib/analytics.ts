@@ -12,6 +12,9 @@
 
 export type AnalyticsEvent =
   | 'user_signed_up'
+  | 'user_signed_in'
+  | 'signup_completed'
+  | 'phone_verified'
   | 'profile_completed'
   | 'like_sent'
   | 'match_created'
