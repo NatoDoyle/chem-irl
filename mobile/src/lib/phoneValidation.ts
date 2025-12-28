@@ -54,4 +54,3 @@ export function formatToE164(input: string): string {
 
   return `+${limitedDigits}`;
 }
-
