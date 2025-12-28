@@ -25,17 +25,12 @@ For hosted Supabase projects, copy the template content into the Dashboard:
 
 ## Templates
 
-### `magic_link.html`
-- **Used for:** Email OTP authentication
-- **Template variable:** `{{ .Token }}` (6-digit code)
-- **Purpose:** Code-only verification (no clickable links)
-- **When sent:** When user requests email OTP via `signInWithOtp({ email })`
-
 ### `confirmation.html`
-- **Used for:** Email confirmation after signup
+- **Used for:** Email OTP authentication (code-only)
 - **Template variable:** `{{ .Token }}` (6-digit code), `{{ .Email }}` (user's email)
-- **Purpose:** Verify email address during signup
-- **When sent:** When user signs up and needs to verify email
+- **Purpose:** Code-only verification (no clickable links)
+- **When sent:** When user signs up and email confirmation is enabled
+- **Note:** This template is configured to be code-only (no confirmation links)
 
 ## Template Variables
 

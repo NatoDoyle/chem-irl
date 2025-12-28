@@ -230,6 +230,10 @@ Copy production schema to staging:
 
 ### 5. Configure Auth
 
+- [ ] **Enable Email Confirmation:**
+  - Go to Authentication → Providers → Email
+  - Turn ON "Enable email confirmations" toggle
+  - We use the confirmation template for OTP emails (configured to be code-only)
 - [ ] Set up email provider (or use Supabase default)
 - [ ] **Configure Email OTP Template** (see detailed instructions below)
 - [ ] **Enable Phone Auth Provider (Twilio Verify):**

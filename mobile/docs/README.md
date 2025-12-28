@@ -56,7 +56,12 @@ The app uses email OTP and phone SMS for authentication. Users enter verificatio
 
 ### Supabase Configuration
 
-1. **Enable Phone Auth Provider (Twilio Verify):**
+1. **Enable Email Confirmation (Required):**
+   - Go to Supabase Dashboard → Authentication → Providers → Email
+   - Turn ON "Enable email confirmations" toggle
+   - We use the confirmation template for OTP emails (configured to be code-only)
+
+2. **Enable Phone Auth Provider (Twilio Verify):**
    - **Create Twilio Account and Verify Service:**
      - Sign up at https://www.twilio.com/try-twilio
      - Go to Twilio Console → **Verify** → **Create new**
@@ -73,12 +78,12 @@ The app uses email OTP and phone SMS for authentication. Users enter verificatio
    - **Note:** Twilio Verify handles SMS formatting automatically - no custom template needed
    - **See [Supabase Dashboard Checklist](./SUPABASE_DASHBOARD_CHECKLIST.md) for detailed Twilio Verify setup**
 
-2. **Configure Email OTP Template:**
+3. **Configure Email OTP Template:**
    - Go to Supabase Dashboard → Authentication → Email Templates
-   - Edit the **Magic Link** template (this is used for OTP emails)
+   - Edit the **"Confirm signup"** template (this is the `confirmation` template used for OTP emails)
    - **IMPORTANT:** The template must include `{{ .Token }}` to display the 6-digit OTP code
-   - **CRITICAL:** Do NOT include any login links or `{{ .SiteURL }}` / `{{ .RedirectTo }}` variables
-   - The email should contain ONLY the OTP code, not a clickable link
+   - **CRITICAL:** Remove any default confirmation links - do NOT include `{{ .SiteURL }}` / `{{ .RedirectTo }}` / `{{ .ConfirmationURL }}` variables
+   - **CRITICAL:** The email should contain ONLY the OTP code, not a clickable link
    - Example template:
 
      ```
@@ -93,7 +98,7 @@ The app uses email OTP and phone SMS for authentication. Users enter verificatio
    - Users enter the code directly in the app - no browser redirects
    - **See [Supabase OTP Template Checklist](./SUPABASE_OTP_TEMPLATE_CHECKLIST.md) for detailed step-by-step instructions**
 
-3. **SMS Template (Twilio Verify):**
+4. **SMS Template (Twilio Verify):**
    - **Note:** If using Twilio Verify (recommended), SMS formatting is handled automatically
    - No custom SMS template configuration needed
    - Twilio Verify sends codes in a standard format

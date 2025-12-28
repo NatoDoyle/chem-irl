@@ -10,6 +10,22 @@
 
 - [ ] Access to Supabase Dashboard (staging and/or production project)
 - [ ] Admin access to Authentication settings
+- [ ] **Email confirmation is ENABLED** (see Step 0 below)
+
+---
+
+## Step 0: Enable Email Confirmation (Do This First!)
+
+**CRITICAL:** We use the `auth.email.template.confirmation` template for OTP emails. Email confirmation must be **ENABLED** for this template to be used.
+
+**Steps:**
+
+1. Go to: **Authentication** → **Providers** → **Email**
+2. Find **"Enable email confirmations"** toggle
+3. **Turn it ON** (enabled)
+4. Click **"Save"**
+
+**Important:** We'll configure the confirmation template to be code-only (using `{{ .Token }}`) instead of containing a confirmation link. This way users receive a 6-digit code to enter in the app, not a link to click.
 
 ---
 
@@ -20,8 +36,8 @@
    - Navigate to: **Authentication** → **Email Templates**
 
 2. **Select Template:**
-   - Click on **"Magic Link"** template
-   - **Note:** Despite the name "Magic Link", this template is used for OTP emails
+   - Click on **"Confirm signup"** template
+   - **Note:** This is the `auth.email.template.confirmation` template that we're using for OTP emails
 
 ---
 

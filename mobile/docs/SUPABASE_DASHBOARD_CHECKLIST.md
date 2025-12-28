@@ -13,9 +13,52 @@
 
 ---
 
+## Checklist: Disable Email Confirmation (CRITICAL)
+
+**Why:** When email confirmation is enabled, Supabase sends a separate "confirmation email" for new signups in addition to the OTP email. This confirmation email typically contains confusing language like "Click here to sign in" or "Sign in to confirm your account" - which doesn't make sense for users who are still in the signup process and haven't finished creating their account yet.
+
+**The Problem:**
+
+When email confirmation is enabled, Supabase sends the **`auth.email.template.confirmation`** email template:
+
+- **Subject:** "Confirm Your Signup" (default)
+- **Content:** Contains a confirmation link (not a code)
+- **Purpose:** Asks users to click a link to verify their email address
+- **When sent:** When a user signs up and needs to verify their email address
+
+This creates confusion because:
+
+- User enters name and email → Requests OTP code
+- Supabase sends TWO emails:
+  1. ❌ **Confirmation email** (from `confirmation` template) - contains a link, says "click to confirm" or "sign in"
+  2. ✅ **OTP code email** (from `magic_link` template) - contains 6-digit code
+- User is told to "enter code in app" but receives a link instead!
+
+**The Solution:** Disable email confirmation so only the OTP code email (`magic_link` template) is sent.
+
+### Step 1: Enable Email Confirmation
+
+1. **Navigate to Auth Settings:**
+   - Go to: **Authentication** → **Providers**
+   - Find **"Email"** in the provider list
+   - Click on **"Email"** to expand settings
+
+2. **Enable Email Confirmation:**
+   - Find **"Enable email confirmations"** or **"Confirm email"** toggle
+   - **Turn it ON** (enabled/checked)
+   - Click **"Save"** if prompted
+
+3. **Verify:**
+   - [ ] Email confirmation toggle is **ON** (enabled)
+   - [ ] The `confirmation` template will be used for signup emails
+
+**Important:** We'll configure the confirmation template to be code-only (see Step 2 below), so it sends a 6-digit code instead of a confirmation link.
+
+---
+
 ## Checklist: Email OTP Template Configuration
 
-### Step 1: Navigate to Email Templates
+### Step 2: Navigate to Email Templates
 
 1. **Open Supabase Dashboard:**
    - Go to: https://supabase.com/dashboard
@@ -26,9 +69,9 @@
    - Click: **Email Templates** (submenu)
    - You should see a list of templates: "Confirm signup", "Magic Link", "Change Email Address", etc.
 
-3. **Select Magic Link Template:**
-   - Click on **"Magic Link"** template
-   - **Note:** Despite the name "Magic Link", this template is used for OTP emails in our app
+3. **Select Confirm Signup Template:**
+   - Click on **"Confirm signup"** template
+   - **Note:** This is the `auth.email.template.confirmation` template that we're using for OTP emails
 
 ### Step 2: Verify Template Content
 

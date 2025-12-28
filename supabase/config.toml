@@ -11,13 +11,10 @@ verify_jwt = false
 # For hosted projects, configure templates in the Supabase Dashboard:
 # Authentication → Email Templates
 
-# Magic Link template (used for OTP emails - code-only, no links)
-[auth.email.template.magic_link]
-subject = "Your Chem IRL verification code"
-content_path = "./supabase/templates/magic_link.html"
-
-# Email confirmation template (for signup verification)
+# Email confirmation template (used for OTP emails - code-only, no links)
+# This template is used when email confirmation is enabled
+# IMPORTANT: Template must use {{ .Token }} for code, NOT confirmation links
 [auth.email.template.confirmation]
-subject = "Confirm Your Email - Chem IRL"
+subject = "Your Chem IRL verification code"
 content_path = "./supabase/templates/confirmation.html"
 

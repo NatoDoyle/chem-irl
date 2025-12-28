@@ -87,9 +87,35 @@ DELETE FROM auth.users WHERE email = 'test+trigger@example.com';
 
 ## Part 2: Supabase Dashboard Configuration
 
-### Step 3: Configure Email OTP Template
+### Step 3: Enable Email Confirmation (Required)
 
-**Location:** Supabase Dashboard → Authentication → Email Templates → **Magic Link** template
+**Location:** Supabase Dashboard → Authentication → Providers → Email
+
+**Why:** We use the `auth.email.template.confirmation` template for OTP emails. Email confirmation must be enabled for this template to be used.
+
+**Required Steps:**
+
+1. **Navigate to Email Provider Settings:**
+   - Go to: **Authentication** → **Providers**
+   - Find **"Email"** in the list
+   - Click on **"Email"** to expand settings
+
+2. **Enable Email Confirmation:**
+   - Find **"Enable email confirmations"** or **"Confirm email"** toggle
+   - **Turn it ON** (enabled)
+   - Click **"Save"** if prompted
+
+3. **Verify:**
+   - [ ] Email confirmation toggle is **ON** (enabled)
+   - [ ] The confirmation template will be used for signup emails
+
+**Important:** We'll configure the confirmation template to be code-only (see Step 4 below), so it sends a 6-digit code instead of a confirmation link.
+
+---
+
+### Step 4: Configure Email OTP Template
+
+**Location:** Supabase Dashboard → Authentication → Email Templates → **"Confirm signup"** template
 
 **Required Changes:**
 
