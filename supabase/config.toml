@@ -6,3 +6,18 @@
 # Webhooks use shared secret (x-webhook-secret header) instead
 verify_jwt = false
 
+# Email Templates Configuration
+# These templates are used for local development with Supabase CLI
+# For hosted projects, configure templates in the Supabase Dashboard:
+# Authentication → Email Templates
+
+# Magic Link template (used for OTP emails - code-only, no links)
+[auth.email.template.magic_link]
+subject = "Your Chem IRL verification code"
+content_path = "./supabase/templates/magic_link.html"
+
+# Email confirmation template (for signup verification)
+[auth.email.template.confirmation]
+subject = "Confirm Your Email - Chem IRL"
+content_path = "./supabase/templates/confirmation.html"
+
