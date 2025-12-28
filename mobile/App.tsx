@@ -126,7 +126,7 @@ export default function App() {
           setProfileComplete(false);
           setSessionExpired(false);
         } else {
-          // Signup not complete - user must complete phone verification
+          // Signup not complete - user must complete email verification and name entry
           setSession(session);
           setProfileComplete(false);
           setSessionExpired(false);
@@ -246,7 +246,7 @@ export default function App() {
             setSessionExpired(false);
             setSignupIncomplete(false);
           } else {
-            // Signup not complete - user must complete phone verification
+            // Signup not complete - user must complete email verification and name entry
             setSession(session);
             setProfileComplete(false);
             setSessionExpired(false);

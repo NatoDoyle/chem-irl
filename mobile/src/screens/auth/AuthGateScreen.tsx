@@ -24,7 +24,7 @@ export default function AuthGateScreen() {
         </TouchableOpacity>
         <TouchableOpacity
           style={[styles.button, styles.buttonSecondary]}
-          onPress={() => navigation.navigate('LoginPhone')}
+          onPress={() => navigation.navigate('LoginEmail')}
         >
           <Text style={styles.buttonTextSecondary}>Log in</Text>
         </TouchableOpacity>

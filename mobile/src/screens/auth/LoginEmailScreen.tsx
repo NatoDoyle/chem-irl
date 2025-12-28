@@ -8,22 +8,37 @@ import {
   ActivityIndicator,
   Alert,
 } from 'react-native';
-import { completeSignup } from '../../lib/auth';
+import { useNavigation } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { AuthStackParamList } from '../../navigation/AuthNavigator';
+import { sendEmailOTP } from '../../lib/auth';
 import { getErrorAlert } from '../../lib/errors';
 import { BRAND_COLORS } from '../../config/brand';
-import { sanitizeText } from '../../lib/sanitize';
 
-export default function NameEnterScreen() {
-  // Navigation handled by App.tsx after signup completion
-  const [fullName, setFullName] = useState('');
+type LoginEmailScreenNavigationProp = NativeStackNavigationProp<AuthStackParamList, 'LoginEmail'>;
+
+export default function LoginEmailScreen() {
+  const navigation = useNavigation<LoginEmailScreenNavigationProp>();
+  const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
 
   const handleContinue = async () => {
-    const nameTrimmed = fullName.trim();
+    const emailTrimmed = email.trim();
 
-    if (!nameTrimmed || nameTrimmed.length < 2) {
+    if (!emailTrimmed) {
       const { title, message } = getErrorAlert(
-        new Error('Please enter your full name (at least 2 characters)'),
+        new Error('Please enter your email address'),
+        'Validation Error'
+      );
+      Alert.alert(title, message);
+      return;
+    }
+
+    // Basic email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(emailTrimmed)) {
+      const { title, message } = getErrorAlert(
+        new Error('Please enter a valid email address'),
         'Validation Error'
       );
       Alert.alert(title, message);
@@ -32,23 +47,21 @@ export default function NameEnterScreen() {
 
     setLoading(true);
     try {
-      // Sanitize name before storing
-      const sanitizedName = sanitizeText(nameTrimmed);
-
-      const result = await completeSignup(sanitizedName);
+      const result = await sendEmailOTP(emailTrimmed, false);
 
       if (!result.success) {
         const { title, message } = getErrorAlert(
-          new Error(result.error || 'Failed to complete signup'),
+          new Error(result.error || 'Failed to send code'),
           'Error'
         );
         Alert.alert(title, message);
-        setLoading(false);
         return;
       }
 
-      // Signup complete - App.tsx will handle routing based on profile completion
-      // Navigation will be handled automatically by App.tsx auth state listener
+      navigation.navigate('EmailCodeVerify', {
+        email: emailTrimmed,
+        isSignup: false,
+      });
     } catch (error: any) {
       const { title, message } = getErrorAlert(error, 'Error');
       Alert.alert(title, message);
@@ -60,17 +73,18 @@ export default function NameEnterScreen() {
   return (
     <View style={styles.container}>
       <View style={styles.content}>
-        <Text style={styles.title}>What's your name?</Text>
-        <Text style={styles.subtitle}>Enter your full name to complete signup</Text>
+        <Text style={styles.title}>Log in</Text>
+        <Text style={styles.subtitle}>Enter your email to receive a verification code</Text>
 
         <TextInput
           style={styles.input}
-          placeholder="Full name"
+          placeholder="Email address"
           placeholderTextColor={BRAND_COLORS.text[600]}
-          value={fullName}
-          onChangeText={setFullName}
-          autoCapitalize="words"
-          autoComplete="name"
+          value={email}
+          onChangeText={setEmail}
+          keyboardType="email-address"
+          autoCapitalize="none"
+          autoComplete="email"
           editable={!loading}
         />
 

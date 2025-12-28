@@ -1,11 +1,4 @@
-import {
-  sendEmailOTP,
-  verifyEmailOTP,
-  sendPhoneOTP,
-  verifyPhoneOTP,
-  updatePhone,
-  completeSignup,
-} from '../auth';
+import { sendEmailOTP, verifyEmailOTP, completeSignup } from '../auth';
 import { supabase } from '../supabase/client';
 
 // Mock Supabase client
@@ -80,60 +73,6 @@ describe('Auth Functions', () => {
       });
       expect(result.success).toBe(true);
       expect(result.session).toBe(mockSession);
-    });
-  });
-
-  describe('sendPhoneOTP', () => {
-    it('should call supabase.auth.signInWithOtp with phone', async () => {
-      jest
-        .spyOn(supabase.auth, 'signInWithOtp')
-        .mockResolvedValue({ data: {} as any, error: null } as any);
-
-      const result = await sendPhoneOTP('+1234567890', true);
-
-      expect(supabase.auth.signInWithOtp).toHaveBeenCalledWith({
-        phone: '+1234567890',
-        options: {
-          shouldCreateUser: true,
-        },
-      });
-      expect(result.success).toBe(true);
-    });
-  });
-
-  describe('verifyPhoneOTP', () => {
-    it('should verify phone OTP code', async () => {
-      const mockSession = { access_token: 'token', refresh_token: 'refresh' };
-      jest
-        .spyOn(supabase.auth, 'verifyOtp')
-        .mockResolvedValue({ data: { session: mockSession }, error: null } as any);
-
-      const result = await verifyPhoneOTP('+1234567890', '123456', 'sms');
-
-      expect(supabase.auth.verifyOtp).toHaveBeenCalledWith({
-        phone: '+1234567890',
-        token: '123456',
-        type: 'sms',
-      });
-      expect(result.success).toBe(true);
-      expect(result.session).toBe(mockSession);
-    });
-  });
-
-  describe('updatePhone', () => {
-    it('should update user phone number', async () => {
-      const mockUser = { id: 'user-123', phone: '+1234567890' };
-      jest
-        .spyOn(supabase.auth, 'updateUser')
-        .mockResolvedValue({ data: { user: mockUser }, error: null } as any);
-
-      const result = await updatePhone('+1234567890');
-
-      expect(supabase.auth.updateUser).toHaveBeenCalledWith({
-        phone: '+1234567890',
-      });
-      expect(result.success).toBe(true);
-      expect(result.user).toBe(mockUser);
     });
   });
 

@@ -3,23 +3,15 @@ import { useEffect } from 'react';
 import { useNavigation } from '@react-navigation/native';
 import AuthGateScreen from '../screens/auth/AuthGateScreen';
 import SignUpEmailScreen from '../screens/auth/SignUpEmailScreen';
+import LoginEmailScreen from '../screens/auth/LoginEmailScreen';
 import EmailCodeVerifyScreen from '../screens/auth/EmailCodeVerifyScreen';
-import PhoneEnterScreen from '../screens/auth/PhoneEnterScreen';
-import PhoneCodeVerifyScreen from '../screens/auth/PhoneCodeVerifyScreen';
-import LoginPhoneScreen from '../screens/auth/LoginPhoneScreen';
-import LoginPhoneVerifyScreen from '../screens/auth/LoginPhoneVerifyScreen';
-import NameEnterScreen from '../screens/auth/NameEnterScreen';
 import { supabase } from '../lib/supabase/client';
 
 export type AuthStackParamList = {
   AuthGate: undefined;
   SignUpEmail: undefined;
-  EmailCodeVerify: { email: string; fullName: string; isSignup: boolean };
-  PhoneEnter: { email?: string; fullName?: string };
-  PhoneCodeVerify: { phone: string; type: 'sms' | 'phone_change'; fullName?: string };
-  NameEnter: undefined;
-  LoginPhone: undefined;
-  LoginPhoneVerify: { phone: string };
+  LoginEmail: undefined;
+  EmailCodeVerify: { email: string; fullName?: string; isSignup: boolean };
 };
 
 const Stack = createNativeStackNavigator<AuthStackParamList>();
@@ -28,7 +20,7 @@ export default function AuthNavigator() {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const navigation = useNavigation<any>();
 
-  // Check if user has session but signup is incomplete, route to PhoneEnter
+  // Check if user has session but signup is incomplete, route to SignUpEmail
   useEffect(() => {
     const checkSignupStatus = async () => {
       const {
@@ -42,11 +34,9 @@ export default function AuthNavigator() {
           .eq('user_id', session.user.id)
           .single();
 
-        // If user has session but signup not complete, route to phone verification
+        // If user has session but signup not complete, route to signup
         if (profile && profile.signup_completed !== true) {
-          const email = session.user.email || '';
-          // Navigate to PhoneEnter to complete signup
-          navigation.navigate('PhoneEnter', { email });
+          navigation.navigate('SignUpEmail');
         }
       }
     };
@@ -63,12 +53,8 @@ export default function AuthNavigator() {
     >
       <Stack.Screen name="AuthGate" component={AuthGateScreen} />
       <Stack.Screen name="SignUpEmail" component={SignUpEmailScreen} />
+      <Stack.Screen name="LoginEmail" component={LoginEmailScreen} />
       <Stack.Screen name="EmailCodeVerify" component={EmailCodeVerifyScreen} />
-      <Stack.Screen name="PhoneEnter" component={PhoneEnterScreen} />
-      <Stack.Screen name="PhoneCodeVerify" component={PhoneCodeVerifyScreen} />
-      <Stack.Screen name="NameEnter" component={NameEnterScreen} />
-      <Stack.Screen name="LoginPhone" component={LoginPhoneScreen} />
-      <Stack.Screen name="LoginPhoneVerify" component={LoginPhoneVerifyScreen} />
     </Stack.Navigator>
   );
 }

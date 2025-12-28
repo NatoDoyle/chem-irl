@@ -130,7 +130,7 @@ The mobile app uses the following database resources:
 
 ### Auth
 
-- **Supabase Auth** - User authentication via email OTP and phone SMS
+- **Supabase Auth** - User authentication via email OTP only
 - **Files:**
   - `src/lib/auth.ts` - auth functions (OTP-based, no magic links)
   - `App.tsx` - session management
@@ -183,10 +183,6 @@ When setting up staging, ensure the following matches production:
   - [ ] **CRITICAL:** Email template does NOT include `{{ .SiteURL }}` or `{{ .RedirectTo }}` login links
   - [ ] Email template instructs user to enter code in app (not click a link)
 
-- [ ] **Phone OTP:**
-  - [ ] Phone provider enabled (Twilio, MessageBird, etc.)
-  - [ ] SMS template configured with `{{ .Token }}` placeholder
-
 ## Setup Procedure
 
 ### 1. Create Staging Project
@@ -236,20 +232,6 @@ Copy production schema to staging:
   - We use the confirmation template for OTP emails (configured to be code-only)
 - [ ] Set up email provider (or use Supabase default)
 - [ ] **Configure Email OTP Template** (see detailed instructions below)
-- [ ] **Enable Phone Auth Provider (Twilio Verify):**
-  - **Create Twilio Verify Service:**
-    - Go to Twilio Console → **Verify** → **Create new**
-    - Enable SMS channel, copy Service SID (starts with `VA...`)
-  - **Get Twilio Credentials:**
-    - In Twilio Console → **Account** → **Account Info**
-    - Copy Account SID (starts with `AC...`) and Auth Token
-  - **Configure in Supabase:**
-    - Go to Authentication → Providers
-    - Enable **Phone** provider
-    - Select **"Twilio Verify"** from SMS Provider dropdown
-    - Enter Account SID, Auth Token, and Verify Service SID
-    - Click **"Save"**
-  - **Note:** Twilio Verify handles SMS formatting automatically - no custom template needed
 
 #### Email Template Configuration (CRITICAL)
 
@@ -399,8 +381,6 @@ In Supabase Dashboard:
 
 - [ ] Settings → Auth → Providers → Email
 - [ ] Verify email provider is enabled
-- [ ] Settings → Auth → Providers → Phone
-- [ ] Verify phone provider is enabled (if using phone auth)
 - [ ] Settings → Auth → Email Templates → Magic Link template
 - [ ] Verify template uses `{{ .Token }}` (not `{{ .SiteURL }}` or `{{ .RedirectTo }}`)
 - [ ] See [Supabase OTP Template Checklist](./SUPABASE_OTP_TEMPLATE_CHECKLIST.md) for detailed verification

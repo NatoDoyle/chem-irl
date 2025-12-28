@@ -8,17 +8,10 @@ import {
   ActivityIndicator,
   Alert,
 } from 'react-native';
-import { useNavigation, useRoute } from '@react-navigation/native';
-import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { AuthStackParamList } from '../../navigation/AuthNavigator';
-import { verifyEmailOTP, sendEmailOTP } from '../../lib/auth';
+import { useRoute } from '@react-navigation/native';
+import { verifyEmailOTP, sendEmailOTP, completeSignup } from '../../lib/auth';
 import { getErrorAlert } from '../../lib/errors';
 import { BRAND_COLORS } from '../../config/brand';
-
-type EmailCodeVerifyScreenNavigationProp = NativeStackNavigationProp<
-  AuthStackParamList,
-  'EmailCodeVerify'
->;
 
 type RouteParams = {
   email: string;
@@ -27,7 +20,6 @@ type RouteParams = {
 };
 
 export default function EmailCodeVerifyScreen() {
-  const navigation = useNavigation<EmailCodeVerifyScreenNavigationProp>();
   const route = useRoute();
   const { email, fullName, isSignup } = route.params as RouteParams;
   const [code, setCode] = useState(['', '', '', '', '', '']);
@@ -108,10 +100,20 @@ export default function EmailCodeVerifyScreen() {
       }
 
       if (isSignup && fullName) {
-        navigation.navigate('PhoneEnter', { email, fullName });
+        // Complete signup: update profile with full_name and signup_completed
+        const signupResult = await completeSignup(fullName);
+        if (!signupResult.success) {
+          const { title, message } = getErrorAlert(
+            new Error(signupResult.error || 'Failed to complete signup'),
+            'Error'
+          );
+          Alert.alert(title, message);
+          return;
+        }
+        // Navigation will be handled by App.tsx based on signup_completed flag
       } else {
-        // Email login complete - navigate to main app
-        // App.tsx will handle routing based on signup_completed
+        // Email login complete - navigation will be handled by App.tsx
+        // based on signup_completed and profile completion
       }
     } catch (error: any) {
       const { title, message } = getErrorAlert(error, 'Error');

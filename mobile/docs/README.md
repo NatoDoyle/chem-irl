@@ -50,9 +50,9 @@ docs/
 3. **Testing**: Run `npm run test:two-device` for workflow, then follow [Two-Device Test Plan](./TWO_DEVICE_TEST_PLAN.md)
 4. **Before release**: Complete [Release Checklist](./RELEASE_CHECKLIST.md)
 
-## OTP-Based Authentication Setup
+## Email OTP Authentication Setup
 
-The app uses email OTP and phone SMS for authentication. Users enter verification codes directly in the app (no browser redirects).
+The app uses email OTP only for authentication. Users enter verification codes directly in the app (no browser redirects or magic links).
 
 ### Supabase Configuration
 
@@ -61,24 +61,7 @@ The app uses email OTP and phone SMS for authentication. Users enter verificatio
    - Turn ON "Enable email confirmations" toggle
    - We use the confirmation template for OTP emails (configured to be code-only)
 
-2. **Enable Phone Auth Provider (Twilio Verify):**
-   - **Create Twilio Account and Verify Service:**
-     - Sign up at https://www.twilio.com/try-twilio
-     - Go to Twilio Console → **Verify** → **Create new**
-     - Enable SMS channel, copy Service SID (starts with `VA...`)
-   - **Get Twilio Credentials:**
-     - In Twilio Console → **Account** → **Account Info**
-     - Copy Account SID (starts with `AC...`) and Auth Token
-   - **Configure in Supabase:**
-     - Go to Supabase Dashboard → Authentication → Providers
-     - Enable **Phone** provider
-     - Select **"Twilio Verify"** from SMS Provider dropdown (not "Twilio")
-     - Enter Account SID, Auth Token, and Verify Service SID
-     - Click **"Save"**
-   - **Note:** Twilio Verify handles SMS formatting automatically - no custom template needed
-   - **See [Supabase Dashboard Checklist](./SUPABASE_DASHBOARD_CHECKLIST.md) for detailed Twilio Verify setup**
-
-3. **Configure Email OTP Template:**
+2. **Configure Email OTP Template:**
    - Go to Supabase Dashboard → Authentication → Email Templates
    - Edit the **"Confirm signup"** template (this is the `confirmation` template used for OTP emails)
    - **IMPORTANT:** The template must include `{{ .Token }}` to display the 6-digit OTP code
@@ -97,12 +80,6 @@ The app uses email OTP and phone SMS for authentication. Users enter verificatio
    - The code should be displayed as plain text, not as a clickable link
    - Users enter the code directly in the app - no browser redirects
    - **See [Supabase OTP Template Checklist](./SUPABASE_OTP_TEMPLATE_CHECKLIST.md) for detailed step-by-step instructions**
-
-4. **SMS Template (Twilio Verify):**
-   - **Note:** If using Twilio Verify (recommended), SMS formatting is handled automatically
-   - No custom SMS template configuration needed
-   - Twilio Verify sends codes in a standard format
-   - If using a different SMS provider (not Twilio Verify), configure template with `{{ .Token }}` placeholder
 
 ### Database Migrations
 
@@ -130,22 +107,22 @@ psql -h your-db-host -U postgres -d your-db-name -f db/profiles_auto_create_trig
 
 **Sign Up:**
 
-1. User enters email → receives 6-digit code via email
-2. User enters code → email verified
-3. User enters phone number → receives 6-digit code via SMS
-4. User enters code → phone verified → signup complete
+1. User enters full name and email → receives 6-digit code via email
+2. User enters code → email verified → signup completed (full_name and signup_completed stored)
+3. User proceeds to onboarding (profile completion flow)
 
 **Log In:**
 
-1. User enters phone number → receives 6-digit code via SMS
+1. User enters email → receives 6-digit code via email
 2. User enters code → authenticated
+3. App routes based on signup_completed and profile completion status
 
 ### Testing
 
-1. Ensure SMS provider is configured and has credits
-2. Test email OTP: Enter email, check inbox for code
-3. Test phone OTP: Enter phone, check SMS for code
-4. Verify codes are 6 digits and work correctly
+1. Test email OTP signup: Enter name and email, check inbox for code, enter code
+2. Test email OTP login: Enter email, check inbox for code, enter code
+3. Verify codes are 6 digits and work correctly
+4. Verify signup_completed is set to true after successful signup
 
 ## Sentry Setup
 
