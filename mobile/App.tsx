@@ -19,6 +19,7 @@ import MainNavigator from './src/navigation/MainNavigator';
 import { isSessionExpiredError, getErrorAlert, isRecoverableError } from './src/lib/errors';
 import { addBreadcrumb, setUserContext, clearUserContext } from './src/lib/sentry';
 import { identifyUser, resetUser } from './src/lib/analytics';
+import { BRAND_COLORS } from './src/config/brand';
 import {
   registerDeviceToken,
   unregisterDeviceToken,
@@ -332,7 +333,7 @@ export default function App() {
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#1453FF" />
+        <ActivityIndicator size="large" color={BRAND_COLORS.primary} />
         {retryAttempts > 0 && (
           <Text style={styles.retryLoadingText}>
             Retrying... ({retryAttempts}/{MAX_RETRY_ATTEMPTS})
@@ -382,7 +383,7 @@ const styles = StyleSheet.create({
     lineHeight: 24,
   },
   signInButton: {
-    backgroundColor: '#1453FF',
+    backgroundColor: BRAND_COLORS.primary,
     paddingVertical: 14,
     paddingHorizontal: 32,
     borderRadius: 8,
@@ -422,7 +423,7 @@ const styles = StyleSheet.create({
     marginBottom: 32,
   },
   retryButton: {
-    backgroundColor: '#1453FF',
+    backgroundColor: BRAND_COLORS.primary,
     paddingVertical: 14,
     paddingHorizontal: 32,
     borderRadius: 8,
