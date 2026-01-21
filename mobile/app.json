@@ -10,7 +10,7 @@
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#1453FF"
+      "backgroundColor": "#F7FFFE"
     },
     "ios": {
       "supportsTablet": true,
@@ -19,16 +19,23 @@
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#1453FF"
+        "backgroundColor": "#F7FFFE"
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
-      "package": "app.chemirl.mobile"
+      "package": "app.chemirl.mobile",
+      "permissions": ["android.permission.RECORD_AUDIO"]
     },
     "web": {
       "favicon": "./assets/favicon.png"
     },
     "scheme": "chemirl",
+    "extra": {
+      "eas": {
+        "projectId": "40fbab02-b775-4e8b-9b3c-011528e37684"
+      }
+    },
+    "_comment": "To generate a valid EAS projectId, run: npx eas-cli@latest init (or: npm install -g eas-cli && eas init). Then restart Metro with: npx expo start -c",
     "plugins": [
       [
         "expo-image-picker",
@@ -48,10 +55,11 @@
         "expo-notifications",
         {
           "icon": "./assets/icon.png",
-          "color": "#1453FF",
+          "color": "#0A7F74",
           "sounds": []
         }
       ]
-    ]
+    ],
+    "owner": "natodoyle"
   }
 }
