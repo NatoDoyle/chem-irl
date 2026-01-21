@@ -156,7 +156,11 @@ export const STEP_CONFIGS: Record<OnboardingStepId, StepConfig> = {
       error: data?.phoneVerified ? undefined : 'Phone must be verified',
     }),
     screenName: undefined, // Handled in auth flow, not onboarding
-    enabled: false, // Phone auth is temporarily disabled for testing
+    // Phone auth is disabled in dev/testing, enabled in production
+    // Set EXPO_PUBLIC_ENABLE_PHONE_AUTH=true to enable in dev
+    enabled: typeof __DEV__ !== 'undefined' && __DEV__
+      ? (process.env.EXPO_PUBLIC_ENABLE_PHONE_AUTH === 'true')
+      : true, // Production defaults to enabled
   },
   date_of_birth: {
     id: 'date_of_birth',
