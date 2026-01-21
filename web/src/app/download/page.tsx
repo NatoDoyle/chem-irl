@@ -1,4 +1,4 @@
-import { BRAND, BRAND_COLORS } from "@/config/brand";
+import { BRAND_COLORS } from "@/config/brand";
 
 export default function DownloadPage() {
   return (

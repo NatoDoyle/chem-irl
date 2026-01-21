@@ -15,6 +15,11 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Chem IRL - Spend less time texting. Test chemistry IRL.",
   description: "Chemistry and vibe aren't on a screen. Meet face to face.",
+  themeColor: "#0A7F74", // aqua600 primary
+  other: {
+    "msapplication-TileColor": "#F7FFFE", // bg
+    "apple-mobile-web-app-status-bar-style": "default",
+  },
 };
 
 export default function RootLayout({

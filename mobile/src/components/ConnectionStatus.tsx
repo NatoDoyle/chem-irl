@@ -49,7 +49,7 @@ const styles = StyleSheet.create({
     borderBottomColor: BRAND_COLORS.warning + '80',
   },
   text: {
-    color: '#fff',
+    color: BRAND_COLORS.onPrimary,
     fontSize: 12,
     fontWeight: '600',
     textAlign: 'center',

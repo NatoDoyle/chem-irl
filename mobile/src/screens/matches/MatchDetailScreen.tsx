@@ -75,7 +75,7 @@ export default function MatchDetailScreen() {
       const { data: profile } = await supabase
         .from('profiles')
         .select('photos, prompts')
-        .eq('user_id', otherUserId)
+        .eq('id', otherUserId)
         .single();
 
       if (profile) {
@@ -267,7 +267,7 @@ export default function MatchDetailScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: BRAND_COLORS.surface,
   },
   header: {
     alignItems: 'center',
@@ -307,7 +307,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   chatButtonText: {
-    color: '#fff',
+    color: BRAND_COLORS.onPrimary,
     fontSize: 16,
     fontWeight: '600',
   },
@@ -327,7 +327,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   proposeButtonText: {
-    color: '#fff',
+    color: BRAND_COLORS.onPrimary,
     fontSize: 18,
     fontWeight: '600',
   },
@@ -349,7 +349,7 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   retryButtonText: {
-    color: '#fff',
+    color: BRAND_COLORS.onPrimary,
     fontSize: 16,
     fontWeight: '600',
   },

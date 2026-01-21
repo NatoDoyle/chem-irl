@@ -1,71 +1,116 @@
-# Supabase Database Setup - Running SQL Migrations
+# Supabase Database Setup - Running Migrations
 
 ## Overview
 
-You need to run 3 SQL files in Supabase to set up your database:
-1. `db/schema.sql` - Creates all tables
-2. `db/rls.sql` - Sets up Row Level Security
-3. `db/kpi_views.sql` - Creates KPI views and functions
+This repository uses **Supabase CLI migrations** for database setup. All migrations are stored in `/supabase/migrations/` and applied via `supabase db push`.
 
-**Important**: Run them in this exact order!
+**Recommended Method:** Use Supabase CLI (see [DB_MIGRATIONS.md](./DB_MIGRATIONS.md) for full guide)  
+**Fallback Method:** Manual SQL Editor (see "Manual Fallback" section below)
 
 ---
 
-## Step-by-Step Guide
+## Recommended: Supabase CLI Method
+
+### Prerequisites
+
+1. **Install Supabase CLI:**
+   ```bash
+   npm install -g supabase
+   # Or: brew install supabase/tap/supabase
+   ```
+
+2. **Login:**
+   ```bash
+   supabase login
+   ```
+
+3. **Link to your project:**
+   ```bash
+   supabase link --project-ref <your-project-ref>
+   ```
+   Find your project ref in Supabase Dashboard → Project Settings → General
+
+### Apply All Migrations
+
+```bash
+supabase db push
+```
+
+This applies all migrations in `/supabase/migrations/` in the correct order.
+
+### Verify Setup
+
+```bash
+cd mobile
+npm run verify:staging
+```
+
+---
+
+## Manual Fallback (Emergency Only)
+
+If Supabase CLI is unavailable, you can manually apply SQL via Supabase Dashboard SQL Editor:
 
 ### Step 1: Access Supabase SQL Editor
 
 1. Go to https://supabase.com/dashboard
 2. Log in to your account
-3. Click on your **chem-irl** project (or whatever you named it)
+3. Click on your **chem-irl** project
 4. In the left sidebar, click **SQL Editor**
-5. You should see an empty SQL editor window
 
-### Step 2: Run schema.sql (Creates Tables)
+### Step 2: Run Migrations in Order
 
-1. Click **"New query"** button (top right)
-2. Open the file `db/schema.sql` on your computer
-3. Copy the **entire contents** of `schema.sql`
-4. Paste it into the Supabase SQL Editor
-5. Click **"Run"** button (or press Ctrl+Enter / Cmd+Enter)
-6. Wait for it to complete (should take 5-10 seconds)
-7. You should see: "Success. No rows returned" or similar success message
+Run these SQL files in order (copy-paste entire contents):
 
-**What this does:**
-- Creates all database tables (users, profiles, matches, proposals, etc.)
-- Creates custom types (user_gender, match_status, etc.)
-- Creates indexes for performance
-- Sets up the complete database structure
+1. **Initial Schema** (`supabase/migrations/20240101000000_initial_schema.sql`)
+   - Creates all database tables (users, profiles, matches, proposals, etc.)
+   - Creates custom types (user_gender, match_status, etc.)
+   - Creates indexes for performance
 
-### Step 3: Run rls.sql (Row Level Security)
+2. **Row Level Security** (`supabase/migrations/20240102000000_rls.sql`)
+   - Enables Row Level Security on all tables
+   - Creates security policies so users can only see their own data
+   - Protects your database from unauthorized access
 
-1. Click **"New query"** button again
-2. Open the file `db/rls.sql` on your computer
-3. Copy the **entire contents** of `rls.sql`
-4. Paste into a new SQL Editor tab
-5. Click **"Run"**
-6. Wait for completion
+3. **KPI Views** (`supabase/migrations/20240103000000_kpi_views.sql`)
+   - Creates views for tracking KPIs (proposal-confirm rate, TTD, etc.)
+   - Sets up functions for daily KPI calculations
+   - Creates the north star metric view (confirmed dates/WAU)
 
-**What this does:**
-- Enables Row Level Security on all tables
-- Creates security policies so users can only see their own data
-- Protects your database from unauthorized access
-- Ensures users can only see matches and proposals they're involved in
+4. **Scoring Functions** (`supabase/migrations/20240104000000_scoring.sql`)
+   - Implements Action Speed, Profile Quality, and Reliability scoring
 
-### Step 4: Run kpi_views.sql (KPI Views)
+5. **Security Fixes** (`supabase/migrations/20240105000000_security_fixes.sql`)
+   - Adds authorization checks to SECURITY DEFINER functions
 
-1. Click **"New query"** button again
-2. Open the file `db/kpi_views.sql` on your computer
-3. Copy the **entire contents** of `kpi_views.sql`
-4. Paste into a new SQL Editor tab
-5. Click **"Run"**
-6. Wait for completion
+6. **Auth OTP Migration** (`supabase/migrations/20240106000000_auth_otp_migration.sql`)
+   - Adds `full_name` and `signup_completed` columns to profiles
 
-**What this does:**
-- Creates views for tracking KPIs (proposal-confirm rate, TTD, etc.)
-- Sets up functions for daily KPI calculations
-- Creates the north star metric view (confirmed dates/WAU)
-- Prepares analytics infrastructure
+7. **Profiles Auto-Create Trigger** (`supabase/migrations/20240107000000_profiles_auto_create_trigger.sql`)
+   - Creates trigger to auto-create profiles for new auth users
+
+8. **Proposal Confirmation Fix** (`supabase/migrations/20240108000000_proposal_confirmation_fix.sql`)
+   - Adds unique constraint and transactional RPC for proposal confirmation
+
+9. **Push Notifications** (`supabase/migrations/20240109000000_push_notifications.sql`)
+   - Creates push_tokens table
+
+10. **Read Receipts** (`supabase/migrations/20240110000000_read_receipts.sql`)
+    - Adds read_at column to messages table
+
+11. **Automation** (`supabase/migrations/20240111000000_automation.sql`)
+    - Sets up proposal expiry and daily scoring automation
+
+**⚠️ Important:** After manually applying migrations, mark them as applied using Supabase CLI to prevent re-running:
+```bash
+# Mark each migration as applied after manually running it
+supabase migration repair 20240101000000 --status applied
+supabase migration repair 20240102000000 --status applied
+supabase migration repair 20240103000000 --status applied
+# ... continue for each migration you manually applied
+```
+
+This updates the migration tracking state without re-running the SQL.
 
 ---
 
@@ -161,17 +206,17 @@ Run policies table by table:
 
 ## Quick Reference
 
-**Files to Run (in order):**
-1. `db/schema.sql` → Creates database structure
-2. `db/rls.sql` → Adds security
-3. `db/kpi_views.sql` → Adds analytics
+**Recommended Method:**
+- Use Supabase CLI: `supabase db push` (see [DB_MIGRATIONS.md](./DB_MIGRATIONS.md))
 
-**Where to Run:**
-- Supabase Dashboard → SQL Editor
+**Manual Fallback:**
+- Run migrations from `/supabase/migrations/` in order via SQL Editor
 
 **How to Verify:**
-- Table Editor → See all tables listed
-- SQL Editor → Run: `SELECT * FROM users LIMIT 1;` (should work)
+```bash
+cd mobile
+npm run verify:staging
+```
 
 ---
 
@@ -179,13 +224,15 @@ Run policies table by table:
 
 Once all migrations are complete:
 
-1. ✅ Get your Supabase keys:
+1. ✅ Verify setup:
+   ```bash
+   cd mobile
+   npm run verify:staging
+   ```
+
+2. ✅ Get your Supabase keys:
    - Go to Settings → API
    - Copy: Project URL, anon key, service_role key
-
-2. ✅ Add to Vercel:
-   - Go to Vercel → Your Project → Settings → Environment Variables
-   - Add: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`
 
 3. ✅ Test the connection:
    - Your app should now be able to connect to the database
@@ -195,10 +242,17 @@ Once all migrations are complete:
 
 ## Need Help?
 
-If migrations fail:
-1. Check the error message in SQL Editor
-2. Verify you copied the entire file
-3. Make sure you ran them in the correct order
-4. Check Supabase project status (should be "Active")
+**For CLI method:**
+- See [DB_MIGRATIONS.md](./DB_MIGRATIONS.md) for troubleshooting
+- **⚠️ Prerequisite:** Ensure you're linked (`supabase link --project-ref <ref>`) before checking status
+- Check `npm run db:status` / `supabase migration list` to see migration status (requires link)
+- Use `npm run db:diff` / `supabase db diff --linked` to see schema differences (prints to stdout)
+- Verify you're linked to the correct project: `supabase projects list`
+
+**For manual method:**
+- Check the error message in SQL Editor
+- Verify you copied the entire file
+- Make sure you ran them in the correct order
+- Check Supabase project status (should be "Active")
 
 Most errors are harmless (like "already exists") and won't affect functionality.

@@ -123,14 +123,14 @@ describe('ProfileScreen Photo Deletion Data Integrity', () => {
       // Now simulate DB update (this would happen in ProfileScreen)
       const updatedPhotos = photos.filter((_, i) => i !== 0);
       await mockUpsert({
-        user_id: userId,
+        id: userId,
         photos: updatedPhotos,
         completion_pct: updatedPhotos.length >= 1 ? 100 : 50,
       });
 
       // Verify DB update was called
       expect(mockUpsert).toHaveBeenCalledWith({
-        user_id: userId,
+        id: userId,
         photos: updatedPhotos,
         completion_pct: 100,
       });
@@ -188,7 +188,7 @@ describe('ProfileScreen Photo Deletion Data Integrity', () => {
       // Simulate DB update attempt
       try {
         await mockUpsert({
-          user_id: userId,
+          id: userId,
           photos: photos.filter((_, i) => i !== 0),
           completion_pct: 100,
         });

@@ -214,7 +214,7 @@ export default function ProposalCard({
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: '#F8FAFC',
+    backgroundColor: 'BRAND_COLORS.background[50]',
     borderRadius: 12,
     padding: 16,
     marginBottom: 12,
@@ -249,7 +249,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   windowText: {
-    color: '#fff',
+    color: BRAND_COLORS.onPrimary,
     fontSize: 14,
     fontWeight: '600',
   },

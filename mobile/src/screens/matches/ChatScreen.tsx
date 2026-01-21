@@ -579,7 +579,7 @@ export default function ChatScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: BRAND_COLORS.surface,
   },
   messagesList: {
     padding: 16,
@@ -603,7 +603,7 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   ownMessageText: {
-    color: '#fff',
+    color: BRAND_COLORS.onPrimary,
   },
   otherMessageText: {
     color: BRAND_COLORS.text[900],
@@ -630,7 +630,7 @@ const styles = StyleSheet.create({
     padding: 16,
     borderTopWidth: 1,
     borderTopColor: '#E2E8F0',
-    backgroundColor: '#fff',
+    backgroundColor: BRAND_COLORS.surface,
     alignItems: 'flex-end',
   },
   inputWrapper: {
@@ -666,7 +666,7 @@ const styles = StyleSheet.create({
     opacity: 0.5,
   },
   sendButtonText: {
-    color: '#fff',
+    color: BRAND_COLORS.onPrimary,
     fontSize: 16,
     fontWeight: '600',
   },

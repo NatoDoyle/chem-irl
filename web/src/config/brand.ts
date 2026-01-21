@@ -7,19 +7,47 @@ export const BRAND = {
 } as const;
 
 export const BRAND_COLORS = {
-  primary: '#1453FF',
-  primaryHover: '#0B2B8F',
+  // Aquamarine scale
+  aqua: {
+    50: '#E9FFFD',
+    100: '#D1FFFB',
+    200: '#A6FBF4',
+    300: '#74F0E7',
+    400: '#3FE0D6',
+    500: '#0B9A8D',
+    600: '#0A7F74', // PRIMARY
+    700: '#08655D', // PRESSED
+    800: '#064C46',
+    900: '#043533',
+  },
+  // Primary tokens
+  primary: '#0A7F74', // aqua600
+  primaryPressed: '#08655D', // aqua700
+  primarySoft: '#D1FFFB', // aqua100
+  primaryHover: '#08655D', // alias for primaryPressed
+  // Neutral tokens
+  surface: '#FFFFFF', // surface
+  border: '#D7F5F0', // border
   text: {
-    900: '#0F172A',
-    600: '#475569',
+    900: '#0B1220', // ink900
+    700: '#374151', // ink700
+    600: '#6B7280', // ink500 (using 600 key for backward compat)
+    500: '#6B7280', // ink500
+    400: '#94A3B8', // keeping for backward compat
+    100: '#F1F5F9', // keeping for backward compat
   },
-  success: '#059669',
-  warning: '#D97706',
-  danger: '#DC2626',
+  // Semantic tokens
+  success: '#16A34A',
+  warning: '#F59E0B',
+  danger: '#EF4444',
+  info: '#2563EB',
+  // Legacy background structure (for backward compat)
   background: {
-    50: '#F8FAFC',
-    0: '#FFFFFF',
+    50: '#F7FFFE', // bg
+    0: '#FFFFFF', // surface
   },
+  // On-primary text (white for dark primary)
+  onPrimary: '#FFFFFF',
 } as const;
 
 export const BRAND_MESSAGES = {

@@ -34,31 +34,23 @@ export default function ProfileSetupScreen() {
   const [bio, setBio] = useState('');
   const [loading, setLoading] = useState(false);
 
+  // Clamp bio to 200 characters
+  const handleBioChange = (text: string) => {
+    if (text.length <= 200) {
+      setBio(text);
+    } else {
+      setBio(text.substring(0, 200));
+    }
+  };
+
   const handleContinue = async () => {
     const headlineTrimmed = headline.trim();
     const bioTrimmed = bio.trim();
 
-    if (!headlineTrimmed || !bioTrimmed) {
+    // Validate bio max length only (no min length, no required fields)
+    if (bioTrimmed.length > 200) {
       const { title, message } = getErrorAlert(
-        'Please fill in both headline and bio',
-        'Validation Error'
-      );
-      Alert.alert(title, message);
-      return;
-    }
-
-    if (headlineTrimmed.length < 5) {
-      const { title, message } = getErrorAlert(
-        'Headline must be at least 5 characters',
-        'Validation Error'
-      );
-      Alert.alert(title, message);
-      return;
-    }
-
-    if (bioTrimmed.length < 20) {
-      const { title, message } = getErrorAlert(
-        'Bio must be at least 20 characters',
+        'Bio must be 200 characters or less',
         'Validation Error'
       );
       Alert.alert(title, message);
@@ -77,17 +69,20 @@ export default function ProfileSetupScreen() {
         return;
       }
 
-      // Sanitize user inputs before storing
-      const sanitizedHeadline = sanitizeText(headlineTrimmed);
-      const sanitizedBio = sanitizeMultilineText(bioTrimmed);
+      // Sanitize user inputs before storing (set to null if empty)
+      const sanitizedHeadline = headlineTrimmed.length > 0 ? sanitizeText(headlineTrimmed) : null;
+      const sanitizedBio = bioTrimmed.length > 0 ? sanitizeMultilineText(bioTrimmed) : null;
+
+      // Build prompts payload (omit keys if null)
+      const promptsUpdate = {
+        ...(sanitizedHeadline !== null && { headline: sanitizedHeadline }),
+        ...(sanitizedBio !== null && { bio: sanitizedBio }),
+      };
 
       // Upsert profile
       const { error } = await supabase.from('profiles').upsert({
-        user_id: user.id,
-        prompts: {
-          headline: sanitizedHeadline,
-          bio: sanitizedBio,
-        },
+        id: user.id,
+        prompts: promptsUpdate,
         completion_pct: 50, // Will be 100 after photos
       });
 
@@ -100,8 +95,8 @@ export default function ProfileSetupScreen() {
 
       // Track profile setup completion
       trackEvent('profile_completed', {
-        hasHeadline: sanitizedHeadline.length > 0,
-        hasBio: sanitizedBio.length > 0,
+        hasHeadline: !!sanitizedHeadline,
+        hasBio: !!sanitizedBio,
       });
 
       // Navigate to photos screen
@@ -120,7 +115,7 @@ export default function ProfileSetupScreen() {
       <Text style={styles.subtitle}>Tell people about yourself</Text>
 
       <View style={styles.form}>
-        <Text style={styles.label}>Headline</Text>
+        <Text style={styles.label}>Headline (optional)</Text>
         <TextInput
           style={styles.input}
           placeholder="A short, catchy headline"
@@ -131,18 +126,23 @@ export default function ProfileSetupScreen() {
           editable={!loading}
         />
 
-        <Text style={styles.label}>Bio</Text>
-        <TextInput
-          style={[styles.input, styles.textArea]}
-          placeholder="Tell people about yourself..."
-          placeholderTextColor={BRAND_COLORS.text[600]}
-          value={bio}
-          onChangeText={setBio}
-          multiline
-          numberOfLines={4}
-          maxLength={500}
-          editable={!loading}
-        />
+        <View>
+          <View style={styles.labelRow}>
+            <Text style={styles.label}>Bio (optional)</Text>
+            <Text style={styles.charCount}>{bio.length}/200</Text>
+          </View>
+          <TextInput
+            style={[styles.input, styles.textArea]}
+            placeholder="Tell people about yourself..."
+            placeholderTextColor={BRAND_COLORS.text[600]}
+            value={bio}
+            onChangeText={handleBioChange}
+            multiline
+            numberOfLines={4}
+            maxLength={200}
+            editable={!loading}
+          />
+        </View>
 
         <TouchableOpacity
           style={[styles.button, loading && styles.buttonDisabled]}
@@ -150,7 +150,7 @@ export default function ProfileSetupScreen() {
           disabled={loading}
         >
           {loading ? (
-            <ActivityIndicator color="#fff" />
+            <ActivityIndicator color={BRAND_COLORS.onPrimary} />
           ) : (
             <Text style={styles.buttonText}>Continue</Text>
           )}
@@ -163,7 +163,7 @@ export default function ProfileSetupScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: BRAND_COLORS.surface,
   },
   content: {
     padding: 24,
@@ -183,11 +183,20 @@ const styles = StyleSheet.create({
   form: {
     gap: 16,
   },
+  labelRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
   label: {
     fontSize: 16,
     fontWeight: '600',
     color: BRAND_COLORS.text[900],
-    marginBottom: 8,
+  },
+  charCount: {
+    fontSize: 14,
+    color: BRAND_COLORS.text[600],
   },
   input: {
     borderWidth: 1,
@@ -195,7 +204,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     padding: 16,
     fontSize: 16,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: 'BRAND_COLORS.background[50]',
   },
   textArea: {
     height: 120,
@@ -212,7 +221,7 @@ const styles = StyleSheet.create({
     opacity: 0.6,
   },
   buttonText: {
-    color: '#fff',
+    color: BRAND_COLORS.onPrimary,
     fontSize: 18,
     fontWeight: '600',
   },

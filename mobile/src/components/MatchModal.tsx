@@ -73,7 +73,7 @@ const styles = StyleSheet.create({
     padding: 24,
   },
   modal: {
-    backgroundColor: '#fff',
+    backgroundColor: BRAND_COLORS.surface,
     borderRadius: 16,
     padding: 24,
     alignItems: 'center',
@@ -111,7 +111,7 @@ const styles = StyleSheet.create({
     borderColor: BRAND_COLORS.primary,
   },
   buttonText: {
-    color: '#fff',
+    color: BRAND_COLORS.onPrimary,
     fontSize: 18,
     fontWeight: '600',
   },

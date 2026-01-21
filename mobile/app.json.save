@@ -1,0 +1,62 @@
+{
+  "expo": {
+    "name": "Chem IRL",
+    "slug": "chem-irl",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": true,
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#1453FF"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "app.chemirl.mobile"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#1453FF"
+      },
+      "edgeToEdgeEnabled": true,
+      "predictiveBackGestureEnabled": false,
+      "package": "app.chemirl.mobile"
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "scheme": "chemirl",
+    "extra": {
+      "eas": {
+      }
+    },
+    "_comment": "To generate a valid EAS projectId, run: npx eas-cli@latest init (or: npm install -g eas-cli && eas init). Then restart Metro with: npx expo start -c",
+    "plugins": [
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow Chem IRL to access your photos to upload profile pictures."
+        }
+      ],
+      "@react-native-community/datetimepicker",
+      [
+        "@sentry/react-native/expo",
+        {
+          "organization": "<YOUR_SENTRY_ORG>",
+          "project": "<YOUR_SENTRY_PROJECT>"
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/icon.png",
+          "color": "#1453FF",
+          "sounds": []
+        }
+      ]
+    ]
+  }
+}

@@ -36,7 +36,7 @@ export default function AuthGateScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: BRAND_COLORS.surface,
     justifyContent: 'space-between',
     padding: 24,
     paddingTop: 80,
@@ -77,7 +77,7 @@ const styles = StyleSheet.create({
     borderColor: BRAND_COLORS.primary,
   },
   buttonTextPrimary: {
-    color: '#fff',
+    color: BRAND_COLORS.onPrimary,
     fontSize: 18,
     fontWeight: '600',
   },

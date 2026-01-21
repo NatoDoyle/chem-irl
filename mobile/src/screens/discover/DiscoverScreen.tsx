@@ -24,116 +24,144 @@ export default function DiscoverScreen() {
   const [matchModalVisible, setMatchModalVisible] = useState(false);
   const [newMatchId, setNewMatchId] = useState<string | null>(null);
   const [hasMore, setHasMore] = useState(true);
-  const [seenUserIds, setSeenUserIds] = useState<Set<string>>(new Set());
+  // Use ref to track seen user IDs to avoid recreating loadFeed callback
+  const seenUserIdsRef = useRef<Set<string>>(new Set());
+  // Use ref to track feed length to avoid depending on feed.length in loadFeed
+  const feedLengthRef = useRef<number>(0);
+  // Guard to prevent concurrent calls to loadFeed
+  const isLoadingFeedRef = useRef<boolean>(false);
   // Throttle like actions to prevent spam (min 1 second between likes)
   const likeThrottleRef = useRef(createThrottle(() => {}, 1000));
 
-  const loadFeed = useCallback(
-    async (reset: boolean = false) => {
+  // loadFeed is called from:
+  // - Mount effect (initial load)
+  // - User actions: retry button, refresh button, onRefresh callback, handleLoadMore
+  const loadFeed = useCallback(async (reset: boolean = false) => {
+    // Prevent concurrent calls
+    if (isLoadingFeedRef.current) {
+      return;
+    }
+
+    isLoadingFeedRef.current = true;
+
+    try {
       if (reset) {
         setError(null);
         setLoading(true);
         setFeed([]);
+        feedLengthRef.current = 0;
         setHasMore(true);
-        setSeenUserIds(new Set());
+        seenUserIdsRef.current = new Set<string>();
       } else {
         setLoadingMore(true);
       }
 
-      try {
-        const {
-          data: { user },
-        } = await supabase.auth.getUser();
-        if (!user) {
-          setLoading(false);
-          setLoadingMore(false);
-          return;
-        }
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) {
+        return;
+      }
 
-        // Calculate how many new items we need
-        // Since RPC doesn't support offset, we request more items and filter duplicates
-        const currentFeedSize = reset ? 0 : feed.length;
-        const requestLimit = currentFeedSize + FEED_PAGE_SIZE;
+      // Calculate how many new items we need
+      // Since RPC doesn't support offset, we request more items and filter duplicates
+      const currentFeedSize = reset ? 0 : feedLengthRef.current;
+      const requestLimit = currentFeedSize + FEED_PAGE_SIZE;
 
-        const { data, error: rpcError } = await supabase.rpc('get_discovery_feed', {
-          p_viewer: user.id,
-          p_limit: requestLimit,
-        });
+      const { data, error: rpcError } = await supabase.rpc('get_discovery_feed', {
+        p_viewer: user.id,
+        p_limit: requestLimit,
+      });
 
-        if (rpcError) {
-          console.error('Error loading feed:', rpcError);
+      if (rpcError) {
+        console.error('Error loading feed:', rpcError);
+
+        // Check for schema cache / RPC function not found errors
+        const errorMessage = rpcError.message || String(rpcError);
+        const isSchemaError =
+          errorMessage.includes('PGRST202') ||
+          errorMessage.includes('Could not find function') ||
+          errorMessage.includes('does not exist') ||
+          errorMessage.includes('schema cache');
+
+        if (isSchemaError) {
+          setError('Feed temporarily unavailable. Please try again.');
+        } else {
           const { message } = getErrorAlert(rpcError, 'Failed to load discovery feed');
           setError(message);
-          setLoading(false);
-          setLoadingMore(false);
-          return;
         }
-
-        const allItems = (data || []) as FeedItem[];
-
-        // Filter out users we've already seen (due to RPC not supporting offset)
-        const newItems = allItems.filter((item: FeedItem) => !seenUserIds.has(item.user_id));
-
-        // If we got fewer new items than requested, we've reached the end
-        if (newItems.length === 0 || allItems.length < requestLimit) {
-          setHasMore(false);
-        }
-
-        // Update seen user IDs
-        const newSeenIds = new Set(seenUserIds);
-        newItems.forEach((item) => newSeenIds.add(item.user_id));
-        setSeenUserIds(newSeenIds);
-
-        // Batch fetch all profiles at once to avoid N+1 query pattern
-        // Extract user IDs from feed items
-        const userIds = newItems.map((item: FeedItem) => item.user_id);
-
-        // Batch fetch all profiles in a single query
-        let profilesMap = new Map<string, { photos: string[] }>();
-        if (userIds.length > 0) {
-          try {
-            const { data: profilesData } = await supabase
-              .from('profiles')
-              .select('user_id, photos')
-              .in('user_id', userIds);
-
-            // Create a map for O(1) lookup
-            if (profilesData) {
-              profilesMap = new Map(
-                profilesData.map((profile) => [
-                  profile.user_id,
-                  { photos: Array.isArray(profile.photos) ? profile.photos : [] },
-                ])
-              );
-            }
-          } catch (error) {
-            console.error('Error batch fetching profiles:', error);
-            // Continue with empty map - will use fallback below
-          }
-        }
-
-        // Map feed items with photos from batch fetch
-        const feedWithPhotos: FeedItemWithPhotos[] = newItems.map((item: FeedItem) => {
-          const profile = profilesMap.get(item.user_id);
-          return {
-            ...item,
-            photos: profile?.photos ?? item.photos ?? [],
-          };
-        });
-
-        setFeed((prev) => (reset ? feedWithPhotos : [...prev, ...feedWithPhotos]));
-        setError(null);
-      } catch (error: any) {
-        console.error('Error loading feed:', error);
-        const { message } = getErrorAlert(error, 'Failed to load discovery feed');
-        setError(message);
-      } finally {
-        setLoading(false);
-        setLoadingMore(false);
+        return;
       }
-    },
-    [feed.length, seenUserIds]
-  );
+
+      const allItems = (data || []) as FeedItem[];
+
+      // Filter out users we've already seen (due to RPC not supporting offset)
+      // Use ref to access current seenUserIds without recreating callback
+      const newItems = allItems.filter(
+        (item: FeedItem) => !seenUserIdsRef.current.has(item.user_id)
+      );
+
+      // If we got fewer new items than requested, we've reached the end
+      if (newItems.length === 0 || allItems.length < requestLimit) {
+        setHasMore(false);
+      }
+
+      // Update seen user IDs
+      newItems.forEach((item) => seenUserIdsRef.current.add(item.user_id));
+
+      // Batch fetch all profiles at once to avoid N+1 query pattern
+      // Extract user IDs from feed items
+      const userIds = newItems.map((item: FeedItem) => item.user_id);
+
+      // Batch fetch all profiles in a single query
+      let profilesMap = new Map<string, { photos: string[] }>();
+      if (userIds.length > 0) {
+        try {
+          const { data: profilesData } = await supabase
+            .from('profiles')
+            .select('user_id, photos')
+            .in('user_id', userIds);
+
+          // Create a map for O(1) lookup
+          if (profilesData) {
+            profilesMap = new Map(
+              profilesData.map((profile) => [
+                profile.user_id,
+                { photos: Array.isArray(profile.photos) ? profile.photos : [] },
+              ])
+            );
+          }
+        } catch (error) {
+          console.error('Error batch fetching profiles:', error);
+          // Continue with empty map - will use fallback below
+        }
+      }
+
+      // Map feed items with photos from batch fetch
+      const feedWithPhotos: FeedItemWithPhotos[] = newItems.map((item: FeedItem) => {
+        const profile = profilesMap.get(item.user_id);
+        return {
+          ...item,
+          photos: profile?.photos ?? item.photos ?? [],
+        };
+      });
+
+      setFeed((prev) => {
+        const newFeed = reset ? feedWithPhotos : [...prev, ...feedWithPhotos];
+        feedLengthRef.current = newFeed.length;
+        return newFeed;
+      });
+      setError(null);
+    } catch (error: any) {
+      console.error('Error loading feed:', error);
+      const { message } = getErrorAlert(error, 'Failed to load discovery feed');
+      setError(message);
+    } finally {
+      setLoading(false);
+      setLoadingMore(false);
+      isLoadingFeedRef.current = false;
+    }
+  }, []);
 
   useEffect(() => {
     loadFeed(true);
@@ -269,7 +297,7 @@ export default function DiscoverScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: BRAND_COLORS.surface,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -292,7 +320,7 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   refreshButtonText: {
-    color: '#fff',
+    color: BRAND_COLORS.onPrimary,
     fontSize: 16,
     fontWeight: '600',
   },
@@ -318,7 +346,7 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   retryButtonText: {
-    color: '#fff',
+    color: BRAND_COLORS.onPrimary,
     fontSize: 16,
     fontWeight: '600',
   },

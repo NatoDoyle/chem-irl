@@ -26,6 +26,20 @@ jest.mock('@react-native-async-storage/async-storage', () => ({
   setItem: jest.fn(),
   removeItem: jest.fn(),
 }));
+jest.mock('expo-constants', () => ({
+  default: {
+    expoConfig: {
+      extra: {
+        eas: {
+          projectId: 'test-project-id',
+        },
+      },
+    },
+    easConfig: {
+      projectId: 'test-project-id',
+    },
+  },
+}));
 
 // eslint-disable-next-line import/first
 import { handleNotificationTap } from '../notifications';
