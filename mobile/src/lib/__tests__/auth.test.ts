@@ -9,6 +9,7 @@ jest.mock('../supabase/client', () => ({
       verifyOtp: jest.fn(),
       updateUser: jest.fn(),
       getUser: jest.fn(),
+      getSession: jest.fn(),
     },
     from: jest.fn(),
   },
@@ -61,6 +62,9 @@ describe('Auth Functions', () => {
     it('should verify email OTP code', async () => {
       const mockSession = { access_token: 'token', refresh_token: 'refresh' };
       jest
+        .spyOn(supabase.auth, 'getSession')
+        .mockResolvedValue({ data: { session: null }, error: null } as any);
+      jest
         .spyOn(supabase.auth, 'verifyOtp')
         .mockResolvedValue({ data: { session: mockSession }, error: null } as any);
 
@@ -79,6 +83,11 @@ describe('Auth Functions', () => {
   describe('completeSignup', () => {
     it('should update profile with full_name and signup_completed', async () => {
       const mockUser = { id: 'user-123' };
+      const mockSelect = jest.fn().mockReturnValue({
+        eq: jest.fn().mockReturnValue({
+          maybeSingle: jest.fn().mockResolvedValue({ data: null, error: null }),
+        }),
+      });
       const mockUpsert = jest.fn().mockResolvedValue({ error: null });
 
       jest.spyOn(supabase.auth, 'getUser').mockResolvedValue({
@@ -86,12 +95,14 @@ describe('Auth Functions', () => {
         error: null,
       } as any);
       jest.spyOn(supabase, 'from').mockReturnValue({
+        select: mockSelect,
         upsert: mockUpsert,
       } as any);
 
       const result = await completeSignup('John Doe');
 
       expect(supabase.from).toHaveBeenCalledWith('profiles');
+      expect(mockSelect).toHaveBeenCalledWith('full_name');
       expect(mockUpsert).toHaveBeenCalledWith({
         id: 'user-123',
         full_name: 'John Doe',
