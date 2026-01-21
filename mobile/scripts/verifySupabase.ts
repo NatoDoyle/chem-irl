@@ -95,12 +95,14 @@ async function verifyTables(): Promise<void> {
         results.push({
           name: 'Table: profiles.full_name column',
           passed: false,
-          error: 'Column full_name does not exist',
+          error:
+            'Column full_name does not exist. Run migrations via Supabase CLI: supabase db push (see DB_MIGRATIONS.md)',
         });
         results.push({
           name: 'Table: profiles.signup_completed column',
           passed: false,
-          error: 'Column signup_completed does not exist',
+          error:
+            'Column signup_completed does not exist. Run migrations via Supabase CLI: supabase db push (see DB_MIGRATIONS.md)',
         });
       } else {
         // Columns exist (error might be RLS or other)
@@ -129,12 +131,16 @@ async function verifyTables(): Promise<void> {
     results.push({
       name: 'Table: profiles.full_name column',
       passed: false,
-      error: err.message || 'Could not verify column exists',
+      error:
+        (err.message || 'Could not verify column exists') +
+        '. Run migrations via Supabase CLI: supabase db push (see DB_MIGRATIONS.md)',
     });
     results.push({
       name: 'Table: profiles.signup_completed column',
       passed: false,
-      error: err.message || 'Could not verify column exists',
+      error:
+        (err.message || 'Could not verify column exists') +
+        '. Run migrations via Supabase CLI: supabase db push (see DB_MIGRATIONS.md)',
     });
   }
 }
@@ -296,7 +302,8 @@ async function verifyTrigger(): Promise<void> {
         results.push({
           name: 'Trigger: on_auth_user_created (auto-create profiles)',
           passed: false,
-          error: 'Function handle_new_user does not exist - trigger migration not run',
+          error:
+            'Function handle_new_user does not exist - run migrations via Supabase CLI: supabase db push (see DB_MIGRATIONS.md)',
         });
       } else {
         // Function exists (error is likely about parameters, which is expected)
@@ -315,7 +322,7 @@ async function verifyTrigger(): Promise<void> {
             name: 'Trigger: on_auth_user_created (auto-create profiles)',
             passed: false,
             error:
-              'Profiles table missing required columns - trigger migration may not be complete',
+              'Profiles table missing required columns - run migrations via Supabase CLI: supabase db push (see DB_MIGRATIONS.md)',
           });
         } else {
           // Function exists and table structure looks correct
@@ -340,14 +347,17 @@ async function verifyTrigger(): Promise<void> {
       results.push({
         name: 'Trigger: on_auth_user_created (auto-create profiles)',
         passed: false,
-        error: 'Function handle_new_user does not exist - trigger migration not run',
+        error:
+          'Function handle_new_user does not exist - run migrations via Supabase CLI: supabase db push (see DB_MIGRATIONS.md)',
       });
     } else {
       // Other error - assume function exists but we can't verify trigger directly
       results.push({
         name: 'Trigger: on_auth_user_created (auto-create profiles)',
         passed: false,
-        error: err.message || 'Could not verify trigger exists - check migration was run',
+        error:
+          (err.message || 'Could not verify trigger exists') +
+          ' - run migrations via Supabase CLI: supabase db push (see DB_MIGRATIONS.md)',
       });
     }
   }

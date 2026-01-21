@@ -70,7 +70,7 @@ const styles = StyleSheet.create({
     flex: 1,
     borderRadius: 16,
     overflow: 'hidden',
-    backgroundColor: '#fff',
+    backgroundColor: BRAND_COLORS.surface,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.25,
@@ -84,7 +84,7 @@ const styles = StyleSheet.create({
   },
   overlay: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: BRAND_COLORS.surface,
     padding: 16,
     justifyContent: 'space-between',
   },
@@ -158,7 +158,7 @@ const styles = StyleSheet.create({
     backgroundColor: BRAND_COLORS.primary,
   },
   likeButtonText: {
-    color: '#fff',
+    color: BRAND_COLORS.onPrimary,
     fontSize: 16,
     fontWeight: '600',
   },

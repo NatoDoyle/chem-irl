@@ -9,7 +9,13 @@ import {
   Alert,
 } from 'react-native';
 import { useRoute } from '@react-navigation/native';
-import { verifyEmailOTP, sendEmailOTP, completeSignup } from '../../lib/auth';
+import {
+  verifyEmailOTP,
+  sendEmailOTP,
+  completeSignup,
+  normalizeEmail,
+  normalizeOtpToken,
+} from '../../lib/auth';
 import { getErrorAlert } from '../../lib/errors';
 import { BRAND_COLORS } from '../../config/brand';
 
@@ -25,7 +31,11 @@ export default function EmailCodeVerifyScreen() {
   const [code, setCode] = useState(['', '', '', '', '', '']);
   const [loading, setLoading] = useState(false);
   const [resending, setResending] = useState(false);
+  const [resendCooldown, setResendCooldown] = useState(0);
+  const [showResendMessage, setShowResendMessage] = useState(false);
   const inputRefs = useRef<(TextInput | null)[]>([]);
+  const resendCooldownRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const hideMessageTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     // Focus first input on mount
@@ -74,8 +84,10 @@ export default function EmailCodeVerifyScreen() {
   };
 
   const handleVerify = async (token?: string) => {
-    const tokenToVerify = token || code.join('');
-    if (tokenToVerify.length !== 6) {
+    const rawToken = token || code.join('');
+    const normalizedToken = normalizeOtpToken(rawToken);
+
+    if (normalizedToken.length !== 6) {
       const { title, message } = getErrorAlert(
         new Error('Please enter the 6-digit code'),
         'Validation Error'
@@ -84,9 +96,11 @@ export default function EmailCodeVerifyScreen() {
       return;
     }
 
+    const normalizedEmail = normalizeEmail(email);
+
     setLoading(true);
     try {
-      const result = await verifyEmailOTP(email, tokenToVerify, isSignup);
+      const result = await verifyEmailOTP(normalizedEmail, normalizedToken, isSignup);
 
       if (!result.success) {
         const { title, message } = getErrorAlert(
@@ -124,16 +138,83 @@ export default function EmailCodeVerifyScreen() {
   };
 
   const handleResend = async () => {
+    if (resendCooldown > 0) {
+      return;
+    }
+
+    // Guard: Clear any existing timers before starting new ones
+    if (resendCooldownRef.current) {
+      clearInterval(resendCooldownRef.current);
+      resendCooldownRef.current = null;
+    }
+    if (hideMessageTimeoutRef.current) {
+      clearTimeout(hideMessageTimeoutRef.current);
+      hideMessageTimeoutRef.current = null;
+    }
+
     setResending(true);
     try {
-      const result = await sendEmailOTP(email, isSignup);
+      const normalizedEmail = normalizeEmail(email);
+      const result = await sendEmailOTP(normalizedEmail, isSignup);
+
       if (!result.success) {
-        const { title, message } = getErrorAlert(
-          new Error(result.error || 'Failed to resend code'),
-          'Error'
-        );
-        Alert.alert(title, message);
+        // Handle rate limit errors (429)
+        if (result.isRateLimit) {
+          // Extend cooldown to 120 seconds for rate limit
+          const extendedCooldown = 120;
+          setResendCooldown(extendedCooldown);
+          let remaining = extendedCooldown;
+
+          resendCooldownRef.current = setInterval(() => {
+            remaining -= 1;
+            setResendCooldown(remaining);
+            if (remaining <= 0) {
+              if (resendCooldownRef.current) {
+                clearInterval(resendCooldownRef.current);
+                resendCooldownRef.current = null;
+              }
+            }
+          }, 1000);
+
+          const { title, message } = getErrorAlert(
+            new Error('Too many requests. Please wait before requesting another code.'),
+            'Rate Limit'
+          );
+          Alert.alert(title, message);
+        } else {
+          const { title, message } = getErrorAlert(
+            new Error(result.error || 'Failed to resend code'),
+            'Error'
+          );
+          Alert.alert(title, message);
+        }
+        return;
       }
+
+      // Clear code input and show message
+      setCode(['', '', '', '', '', '']);
+      setShowResendMessage(true);
+      inputRefs.current[0]?.focus();
+
+      // Start 60-second cooldown
+      setResendCooldown(60);
+      let remaining = 60;
+      resendCooldownRef.current = setInterval(() => {
+        remaining -= 1;
+        setResendCooldown(remaining);
+        if (remaining <= 0) {
+          if (resendCooldownRef.current) {
+            clearInterval(resendCooldownRef.current);
+            resendCooldownRef.current = null;
+          }
+        }
+      }, 1000);
+
+      // Hide message after 5 seconds
+      hideMessageTimeoutRef.current = setTimeout(() => {
+        setShowResendMessage(false);
+        hideMessageTimeoutRef.current = null;
+      }, 5000);
     } catch (error: any) {
       const { title, message } = getErrorAlert(error, 'Error');
       Alert.alert(title, message);
@@ -141,6 +222,20 @@ export default function EmailCodeVerifyScreen() {
       setResending(false);
     }
   };
+
+  useEffect(() => {
+    return () => {
+      // Cleanup: Clear both interval and timeout on unmount
+      if (resendCooldownRef.current) {
+        clearInterval(resendCooldownRef.current);
+        resendCooldownRef.current = null;
+      }
+      if (hideMessageTimeoutRef.current) {
+        clearTimeout(hideMessageTimeoutRef.current);
+        hideMessageTimeoutRef.current = null;
+      }
+    };
+  }, []);
 
   return (
     <View style={styles.container}>
@@ -175,15 +270,29 @@ export default function EmailCodeVerifyScreen() {
           disabled={loading || code.some((c) => !c)}
         >
           {loading ? (
-            <ActivityIndicator color="#fff" />
+            <ActivityIndicator color={BRAND_COLORS.onPrimary} />
           ) : (
             <Text style={styles.buttonText}>Verify</Text>
           )}
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.resendButton} onPress={handleResend} disabled={resending}>
+        {showResendMessage && (
+          <Text style={styles.resendMessage}>
+            Use the most recent code; older codes won't work.
+          </Text>
+        )}
+
+        <TouchableOpacity
+          style={styles.resendButton}
+          onPress={handleResend}
+          disabled={resending || resendCooldown > 0}
+        >
           <Text style={styles.resendText}>
-            {resending ? 'Resending...' : "Didn't receive code? Resend"}
+            {resending
+              ? 'Resending...'
+              : resendCooldown > 0
+                ? `Resend code (${resendCooldown}s)`
+                : "Didn't receive code? Resend"}
           </Text>
         </TouchableOpacity>
       </View>
@@ -194,7 +303,7 @@ export default function EmailCodeVerifyScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: BRAND_COLORS.surface,
     padding: 24,
     paddingTop: 80,
   },
@@ -226,7 +335,7 @@ const styles = StyleSheet.create({
     padding: 16,
     fontSize: 24,
     textAlign: 'center',
-    backgroundColor: '#F8FAFC',
+    backgroundColor: 'BRAND_COLORS.background[50]',
     fontWeight: '600',
   },
   codeInputFilled: {
@@ -243,9 +352,16 @@ const styles = StyleSheet.create({
     opacity: 0.6,
   },
   buttonText: {
-    color: '#fff',
+    color: BRAND_COLORS.onPrimary,
     fontSize: 18,
     fontWeight: '600',
+  },
+  resendMessage: {
+    color: BRAND_COLORS.text[600],
+    fontSize: 14,
+    textAlign: 'center',
+    marginBottom: 8,
+    fontStyle: 'italic',
   },
   resendButton: {
     alignItems: 'center',

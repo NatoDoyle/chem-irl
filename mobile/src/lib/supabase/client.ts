@@ -7,6 +7,11 @@ import 'react-native-get-random-values';
 const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL!;
 const supabaseKey = process.env.EXPO_PUBLIC_SUPABASE_KEY!;
 
+// Log Supabase URL for debugging (no keys)
+if (__DEV__) {
+  console.log(`🔗 Supabase URL: ${supabaseUrl}`);
+}
+
 /**
  * LargeSecureStore - Handles values larger than SecureStore's 2048 byte limit
  *

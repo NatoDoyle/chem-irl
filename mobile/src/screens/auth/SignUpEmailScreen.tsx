@@ -8,21 +8,28 @@ import {
   ActivityIndicator,
   Alert,
 } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { AuthStackParamList } from '../../navigation/AuthNavigator';
-import { sendEmailOTP } from '../../lib/auth';
+import { sendEmailOTP, normalizeEmail, emailExists } from '../../lib/auth';
 import { getErrorAlert } from '../../lib/errors';
 import { BRAND_COLORS } from '../../config/brand';
 import { sanitizeText } from '../../lib/sanitize';
 
 type SignUpEmailScreenNavigationProp = NativeStackNavigationProp<AuthStackParamList, 'SignUpEmail'>;
 
+type RouteParams = {
+  prefillEmail?: string;
+};
+
 export default function SignUpEmailScreen() {
   const navigation = useNavigation<SignUpEmailScreenNavigationProp>();
+  const route = useRoute();
+  const { prefillEmail } = (route.params || {}) as RouteParams;
   const [fullName, setFullName] = useState('');
-  const [email, setEmail] = useState('');
+  const [email, setEmail] = useState(prefillEmail || '');
   const [loading, setLoading] = useState(false);
+  const [checkingEmail, setCheckingEmail] = useState(false);
 
   const handleContinue = async () => {
     const nameTrimmed = fullName.trim();
@@ -57,9 +64,43 @@ export default function SignUpEmailScreen() {
       return;
     }
 
+    const normalizedEmail = normalizeEmail(emailTrimmed);
+
+    // Check if email already exists before proceeding with signup
+    setCheckingEmail(true);
+    try {
+      const emailCheckResult = await emailExists(normalizedEmail);
+
+      if (!emailCheckResult.success) {
+        // If check fails (network/RPC error), allow continuing with signup but log error
+        console.log(
+          `[auth] emailExists check failed: ${emailCheckResult.error}, allowing signup to proceed`
+        );
+        // Continue with signup flow (fallback behavior)
+      } else if (emailCheckResult.exists === true) {
+        // Email already exists, redirect to sign in
+        Alert.alert('Account already exists', 'Please sign in instead.', [
+          {
+            text: 'OK',
+            onPress: () => {
+              navigation.navigate('LoginEmail', { prefillEmail: normalizedEmail });
+            },
+          },
+        ]);
+        setCheckingEmail(false);
+        return;
+      }
+      // Email doesn't exist, proceed with signup
+    } catch (error: any) {
+      // If check throws, allow continuing with signup (fallback behavior)
+      console.log(`[auth] emailExists check error: ${error.message}, allowing signup to proceed`);
+    } finally {
+      setCheckingEmail(false);
+    }
+
     setLoading(true);
     try {
-      const result = await sendEmailOTP(emailTrimmed, true);
+      const result = await sendEmailOTP(normalizedEmail, true);
 
       if (!result.success) {
         const { title, message } = getErrorAlert(
@@ -72,7 +113,7 @@ export default function SignUpEmailScreen() {
 
       // Store name in route params to pass through flow
       navigation.navigate('EmailCodeVerify', {
-        email: emailTrimmed,
+        email: normalizedEmail,
         fullName: sanitizeText(nameTrimmed),
         isSignup: true,
       });
@@ -114,12 +155,12 @@ export default function SignUpEmailScreen() {
         />
 
         <TouchableOpacity
-          style={[styles.button, loading && styles.buttonDisabled]}
+          style={[styles.button, (loading || checkingEmail) && styles.buttonDisabled]}
           onPress={handleContinue}
-          disabled={loading}
+          disabled={loading || checkingEmail}
         >
-          {loading ? (
-            <ActivityIndicator color="#fff" />
+          {loading || checkingEmail ? (
+            <ActivityIndicator color={BRAND_COLORS.onPrimary} />
           ) : (
             <Text style={styles.buttonText}>Continue</Text>
           )}
@@ -132,7 +173,7 @@ export default function SignUpEmailScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: BRAND_COLORS.surface,
     padding: 24,
     paddingTop: 80,
   },
@@ -157,7 +198,7 @@ const styles = StyleSheet.create({
     padding: 16,
     fontSize: 16,
     marginBottom: 24,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: 'BRAND_COLORS.background[50]',
   },
   button: {
     backgroundColor: BRAND_COLORS.primary,
@@ -169,7 +210,7 @@ const styles = StyleSheet.create({
     opacity: 0.6,
   },
   buttonText: {
-    color: '#fff',
+    color: BRAND_COLORS.onPrimary,
     fontSize: 18,
     fontWeight: '600',
   },

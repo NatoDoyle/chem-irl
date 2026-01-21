@@ -4,24 +4,74 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
-  ScrollView,
   Alert,
   ActivityIndicator,
+  Platform,
 } from 'react-native';
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
+import * as FileSystem from 'expo-file-system';
 import { compressImage } from '../../lib/imageCompression';
 import { trackEvent } from '../../lib/analytics';
 import { supabase } from '../../lib/supabase/client';
 import { BRAND_COLORS } from '../../config/brand';
-import { useNavigation } from '@react-navigation/native';
+import BaseOnboardingScreen from '../../components/onboarding/BaseOnboardingScreen';
+import { markStepResolved } from '../../lib/onboarding/flowGuard';
 
 type PhotoUploadState = 'idle' | 'uploading' | 'success' | 'error';
 
+/**
+ * Convert a local file URI to a Blob, handling Android file:// URIs safely
+ * On Android, file:// URIs cannot be fetched directly, so we convert them to content:// URIs
+ */
+async function uriToBlob(uri: string): Promise<Blob> {
+  let fetchUri = uri;
+
+  // On Android, convert file:// URIs to content:// URIs for fetch compatibility
+  if (Platform.OS === 'android' && uri.startsWith('file://')) {
+    try {
+      const contentUri = await FileSystem.getContentUriAsync(uri);
+      if (!contentUri) {
+        throw new Error(`getContentUriAsync returned null. Original URI: ${uri}`);
+      }
+      fetchUri = contentUri;
+      if (__DEV__) {
+        console.log('[uriToBlob] Android: converted file:// to content:// URI:', fetchUri);
+      }
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      throw new Error(
+        `Failed to convert file:// URI to content:// URI on Android. Original URI: ${uri}. Error: ${errorMessage}`
+      );
+    }
+  }
+
+  if (__DEV__) {
+    const preview = typeof fetchUri === 'string' ? fetchUri.slice(0, 100) : String(fetchUri);
+    console.log('[uriToBlob] Fetching blob from URI:', preview);
+  }
+
+  const response = await fetch(fetchUri);
+  if (!response.ok) {
+    throw new Error(`Failed to fetch image: ${response.status} ${response.statusText}`);
+  }
+  return response.blob();
+}
+
+// Helper to check if two arrays are equal (by reference and content)
+function arraysEqual<T>(a: T[], b: T[]): boolean {
+  if (a === b) return true;
+  if (a.length !== b.length) return false;
+  for (let i = 0; i < a.length; i++) {
+    if (a[i] !== b[i]) return false;
+  }
+  return true;
+}
+
 export default function PhotosScreen() {
-  const navigation = useNavigation();
   const [photos, setPhotos] = useState<string[]>([]);
   const [uploading, setUploading] = useState(false);
+  const [saving, setSaving] = useState(false);
   // Track upload state per photo (by index)
   const [photoUploadStates, setPhotoUploadStates] = useState<Map<number, PhotoUploadState>>(
     new Map()
@@ -43,11 +93,12 @@ export default function PhotosScreen() {
       const { data: profile } = await supabase
         .from('profiles')
         .select('photos')
-        .eq('user_id', user.id)
-        .single();
+        .eq('id', user.id)
+        .maybeSingle();
 
       if (profile?.photos && Array.isArray(profile.photos)) {
-        setPhotos(profile.photos as string[]);
+        const profilePhotos = profile.photos as string[];
+        setPhotos((prev) => (arraysEqual(prev, profilePhotos) ? prev : profilePhotos));
       }
     } catch (error) {
       // Silently fail - user might not have a profile yet
@@ -63,7 +114,7 @@ export default function PhotosScreen() {
     }
 
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      mediaTypes: ['images'],
       allowsEditing: true,
       aspect: [4, 5],
       quality: 0.8,
@@ -97,9 +148,8 @@ export default function PhotosScreen() {
       // Compress image before upload
       const compressedUri = await compressImage(uri);
 
-      // Convert compressed URI to blob
-      const response = await fetch(compressedUri);
-      const blob = await response.blob();
+      // Convert compressed URI to blob (Android-safe)
+      const blob = await uriToBlob(compressedUri);
       // Use compressed URI for filename extension
       const fileExt = 'jpg'; // Always JPEG after compression
       const fileName = `${user.id}/${Date.now()}.${fileExt}`;
@@ -108,7 +158,7 @@ export default function PhotosScreen() {
       const { error: uploadError } = await supabase.storage
         .from('profiles')
         .upload(fileName, blob, {
-          contentType: `image/${fileExt}`,
+          contentType: 'image/jpeg',
           upsert: false,
         });
 
@@ -130,8 +180,8 @@ export default function PhotosScreen() {
       const { data: profileData } = await supabase
         .from('profiles')
         .select('photos')
-        .eq('user_id', user.id)
-        .single();
+        .eq('id', user.id)
+        .maybeSingle();
 
       const existingPhotos = (profileData?.photos as string[]) || [];
 
@@ -151,19 +201,26 @@ export default function PhotosScreen() {
       const updatedPhotos = [...existingPhotos, publicUrl].slice(0, 6);
 
       const { error: updateError } = await supabase.from('profiles').upsert({
-        user_id: user.id,
+        id: user.id,
         photos: updatedPhotos,
         completion_pct: updatedPhotos.length >= 1 ? 100 : 50,
       });
 
       if (updateError) {
+        console.error('[PhotosScreen] Supabase upsert error:', {
+          error: updateError.message,
+          code: (updateError as any).code,
+          details: (updateError as any).details,
+          hint: (updateError as any).hint,
+          photosCount: updatedPhotos.length,
+        });
         setPhotoUploadStates((prev) => new Map(prev).set(tempIndex, 'error'));
         Alert.alert('Error', updateError.message);
         setUploading(false);
         return;
       }
 
-      setPhotos(updatedPhotos);
+      setPhotos((prev) => (arraysEqual(prev, updatedPhotos) ? prev : updatedPhotos));
       // Track photo upload
       trackEvent('photo_uploaded', {
         photoCount: updatedPhotos.length,
@@ -212,22 +269,36 @@ export default function PhotosScreen() {
   };
 
   const handleContinue = async () => {
-    if (photos.length === 0) {
-      Alert.alert('Photo required', 'Please add at least one photo to continue');
-      return;
+    if (photos.length < 2) {
+      Alert.alert('Photos required', 'Please add at least 2 photos to continue');
+      return { success: false, error: 'Minimum 2 photos required' };
     }
 
-    // Profile is complete, app will automatically show main navigator
-    // on next render due to profile completion check
-    // Force a refresh by navigating back to root
-    navigation.getParent()?.goBack();
+    setSaving(true);
+    try {
+      // Photos are already saved during upload, just mark step as resolved
+      const result = await markStepResolved('profile_photos', 'completed');
+      if (!result.success) {
+        return {
+          success: false,
+          error: result.error?.message || 'Failed to mark step as complete',
+        };
+      }
+      return { success: true };
+    } catch (error: any) {
+      return { success: false, error: error.message || 'Unknown error' };
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <Text style={styles.title}>Add Photos</Text>
-      <Text style={styles.subtitle}>Add at least one photo to your profile</Text>
-
+    <BaseOnboardingScreen
+      stepId="profile_photos"
+      onContinue={handleContinue}
+      canContinue={photos.length >= 2}
+      loading={saving}
+    >
       <View style={styles.photosContainer}>
         {photos.map((photo, index) => {
           const uploadState = photoUploadStates.get(index);
@@ -241,7 +312,7 @@ export default function PhotosScreen() {
               />
               {uploadState === 'uploading' && (
                 <View style={styles.uploadOverlay}>
-                  <ActivityIndicator color="#fff" size="small" />
+                  <ActivityIndicator color={BRAND_COLORS.onPrimary} size="small" />
                 </View>
               )}
               {uploadState === 'success' && (
@@ -270,37 +341,22 @@ export default function PhotosScreen() {
           </TouchableOpacity>
         )}
       </View>
-
-      <TouchableOpacity
-        style={[styles.button, photos.length === 0 && styles.buttonDisabled]}
-        onPress={handleContinue}
-        disabled={photos.length === 0 || uploading}
-      >
-        <Text style={styles.buttonText}>Continue</Text>
-      </TouchableOpacity>
-    </ScrollView>
+      {photos.length < 2 && (
+        <Text style={styles.requirementText}>
+          Add at least {2 - photos.length} more photo{2 - photos.length > 1 ? 's' : ''} to continue
+        </Text>
+      )}
+    </BaseOnboardingScreen>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
-  },
-  content: {
-    padding: 24,
-    paddingTop: 60,
-  },
-  title: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    color: BRAND_COLORS.text[900],
-    marginBottom: 8,
-  },
-  subtitle: {
-    fontSize: 16,
+  requirementText: {
+    fontSize: 14,
     color: BRAND_COLORS.text[600],
-    marginBottom: 32,
+    textAlign: 'center',
+    marginTop: 16,
+    fontStyle: 'italic',
   },
   photosContainer: {
     flexDirection: 'row',
@@ -337,17 +393,17 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   checkmark: {
-    color: '#fff',
+    color: BRAND_COLORS.onPrimary,
     fontSize: 32,
     fontWeight: 'bold',
   },
   errorText: {
-    color: '#fff',
+    color: BRAND_COLORS.onPrimary,
     fontSize: 24,
     fontWeight: 'bold',
   },
   retryButton: {
-    backgroundColor: '#fff',
+    backgroundColor: BRAND_COLORS.surface,
     paddingHorizontal: 12,
     paddingVertical: 4,
     borderRadius: 4,
@@ -366,25 +422,11 @@ const styles = StyleSheet.create({
     borderStyle: 'dashed',
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#F8FAFC',
+    backgroundColor: 'BRAND_COLORS.background[50]',
   },
   addPhotoText: {
     color: BRAND_COLORS.primary,
     fontSize: 14,
-    fontWeight: '600',
-  },
-  button: {
-    backgroundColor: BRAND_COLORS.primary,
-    paddingVertical: 16,
-    borderRadius: 8,
-    alignItems: 'center',
-  },
-  buttonDisabled: {
-    opacity: 0.5,
-  },
-  buttonText: {
-    color: '#fff',
-    fontSize: 18,
     fontWeight: '600',
   },
 });

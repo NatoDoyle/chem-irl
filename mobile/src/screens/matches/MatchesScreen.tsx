@@ -386,7 +386,7 @@ export default function MatchesScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: BRAND_COLORS.surface,
   },
   list: {
     padding: 16,
@@ -394,7 +394,7 @@ const styles = StyleSheet.create({
   matchCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F8FAFC',
+    backgroundColor: 'BRAND_COLORS.background[50]',
     borderRadius: 12,
     padding: 16,
     marginBottom: 12,
@@ -444,7 +444,7 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   refreshButtonText: {
-    color: '#fff',
+    color: BRAND_COLORS.onPrimary,
     fontSize: 16,
     fontWeight: '600',
   },
@@ -470,7 +470,7 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   retryButtonText: {
-    color: '#fff',
+    color: BRAND_COLORS.onPrimary,
     fontSize: 16,
     fontWeight: '600',
   },

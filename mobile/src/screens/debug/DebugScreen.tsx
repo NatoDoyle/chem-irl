@@ -13,13 +13,27 @@ import { supabase } from '../../lib/supabase/client';
 import { BRAND_COLORS } from '../../config/brand';
 import Constants from 'expo-constants';
 
+type RowStatus = 'checking' | 'exists' | 'missing' | 'error';
+
+interface RowStatusInfo {
+  status: RowStatus;
+  errorCode?: string;
+  errorMessage?: string;
+}
+
 export default function DebugScreen() {
   const [userId, setUserId] = useState<string | null>(null);
   const [userEmail, setUserEmail] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [usersRowStatus, setUsersRowStatus] = useState<RowStatusInfo>({ status: 'checking' });
+  const [profilesRowStatus, setProfilesRowStatus] = useState<RowStatusInfo>({ status: 'checking' });
 
   useEffect(() => {
-    loadUserInfo();
+    if (__DEV__) {
+      loadUserInfo();
+      checkUsersRow();
+      checkProfilesRow();
+    }
   }, []);
 
   const loadUserInfo = async () => {
@@ -33,6 +47,86 @@ export default function DebugScreen() {
       }
     } catch (error) {
       console.error('Error loading user info:', error);
+    }
+  };
+
+  const checkUsersRow = async () => {
+    if (!__DEV__) return;
+
+    setUsersRowStatus({ status: 'checking' });
+
+    try {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) {
+        setUsersRowStatus({ status: 'error', errorMessage: 'Not authenticated' });
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from('users')
+        .select('user_id')
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+      if (error) {
+        setUsersRowStatus({
+          status: 'error',
+          errorCode: (error as any).code,
+          errorMessage: error.message,
+        });
+      } else if (data) {
+        setUsersRowStatus({ status: 'exists' });
+      } else {
+        setUsersRowStatus({ status: 'missing' });
+      }
+    } catch (error: any) {
+      console.error('[DebugScreen] Error checking users row:', error);
+      setUsersRowStatus({
+        status: 'error',
+        errorMessage: error.message || 'Unknown error',
+      });
+    }
+  };
+
+  const checkProfilesRow = async () => {
+    if (!__DEV__) return;
+
+    setProfilesRowStatus({ status: 'checking' });
+
+    try {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) {
+        setProfilesRowStatus({ status: 'error', errorMessage: 'Not authenticated' });
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('id', user.id)
+        .maybeSingle();
+
+      if (error) {
+        setProfilesRowStatus({
+          status: 'error',
+          errorCode: (error as any).code,
+          errorMessage: error.message,
+        });
+      } else if (data) {
+        setProfilesRowStatus({ status: 'exists' });
+      } else {
+        setProfilesRowStatus({ status: 'missing' });
+      }
+    } catch (error: any) {
+      console.error('[DebugScreen] Error checking profiles row:', error);
+      setProfilesRowStatus({
+        status: 'error',
+        errorMessage: error.message || 'Unknown error',
+      });
     }
   };
 
@@ -79,7 +173,7 @@ export default function DebugScreen() {
               }
 
               const { error } = await supabase.from('profiles').upsert({
-                user_id: user.id,
+                id: user.id,
                 completion_pct: 0,
               });
 
@@ -138,7 +232,7 @@ export default function DebugScreen() {
       const { data: profile, error } = await supabase
         .from('profiles')
         .select('*')
-        .eq('user_id', user.id)
+        .eq('id', user.id)
         .single();
 
       if (error) {
@@ -187,6 +281,50 @@ export default function DebugScreen() {
               : 'N/A'}
           </Text>
         </View>
+        {__DEV__ && (
+          <>
+            <View style={styles.infoRow}>
+              <Text style={styles.infoLabel}>public.users row:</Text>
+              <Text style={styles.infoValue}>
+                {usersRowStatus.status === 'checking'
+                  ? 'Checking...'
+                  : usersRowStatus.status === 'exists'
+                    ? '✅ Exists'
+                    : usersRowStatus.status === 'missing'
+                      ? '❌ Missing'
+                      : `⚠️ Error: ${usersRowStatus.errorCode || 'N/A'}`}
+              </Text>
+            </View>
+            {usersRowStatus.status === 'error' && (
+              <View style={styles.infoRow}>
+                <Text style={styles.infoLabel}>users error:</Text>
+                <Text style={styles.infoValue}>
+                  {usersRowStatus.errorCode || 'N/A'}: {usersRowStatus.errorMessage || 'N/A'}
+                </Text>
+              </View>
+            )}
+            <View style={styles.infoRow}>
+              <Text style={styles.infoLabel}>public.profiles row:</Text>
+              <Text style={styles.infoValue}>
+                {profilesRowStatus.status === 'checking'
+                  ? 'Checking...'
+                  : profilesRowStatus.status === 'exists'
+                    ? '✅ Exists'
+                    : profilesRowStatus.status === 'missing'
+                      ? '❌ Missing'
+                      : `⚠️ Error: ${profilesRowStatus.errorCode || 'N/A'}`}
+              </Text>
+            </View>
+            {profilesRowStatus.status === 'error' && (
+              <View style={styles.infoRow}>
+                <Text style={styles.infoLabel}>profiles error:</Text>
+                <Text style={styles.infoValue}>
+                  {profilesRowStatus.errorCode || 'N/A'}: {profilesRowStatus.errorMessage || 'N/A'}
+                </Text>
+              </View>
+            )}
+          </>
+        )}
       </View>
 
       <View style={styles.section}>
@@ -198,7 +336,7 @@ export default function DebugScreen() {
           disabled={!!actionLoading}
         >
           {actionLoading === 'cache' ? (
-            <ActivityIndicator color="#fff" />
+            <ActivityIndicator color={BRAND_COLORS.onPrimary} />
           ) : (
             <Text style={styles.buttonText}>Clear AsyncStorage / Cache</Text>
           )}
@@ -210,7 +348,7 @@ export default function DebugScreen() {
           disabled={!!actionLoading}
         >
           {actionLoading === 'onboarding' ? (
-            <ActivityIndicator color="#fff" />
+            <ActivityIndicator color={BRAND_COLORS.onPrimary} />
           ) : (
             <Text style={styles.buttonText}>Reset Onboarding State</Text>
           )}
@@ -222,11 +360,46 @@ export default function DebugScreen() {
           disabled={!!actionLoading}
         >
           {actionLoading === 'refetch' ? (
-            <ActivityIndicator color="#fff" />
+            <ActivityIndicator color={BRAND_COLORS.onPrimary} />
           ) : (
             <Text style={styles.buttonText}>Refetch Profile</Text>
           )}
         </TouchableOpacity>
+
+        {__DEV__ && (
+          <>
+            <TouchableOpacity
+              style={[styles.button, actionLoading === 'checkUsers' && styles.buttonDisabled]}
+              onPress={async () => {
+                setActionLoading('checkUsers');
+                await checkUsersRow();
+                setActionLoading(null);
+              }}
+              disabled={!!actionLoading}
+            >
+              {actionLoading === 'checkUsers' ? (
+                <ActivityIndicator color={BRAND_COLORS.onPrimary} />
+              ) : (
+                <Text style={styles.buttonText}>Check public.users Row</Text>
+              )}
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.button, actionLoading === 'checkProfiles' && styles.buttonDisabled]}
+              onPress={async () => {
+                setActionLoading('checkProfiles');
+                await checkProfilesRow();
+                setActionLoading(null);
+              }}
+              disabled={!!actionLoading}
+            >
+              {actionLoading === 'checkProfiles' ? (
+                <ActivityIndicator color={BRAND_COLORS.onPrimary} />
+              ) : (
+                <Text style={styles.buttonText}>Check public.profiles Row</Text>
+              )}
+            </TouchableOpacity>
+          </>
+        )}
 
         <TouchableOpacity
           style={[
@@ -238,7 +411,7 @@ export default function DebugScreen() {
           disabled={!!actionLoading}
         >
           {actionLoading === 'signout' ? (
-            <ActivityIndicator color="#fff" />
+            <ActivityIndicator color={BRAND_COLORS.onPrimary} />
           ) : (
             <Text style={styles.buttonText}>Sign Out</Text>
           )}
@@ -251,7 +424,7 @@ export default function DebugScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: BRAND_COLORS.surface,
   },
   content: {
     padding: 24,
@@ -309,7 +482,7 @@ const styles = StyleSheet.create({
     opacity: 0.6,
   },
   buttonText: {
-    color: '#fff',
+    color: BRAND_COLORS.onPrimary,
     fontSize: 16,
     fontWeight: '600',
   },

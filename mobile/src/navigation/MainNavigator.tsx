@@ -6,6 +6,7 @@ import MatchDetailScreen from '../screens/matches/MatchDetailScreen';
 import ProposeScreen from '../screens/matches/ProposeScreen';
 import ChatScreen from '../screens/matches/ChatScreen';
 import ProfileScreen from '../screens/profile/ProfileScreen';
+import { BRAND_COLORS } from '../config/brand';
 
 // Debug screen - only available in development builds
 // Never enable in production, even if EXPO_PUBLIC_ENABLE_DEBUG_MENU is set
@@ -53,8 +54,8 @@ export default function MainNavigator() {
     <Tab.Navigator
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: '#1453FF',
-        tabBarInactiveTintColor: '#475569',
+        tabBarActiveTintColor: BRAND_COLORS.primary,
+        tabBarInactiveTintColor: BRAND_COLORS.text[600],
       }}
     >
       <Tab.Screen

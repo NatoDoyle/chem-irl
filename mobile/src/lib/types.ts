@@ -28,7 +28,7 @@ export interface User {
 }
 
 export interface Profile {
-  user_id: string;
+  id: string;
   prompts: Record<string, string>;
   availability: Record<string, any>;
   photos: string[];

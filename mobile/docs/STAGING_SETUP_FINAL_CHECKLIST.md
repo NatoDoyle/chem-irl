@@ -16,51 +16,55 @@
 
 ## Part 1: Database Migrations
 
-### Step 1: Run Auth OTP Migration
+### Recommended: Use Supabase CLI
 
-**File:** `db/auth_otp_migration.sql`
+**Prerequisites:**
 
-**What it does:**
+1. Install Supabase CLI: `npm install -g supabase`
+2. Login: `supabase login`
+3. Link to staging project: `supabase link --project-ref <staging-ref>`
 
-- Adds `full_name` column to `profiles` table
-- Adds `signup_completed` boolean column to `profiles` table
-- Creates index on `signup_completed`
-- Updates existing profiles with `completion_pct >= 100` to mark signup as complete
-
-**Command:**
+**Apply All Migrations:**
 
 ```bash
-psql -h your-staging-db-host -U postgres -d your-staging-db-name -f db/auth_otp_migration.sql
+supabase db push
 ```
+
+This applies all migrations in `/supabase/migrations/` in the correct order, including:
+
+- Initial schema, RLS, KPI views
+- Scoring functions and security fixes
+- Auth OTP migration (adds `full_name` and `signup_completed` columns)
+- Profiles auto-create trigger
+- All other feature migrations
 
 **Verification:**
 
-- [ ] Migration runs without errors
+- [ ] All migrations applied successfully
 - [ ] `profiles` table has `full_name` column (TEXT)
 - [ ] `profiles` table has `signup_completed` column (BOOLEAN, default false)
-- [ ] Index `idx_profiles_signup_completed` exists
-
-### Step 2: Run Profile Auto-Create Trigger Migration
-
-**File:** `db/profiles_auto_create_trigger.sql`
-
-**What it does:**
-
-- Creates `handle_new_user()` function
-- Creates trigger `on_auth_user_created` on `auth.users` table
-- Automatically creates `users` and `profiles` rows when new auth user is created
-
-**Command:**
-
-```bash
-psql -h your-staging-db-host -U postgres -d your-staging-db-name -f db/profiles_auto_create_trigger.sql
-```
-
-**Verification:**
-
-- [ ] Migration runs without errors
 - [ ] Function `public.handle_new_user()` exists
 - [ ] Trigger `on_auth_user_created` exists on `auth.users` table
+- [ ] Run verification script: `cd mobile && npm run verify:staging`
+
+**See [DB_MIGRATIONS.md](../../DB_MIGRATIONS.md) for full migration guide.**
+
+### Manual Fallback (Emergency Only)
+
+If Supabase CLI is unavailable, you can manually apply SQL via Supabase Dashboard SQL Editor:
+
+1. Go to Supabase Dashboard → SQL Editor
+2. Run migrations from `/supabase/migrations/` in order:
+   - `20240101000000_initial_schema.sql`
+   - `20240102000000_rls.sql`
+   - `20240103000000_kpi_views.sql`
+   - `20240104000000_scoring.sql`
+   - `20240105000000_security_fixes.sql`
+   - `20240106000000_auth_otp_migration.sql` (adds `full_name` and `signup_completed`)
+   - `20240107000000_profiles_auto_create_trigger.sql` (creates trigger)
+   - ... (continue with remaining migrations)
+
+**⚠️ Important:** After manually applying, mark migrations as applied to prevent re-running (see DB_MIGRATIONS.md).
 
 **Test trigger (optional):**
 
@@ -297,21 +301,33 @@ npm run verify:staging
 
 **Cause:** Migration not run or failed
 
-**Fix:**
+**Fix (CLI method):**
 
-1. Check migration file exists: `db/auth_otp_migration.sql`
-2. Run migration again: `psql -h ... -f db/auth_otp_migration.sql`
-3. Verify columns exist: `SELECT column_name FROM information_schema.columns WHERE table_name = 'profiles' AND column_name IN ('full_name', 'signup_completed');`
+1. Ensure linked to staging: `supabase link --project-ref <staging-ref>` (required for status check)
+2. Check migration status: `npm run db:status` / `supabase migration list`
+3. Apply migrations: `supabase db push`
+4. Verify columns exist: `SELECT column_name FROM information_schema.columns WHERE table_name = 'profiles' AND column_name IN ('full_name', 'signup_completed');`
+
+**Fix (Manual fallback):**
+
+1. Run migration via SQL Editor: `supabase/migrations/20240106000000_auth_otp_migration.sql`
+2. See [DB_MIGRATIONS.md](../../DB_MIGRATIONS.md) for manual fallback instructions
 
 ### Trigger Not Working?
 
 **Cause:** Trigger migration not run or failed
 
-**Fix:**
+**Fix (CLI method):**
 
-1. Check migration file exists: `db/profiles_auto_create_trigger.sql`
-2. Run migration again: `psql -h ... -f db/profiles_auto_create_trigger.sql`
-3. Verify trigger exists: `SELECT trigger_name FROM information_schema.triggers WHERE trigger_name = 'on_auth_user_created';`
+1. Ensure linked to staging: `supabase link --project-ref <staging-ref>` (required for status check)
+2. Check migration status: `npm run db:status` / `supabase migration list`
+3. Apply migrations: `supabase db push`
+4. Verify trigger exists: `SELECT trigger_name FROM information_schema.triggers WHERE trigger_name = 'on_auth_user_created';`
+
+**Fix (Manual fallback):**
+
+1. Run migration via SQL Editor: `supabase/migrations/20240107000000_profiles_auto_create_trigger.sql`
+2. See [DB_MIGRATIONS.md](../../DB_MIGRATIONS.md) for manual fallback instructions
 
 ### Phone OTP Not Sending?
 
@@ -342,6 +358,7 @@ npm run verify:staging
 
 ## Related Documentation
 
+- [DB_MIGRATIONS.md](../../DB_MIGRATIONS.md) - **Database migrations guide (CLI workflow)**
 - [Supabase OTP Template Checklist](./SUPABASE_OTP_TEMPLATE_CHECKLIST.md) - Detailed email template configuration
 - [Supabase Dashboard Checklist](./SUPABASE_DASHBOARD_CHECKLIST.md) - Step-by-step dashboard configuration
 - [Supabase Staging Setup](./SUPABASE_STAGING_SETUP.md) - Complete staging environment setup

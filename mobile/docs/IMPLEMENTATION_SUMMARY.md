@@ -48,11 +48,7 @@
 - `mobile/src/components/ProposalCard.tsx`
 - `mobile/scripts/verifySupabase.ts`
 
-**Database Migration Required:**
-
-```sql
-\i db/proposal_confirmation_fix.sql
-```
+**Database Migration:** Included in `/supabase/migrations/20240108000000_proposal_confirmation_fix.sql`. Deploy via `supabase db push`.
 
 **Quality Gates:** ✅ All passed
 
@@ -103,11 +99,7 @@
 - `mobile/docs/PUSH_NOTIFICATIONS_SETUP.md` (new)
 - `mobile/scripts/verifySupabase.ts`
 
-**Database Migration Required:**
-
-```sql
-\i db/push_notifications.sql
-```
+**Database Migration:** Included in `/supabase/migrations/20240109000000_push_notifications.sql`. Deploy via `supabase db push`.
 
 **Edge Function Deployment Required:**
 
@@ -144,11 +136,7 @@
 - `mobile/src/screens/matches/ChatScreen.tsx`
 - `mobile/scripts/verifySupabase.ts`
 
-**Database Migration Required:**
-
-```sql
-\i db/read_receipts.sql
-```
+**Database Migration:** Included in `/supabase/migrations/20240110000000_read_receipts.sql`. Deploy via `supabase db push`.
 
 **Quality Gates:** ✅ All passed
 
@@ -156,11 +144,32 @@
 
 ## Database Migrations Summary
 
-Run these SQL files in order in Supabase SQL Editor:
+**Recommended:** Use Supabase CLI to apply all migrations:
 
-1. `db/proposal_confirmation_fix.sql` - Unique constraint + RPC for proposal confirmation
-2. `db/push_notifications.sql` - Push tokens table
-3. `db/read_receipts.sql` - Read receipts column + RPC
+```bash
+supabase link --project-ref <project-ref>
+supabase db push
+```
+
+**Source of Truth:** `/supabase/migrations/*.sql`  
+**Deployment Method:** `supabase db push`
+
+All database schema changes are managed via Supabase CLI migrations. To apply migrations:
+
+```bash
+# Link to your project (required for status check)
+supabase link --project-ref <project-ref>
+
+# Check migration status (requires link to compare local vs remote)
+npm run db:status  # Or: supabase migration list
+
+# Apply all pending migrations
+supabase db push
+```
+
+**See [DB_MIGRATIONS.md](../../DB_MIGRATIONS.md) for complete migration guide.**
+
+**Note:** The old `/db/*.sql` files are kept for reference only. All new database changes should be added as migrations in `/supabase/migrations/`.
 
 ---
 

@@ -552,7 +552,7 @@ export default function ProposeScreen() {
         disabled={loading}
       >
         {loading ? (
-          <ActivityIndicator color="#fff" />
+          <ActivityIndicator color={BRAND_COLORS.onPrimary} />
         ) : (
           <Text style={styles.submitButtonText}>Send Proposal</Text>
         )}
@@ -564,7 +564,7 @@ export default function ProposeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: BRAND_COLORS.surface,
   },
   section: {
     padding: 16,
@@ -586,7 +586,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: '#F8FAFC',
+    backgroundColor: 'BRAND_COLORS.background[50]',
     padding: 12,
     borderRadius: 8,
     marginBottom: 8,
@@ -615,7 +615,7 @@ const styles = StyleSheet.create({
   pickerContainer: {
     marginTop: 16,
     padding: 16,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: 'BRAND_COLORS.background[50]',
     borderRadius: 8,
   },
   pickerButtonsRow: {
@@ -637,7 +637,7 @@ const styles = StyleSheet.create({
     borderColor: BRAND_COLORS.primary,
   },
   pickerButtonText: {
-    color: '#fff',
+    color: BRAND_COLORS.onPrimary,
     fontSize: 16,
     fontWeight: '600',
   },
@@ -656,7 +656,7 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     paddingHorizontal: 16,
     borderRadius: 20,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: 'BRAND_COLORS.background[50]',
     borderWidth: 1,
     borderColor: '#E2E8F0',
   },
@@ -669,7 +669,7 @@ const styles = StyleSheet.create({
     color: BRAND_COLORS.text[900],
   },
   dateTypeTextSelected: {
-    color: '#fff',
+    color: BRAND_COLORS.onPrimary,
     fontWeight: '600',
   },
   noteInput: {
@@ -693,7 +693,7 @@ const styles = StyleSheet.create({
     opacity: 0.6,
   },
   submitButtonText: {
-    color: '#fff',
+    color: BRAND_COLORS.onPrimary,
     fontSize: 18,
     fontWeight: '600',
   },

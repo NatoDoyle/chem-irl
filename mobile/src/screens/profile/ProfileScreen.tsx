@@ -8,9 +8,11 @@ import {
   ScrollView,
   Alert,
   ActivityIndicator,
+  Platform,
 } from 'react-native';
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
+import * as FileSystem from 'expo-file-system';
 import { compressImage } from '../../lib/imageCompression';
 import { supabase } from '../../lib/supabase/client';
 import { BRAND_COLORS } from '../../config/brand';
@@ -28,13 +30,99 @@ import {
 type PhotoUploadState = 'idle' | 'uploading' | 'success' | 'error';
 type PhotoDeletionState = 'idle' | 'deleting';
 
+/**
+ * Convert a local file URI to a Blob, handling Android file:// URIs safely
+ * On Android, file:// URIs cannot be fetched directly, so we convert them to content:// URIs
+ */
+async function uriToBlob(uri: string): Promise<Blob> {
+  let fetchUri = uri;
+
+  // On Android, convert file:// URIs to content:// URIs for fetch compatibility
+  if (Platform.OS === 'android' && uri.startsWith('file://')) {
+    try {
+      const contentUri = await FileSystem.getContentUriAsync(uri);
+      if (!contentUri) {
+        throw new Error(`getContentUriAsync returned null. Original URI: ${uri}`);
+      }
+      fetchUri = contentUri;
+      if (__DEV__) {
+        console.log('[uriToBlob] Android: converted file:// to content:// URI:', fetchUri);
+      }
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      throw new Error(
+        `Failed to convert file:// URI to content:// URI on Android. Original URI: ${uri}. Error: ${errorMessage}`
+      );
+    }
+  }
+
+  if (__DEV__) {
+    const preview = typeof fetchUri === 'string' ? fetchUri.slice(0, 100) : String(fetchUri);
+    console.log('[uriToBlob] Fetching blob from URI:', preview);
+  }
+
+  const response = await fetch(fetchUri);
+  if (!response.ok) {
+    throw new Error(`Failed to fetch image: ${response.status} ${response.statusText}`);
+  }
+  return response.blob();
+}
+
+/**
+ * Wraps a promise with a timeout, preserving the promise's return type
+ * Clears timeout on resolve/reject to prevent memory leaks
+ */
+function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
+  let timeoutId: ReturnType<typeof setTimeout> | null = null;
+
+  const timeoutPromise = new Promise<T>((_, reject) => {
+    timeoutId = setTimeout(() => {
+      timeoutId = null;
+      reject(new Error(`Operation timed out after ${ms}ms`));
+    }, ms);
+  });
+
+  return Promise.race([
+    promise.then(
+      (value) => {
+        if (timeoutId) {
+          clearTimeout(timeoutId);
+          timeoutId = null;
+        }
+        return value;
+      },
+      (error) => {
+        if (timeoutId) {
+          clearTimeout(timeoutId);
+          timeoutId = null;
+        }
+        throw error;
+      }
+    ),
+    timeoutPromise,
+  ]);
+}
+
 export default function ProfileScreen() {
   const [headline, setHeadline] = useState('');
   const [bio, setBio] = useState('');
+  const [prompts, setPrompts] = useState<Record<string, string>>({});
   const [photos, setPhotos] = useState<string[]>([]);
+  const [favouriteFirstDates, setFavouriteFirstDates] = useState<string[]>([]);
+  const [newDateIdea, setNewDateIdea] = useState('');
   const [loading, setLoading] = useState(true);
+
+  // Clamp bio to 500 characters (match BioScreen validation)
+  const handleBioChange = (text: string) => {
+    if (text.length <= 500) {
+      setBio(text);
+    } else {
+      setBio(text.substring(0, 500));
+    }
+  };
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [signingOut, setSigningOut] = useState(false);
   // Track upload state per photo (by index)
   const [photoUploadStates, setPhotoUploadStates] = useState<Map<number, PhotoUploadState>>(
     new Map()
@@ -61,25 +149,106 @@ export default function ProfileScreen() {
         return;
       }
 
-      const { data: profile, error } = await supabase
+      const userId = user.id;
+      if (__DEV__) {
+        console.log(
+          '[ProfileScreen.loadProfile] Querying profile for user:',
+          userId.substring(0, 8)
+        );
+      }
+
+      let { data: profile, error } = await supabase
         .from('profiles')
-        .select('prompts, photos')
-        .eq('user_id', user.id)
-        .single();
+        .select('prompts, photos, favourite_first_dates, bio')
+        .eq('id', userId)
+        .maybeSingle();
+
+      if (__DEV__ && error) {
+        console.error('[ProfileScreen.loadProfile] Supabase error:', {
+          userId: userId.substring(0, 8),
+          error: error.message,
+          code: (error as any).code,
+          details: (error as any).details,
+          hint: (error as any).hint,
+        });
+      }
+
+      // If profile doesn't exist, try to create it
+      if (!profile && !error) {
+        console.warn(
+          '[ProfileScreen.loadProfile] Profile not found, attempting to create:',
+          userId.substring(0, 8)
+        );
+        const { error: createError } = await supabase.from('profiles').upsert(
+          {
+            id: userId,
+            prompts: {} as any,
+            availability: {} as any,
+            photos: [] as any,
+            completion_pct: 0,
+            signup_completed: false,
+            onboarding: { currentStepId: null, resolvedSteps: {} } as any,
+            terms_accepted: false,
+          },
+          { onConflict: 'id' }
+        );
+
+        if (createError) {
+          console.error('[ProfileScreen.loadProfile] Failed to create profile:', {
+            userId: userId.substring(0, 8),
+            error: createError.message,
+            code: (createError as any).code,
+            details: (createError as any).details,
+            hint: (createError as any).hint,
+          });
+          Alert.alert('Error', 'Failed to load or create profile');
+          setLoading(false);
+          return;
+        }
+
+        // Re-fetch profile after creation
+        const { data: newProfile, error: refetchError } = await supabase
+          .from('profiles')
+          .select('prompts, photos, favourite_first_dates, bio')
+          .eq('id', userId)
+          .maybeSingle();
+
+        if (refetchError || !newProfile) {
+          console.error('[ProfileScreen.loadProfile] Failed to refetch after creation:', {
+            userId: userId.substring(0, 8),
+            error: refetchError?.message,
+          });
+          Alert.alert('Error', 'Failed to load profile');
+          setLoading(false);
+          return;
+        }
+
+        profile = newProfile;
+      }
 
       if (error) {
-        console.error('Error loading profile:', error);
+        console.error('[ProfileScreen.loadProfile] Error loading profile:', {
+          userId: userId.substring(0, 8),
+          error: error.message,
+          code: (error as any).code,
+          details: (error as any).details,
+          hint: (error as any).hint,
+        });
         Alert.alert('Error', 'Failed to load profile');
         setLoading(false);
         return;
       }
 
       if (profile) {
-        const prompts = (profile.prompts as Record<string, string>) || {};
-        setHeadline(prompts.headline || '');
-        setBio(prompts.bio || '');
+        const loadedPrompts = (profile.prompts as Record<string, string>) || {};
+        setPrompts(loadedPrompts);
+        setHeadline(loadedPrompts.headline || '');
+        // Prefer bio column, fallback to prompts.bio for backwards compatibility
+        setBio((profile.bio as string) || loadedPrompts.bio || '');
         const loadedPhotos = (profile.photos as string[]) || [];
         setPhotos(loadedPhotos);
+        const loadedDates = (profile.favourite_first_dates as string[]) || [];
+        setFavouriteFirstDates(loadedDates);
 
         // Run reconciliation if needed (cached to max once per 24h AND once per session)
         // Component-level cache prevents multiple runs if user navigates away/back
@@ -109,7 +278,7 @@ export default function ProfileScreen() {
                     // Update profile to remove invalid URLs
                     const updatedPhotos = reconcileResult.validUrls;
                     const { error: updateError } = await supabase.from('profiles').upsert({
-                      user_id: user.id,
+                      id: user.id,
                       photos: updatedPhotos,
                     });
 
@@ -144,22 +313,51 @@ export default function ProfileScreen() {
     }
   };
 
+  const handleAddDateIdea = () => {
+    const trimmed = newDateIdea.trim();
+
+    // Validate: no empty
+    if (trimmed.length === 0) {
+      Alert.alert('Error', 'Please enter a date idea');
+      return;
+    }
+
+    // Validate: max length 60 chars
+    if (trimmed.length > 60) {
+      Alert.alert('Error', 'Date idea must be 60 characters or less');
+      return;
+    }
+
+    // Validate: no duplicates (case-insensitive)
+    const isDuplicate = favouriteFirstDates.some(
+      (date) => date.toLowerCase() === trimmed.toLowerCase()
+    );
+    if (isDuplicate) {
+      Alert.alert('Error', 'This date idea already exists');
+      return;
+    }
+
+    // Validate: max 3 items
+    if (favouriteFirstDates.length >= 3) {
+      Alert.alert('Error', 'You can only have up to 3 favourite first dates');
+      return;
+    }
+
+    setFavouriteFirstDates([...favouriteFirstDates, trimmed]);
+    setNewDateIdea('');
+  };
+
+  const handleRemoveDateIdea = (index: number) => {
+    setFavouriteFirstDates(favouriteFirstDates.filter((_, i) => i !== index));
+  };
+
   const handleSave = async () => {
     const headlineTrimmed = headline.trim();
     const bioTrimmed = bio.trim();
 
-    if (!headlineTrimmed || !bioTrimmed) {
-      Alert.alert('Error', 'Please fill in both headline and bio');
-      return;
-    }
-
-    if (headlineTrimmed.length < 5) {
-      Alert.alert('Error', 'Headline must be at least 5 characters');
-      return;
-    }
-
-    if (bioTrimmed.length < 20) {
-      Alert.alert('Error', 'Bio must be at least 20 characters');
+    // Validate bio max length only (no min length, no required fields)
+    if (bioTrimmed.length > 500) {
+      Alert.alert('Error', 'Bio must be 500 characters or less');
       return;
     }
 
@@ -175,17 +373,25 @@ export default function ProfileScreen() {
         return;
       }
 
-      // Sanitize user inputs before storing
-      const sanitizedHeadline = sanitizeText(headlineTrimmed);
-      const sanitizedBio = sanitizeMultilineText(bioTrimmed);
+      // Sanitize user inputs before storing (set to null if empty)
+      const sanitizedHeadline = headlineTrimmed.length > 0 ? sanitizeText(headlineTrimmed) : null;
+      const sanitizedBio = bioTrimmed.length > 0 ? sanitizeMultilineText(bioTrimmed) : null;
+
+      // Merge with existing prompts to preserve other keys
+      const mergedPrompts = {
+        ...prompts,
+        ...(sanitizedHeadline !== null && { headline: sanitizedHeadline }),
+      };
+
+      // Remove legacy prompts.bio to prevent divergence (bio is now in bio column)
+      delete (mergedPrompts as any).bio;
 
       const { error } = await supabase.from('profiles').upsert({
-        user_id: user.id,
-        prompts: {
-          headline: sanitizedHeadline,
-          bio: sanitizedBio,
-        },
+        id: user.id,
+        prompts: mergedPrompts,
+        bio: sanitizedBio,
         photos: photos,
+        favourite_first_dates: favouriteFirstDates,
         completion_pct: photos.length >= 1 ? 100 : 50,
       });
 
@@ -213,7 +419,7 @@ export default function ProfileScreen() {
     }
 
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      mediaTypes: ['images'],
       allowsEditing: true,
       aspect: [4, 5],
       quality: 0.8,
@@ -248,9 +454,8 @@ export default function ProfileScreen() {
       // Compress image before upload
       const compressedUri = await compressImage(uri);
 
-      // Convert compressed URI to blob
-      const response = await fetch(compressedUri);
-      const blob = await response.blob();
+      // Convert compressed URI to blob (Android-safe)
+      const blob = await uriToBlob(compressedUri);
       // Use compressed URI for filename extension
       const fileExt = 'jpg'; // Always JPEG after compression
       const fileName = `${user.id}/${Date.now()}.${fileExt}`;
@@ -259,7 +464,7 @@ export default function ProfileScreen() {
       const { error: uploadError } = await supabase.storage
         .from('profiles')
         .upload(fileName, blob, {
-          contentType: `image/${fileExt}`,
+          contentType: 'image/jpeg',
           upsert: false,
         });
 
@@ -433,9 +638,67 @@ export default function ProfileScreen() {
   };
 
   const handleSignOut = async () => {
-    addBreadcrumb('User signing out', 'auth', 'info');
-    clearUserContext();
-    await supabase.auth.signOut();
+    // Re-entrancy guard: prevent multiple simultaneous sign-out attempts
+    if (signingOut) {
+      console.log('[ProfileScreen] handleSignOut: already in progress, ignoring');
+      return;
+    }
+
+    console.log('[ProfileScreen] handleSignOut: pressed');
+
+    setSigningOut(true);
+    try {
+      // Check session before signOut (inside try block)
+      const { data: sessionBefore } = await supabase.auth.getSession();
+      console.log(
+        '[ProfileScreen] handleSignOut: session exists before =',
+        !!sessionBefore.session
+      );
+
+      addBreadcrumb('User signing out', 'auth', 'info');
+
+      console.log('[ProfileScreen] handleSignOut: calling signOut with scope=local');
+
+      // Use scope: 'local' for instant local sign-out
+      // Wrap signOut in a timeout to prevent UI from getting stuck
+      const signOutResult = await withTimeout(supabase.auth.signOut({ scope: 'local' }), 8000);
+
+      // Check for signOut error (signOut returns { error } and usually does not throw)
+      if (signOutResult.error) {
+        const error = signOutResult.error;
+        const errorStatus = (error as any).status || 'unknown';
+        const errorCode = (error as any).code || 'unknown';
+        console.log(
+          `[ProfileScreen] handleSignOut: signOut returned error = ${error.message || error}, status=${errorStatus}, code=${errorCode}`
+        );
+        throw error;
+      }
+
+      console.log('[ProfileScreen] handleSignOut: signOut succeeded');
+
+      // Check session after signOut
+      const { data: sessionAfter } = await supabase.auth.getSession();
+      console.log('[ProfileScreen] handleSignOut: session exists after =', !!sessionAfter.session);
+
+      clearUserContext();
+
+      // Note: App.tsx onAuthStateChange listener should handle SIGNED_OUT event
+      // and update session state, which will trigger navigation to auth screens
+      // If that doesn't work, the session check above will be null and App.tsx
+      // will re-evaluate routing on next render
+    } catch (error: any) {
+      const errorStatus = (error as any).status || 'unknown';
+      const errorCode = (error as any).code || 'unknown';
+      console.log(
+        `[ProfileScreen] handleSignOut: error = ${error.message || error}, status=${errorStatus}, code=${errorCode}`
+      );
+      const { title, message } = getErrorAlert(error, 'Sign Out Error');
+      Alert.alert(title, message);
+    } finally {
+      // Always reset loading state, even if signOut fails or times out
+      setSigningOut(false);
+      console.log('[ProfileScreen] handleSignOut: loading state reset');
+    }
   };
 
   if (loading) {
@@ -452,7 +715,7 @@ export default function ProfileScreen() {
       <Text style={styles.subtitle}>Manage your profile information</Text>
 
       <View style={styles.form}>
-        <Text style={styles.label}>Headline</Text>
+        <Text style={styles.label}>Headline (optional)</Text>
         <TextInput
           style={styles.input}
           placeholder="A short, catchy headline"
@@ -463,18 +726,63 @@ export default function ProfileScreen() {
           editable={!saving}
         />
 
-        <Text style={styles.label}>Bio</Text>
-        <TextInput
-          style={[styles.input, styles.textArea]}
-          placeholder="Tell people about yourself..."
-          placeholderTextColor={BRAND_COLORS.text[600]}
-          value={bio}
-          onChangeText={setBio}
-          multiline
-          numberOfLines={4}
-          maxLength={500}
-          editable={!saving}
-        />
+        <View>
+          <View style={styles.labelRow}>
+            <Text style={styles.label}>Bio (optional)</Text>
+            <Text style={styles.charCount}>{bio.length}/500</Text>
+          </View>
+          <TextInput
+            style={[styles.input, styles.textArea]}
+            placeholder="Tell people about yourself..."
+            placeholderTextColor={BRAND_COLORS.text[600]}
+            value={bio}
+            onChangeText={handleBioChange}
+            multiline
+            numberOfLines={4}
+            maxLength={200}
+            editable={!saving}
+          />
+        </View>
+
+        <Text style={styles.label}>Favourite first dates</Text>
+        <Text style={styles.subLabel}>Share 1-3 ideas for great first dates (optional)</Text>
+        <View style={styles.dateIdeasContainer}>
+          {favouriteFirstDates.map((dateIdea, index) => (
+            <View key={index} style={styles.dateIdeaChip}>
+              <Text style={styles.dateIdeaText}>{dateIdea}</Text>
+              <TouchableOpacity
+                style={styles.removeDateIdeaButton}
+                onPress={() => handleRemoveDateIdea(index)}
+                disabled={saving}
+              >
+                <Text style={styles.removeDateIdeaText}>×</Text>
+              </TouchableOpacity>
+            </View>
+          ))}
+        </View>
+        <View style={styles.dateIdeaInputRow}>
+          <TextInput
+            style={[styles.input, styles.dateIdeaInput]}
+            placeholder="Add a date idea (max 60 chars)"
+            placeholderTextColor={BRAND_COLORS.text[600]}
+            value={newDateIdea}
+            onChangeText={setNewDateIdea}
+            maxLength={60}
+            editable={!saving && favouriteFirstDates.length < 3}
+            onSubmitEditing={handleAddDateIdea}
+          />
+          <TouchableOpacity
+            style={[
+              styles.addDateIdeaButton,
+              (saving || favouriteFirstDates.length >= 3 || newDateIdea.trim().length === 0) &&
+                styles.buttonDisabled,
+            ]}
+            onPress={handleAddDateIdea}
+            disabled={saving || favouriteFirstDates.length >= 3 || newDateIdea.trim().length === 0}
+          >
+            <Text style={styles.addDateIdeaButtonText}>Add</Text>
+          </TouchableOpacity>
+        </View>
 
         <Text style={styles.label}>Photos</Text>
         <View style={styles.photosContainer}>
@@ -493,12 +801,12 @@ export default function ProfileScreen() {
                 />
                 {uploadState === 'uploading' && (
                   <View style={styles.uploadOverlay}>
-                    <ActivityIndicator color="#fff" size="small" />
+                    <ActivityIndicator color={BRAND_COLORS.onPrimary} size="small" />
                   </View>
                 )}
                 {isDeleting && (
                   <View style={styles.uploadOverlay}>
-                    <ActivityIndicator color="#fff" size="small" />
+                    <ActivityIndicator color={BRAND_COLORS.onPrimary} size="small" />
                     <Text style={styles.deletingText}>Deleting...</Text>
                   </View>
                 )}
@@ -546,15 +854,23 @@ export default function ProfileScreen() {
           disabled={saving}
         >
           {saving ? (
-            <ActivityIndicator color="#fff" />
+            <ActivityIndicator color={BRAND_COLORS.onPrimary} />
           ) : (
             <Text style={styles.saveButtonText}>Save Changes</Text>
           )}
         </TouchableOpacity>
       </View>
 
-      <TouchableOpacity style={styles.signOutButton} onPress={handleSignOut}>
-        <Text style={styles.signOutText}>Sign Out</Text>
+      <TouchableOpacity
+        style={[styles.signOutButton, signingOut && styles.buttonDisabled]}
+        onPress={handleSignOut}
+        disabled={signingOut}
+      >
+        {signingOut ? (
+          <ActivityIndicator color={BRAND_COLORS.onPrimary} />
+        ) : (
+          <Text style={styles.signOutText}>Sign Out</Text>
+        )}
       </TouchableOpacity>
     </ScrollView>
   );
@@ -563,7 +879,7 @@ export default function ProfileScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: BRAND_COLORS.surface,
   },
   content: {
     padding: 24,
@@ -584,11 +900,26 @@ const styles = StyleSheet.create({
     gap: 16,
     marginBottom: 32,
   },
+  labelRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
   label: {
     fontSize: 16,
     fontWeight: '600',
     color: BRAND_COLORS.text[900],
+  },
+  subLabel: {
+    fontSize: 14,
+    color: BRAND_COLORS.text[600],
+    marginTop: -8,
     marginBottom: 8,
+  },
+  charCount: {
+    fontSize: 14,
+    color: BRAND_COLORS.text[600],
   },
   input: {
     borderWidth: 1,
@@ -596,11 +927,67 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     padding: 16,
     fontSize: 16,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: 'BRAND_COLORS.background[50]',
   },
   textArea: {
     height: 120,
     textAlignVertical: 'top',
+  },
+  dateIdeasContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: 12,
+  },
+  dateIdeaChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: BRAND_COLORS.primary + '20',
+    borderRadius: 20,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    gap: 8,
+  },
+  dateIdeaText: {
+    fontSize: 14,
+    color: BRAND_COLORS.text[900],
+    maxWidth: 200,
+  },
+  removeDateIdeaButton: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: '#94A3B8',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  removeDateIdeaText: {
+    color: BRAND_COLORS.onPrimary,
+    fontSize: 16,
+    fontWeight: 'bold',
+    lineHeight: 16,
+  },
+  dateIdeaInputRow: {
+    flexDirection: 'row',
+    gap: 8,
+    alignItems: 'center',
+  },
+  dateIdeaInput: {
+    flex: 1,
+  },
+  addDateIdeaButton: {
+    backgroundColor: BRAND_COLORS.primary,
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+    minWidth: 60,
+  },
+  addDateIdeaButtonText: {
+    color: BRAND_COLORS.onPrimary,
+    fontSize: 16,
+    fontWeight: '600',
   },
   photosContainer: {
     flexDirection: 'row',
@@ -629,7 +1016,7 @@ const styles = StyleSheet.create({
     zIndex: 1,
   },
   deletingText: {
-    color: '#fff',
+    color: BRAND_COLORS.onPrimary,
     fontSize: 12,
     fontWeight: '600',
     marginTop: 4,
@@ -643,17 +1030,17 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   checkmark: {
-    color: '#fff',
+    color: BRAND_COLORS.onPrimary,
     fontSize: 32,
     fontWeight: 'bold',
   },
   errorText: {
-    color: '#fff',
+    color: BRAND_COLORS.onPrimary,
     fontSize: 24,
     fontWeight: 'bold',
   },
   retryButton: {
-    backgroundColor: '#fff',
+    backgroundColor: BRAND_COLORS.surface,
     paddingHorizontal: 12,
     paddingVertical: 4,
     borderRadius: 4,
@@ -675,7 +1062,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   removePhotoText: {
-    color: '#fff',
+    color: BRAND_COLORS.onPrimary,
     fontSize: 18,
     fontWeight: 'bold',
     lineHeight: 20,
@@ -689,7 +1076,7 @@ const styles = StyleSheet.create({
     borderStyle: 'dashed',
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#F8FAFC',
+    backgroundColor: 'BRAND_COLORS.background[50]',
   },
   addPhotoText: {
     color: BRAND_COLORS.primary,
@@ -707,7 +1094,7 @@ const styles = StyleSheet.create({
     opacity: 0.6,
   },
   saveButtonText: {
-    color: '#fff',
+    color: BRAND_COLORS.onPrimary,
     fontSize: 18,
     fontWeight: '600',
   },
@@ -720,7 +1107,7 @@ const styles = StyleSheet.create({
     marginTop: 16,
   },
   signOutText: {
-    color: '#fff',
+    color: BRAND_COLORS.onPrimary,
     fontSize: 16,
     fontWeight: '600',
   },

@@ -93,7 +93,7 @@ describe('Auth Functions', () => {
 
       expect(supabase.from).toHaveBeenCalledWith('profiles');
       expect(mockUpsert).toHaveBeenCalledWith({
-        user_id: 'user-123',
+        id: 'user-123',
         full_name: 'John Doe',
         signup_completed: true,
       });

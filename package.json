@@ -3,7 +3,17 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "docs:check": "tsx scripts/check-markdown-links.ts"
+    "docs:check": "tsx scripts/check-markdown-links.ts",
+    "db:login": "supabase login",
+    "db:link:staging": "echo '📋 To link to staging, run: supabase link --project-ref <your-staging-project-ref>' && echo '   Get your project ref from: Supabase Dashboard → Project Settings → General' && echo '   Example: supabase link --project-ref abcdefghijklmnop'",
+    "db:link:production": "echo '📋 To link to production, run: supabase link --project-ref <your-production-project-ref>' && echo '   Get your project ref from: Supabase Dashboard → Project Settings → General' && echo '   Example: supabase link --project-ref xyzabcdefghijkl'",
+    "db:status": "supabase migration list",
+    "db:diff": "supabase db diff --linked",
+    "db:push": "supabase db push",
+    "db:push:staging": "echo '⚠️  Ensure you are linked to staging project first (run: supabase link --project-ref <staging-ref>)' && supabase db push",
+    "db:push:production": "echo '⚠️  Ensure you are linked to production project first (run: supabase link --project-ref <production-ref>)' && supabase db push",
+    "db:reset:local": "supabase db reset",
+    "db:verify:discovery": "supabase db execute --file scripts/verify_get_discovery_feed.sql || echo 'Note: If --file flag not supported, copy/paste scripts/verify_get_discovery_feed.sql into SQL Editor'"
   },
   "devDependencies": {
     "tsx": "^4.21.0",
