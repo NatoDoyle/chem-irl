@@ -60,10 +60,5 @@ next
 chem-irl@*
 next
 
-# Ignore accidental artifacts
-chem-irl@*
-next
-
-# Ignore accidental artifacts
-chem-irl@*
-next
+# Supabase CLI temp (project ref, etc.)
+supabase/.temp/
