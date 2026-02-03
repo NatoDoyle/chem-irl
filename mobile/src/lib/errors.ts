@@ -47,6 +47,35 @@ export function isRecoverableError(error: unknown): boolean {
 }
 
 /**
+ * Check if error indicates an RLS (row-level security) or permission denial
+ */
+export function isRlsError(error: unknown): boolean {
+  if (error == null) return false;
+  const err = error as { code?: string | number; status?: number | string; message?: string };
+  const code = err.code != null ? String(err.code) : '';
+  const status = err.status;
+  const message = (err.message || '').toLowerCase();
+  if (code === '42501' || code === 'PGRST301') return true;
+  if (status === 403 || status === 401 || status === '403' || status === '401') return true;
+  if (
+    message.includes('row-level security') ||
+    message.includes('permission denied') ||
+    message.includes('new row violates row-level security policy')
+  )
+    return true;
+  return false;
+}
+
+/**
+ * Check if a query result indicates a missing row (null/undefined data, no error or generic not-found)
+ */
+export function isMissingRow(data: unknown, error: unknown): boolean {
+  if (data != null) return false;
+  if (error != null) return false;
+  return true;
+}
+
+/**
  * Check if error indicates session expiry
  */
 export function isSessionExpiredError(error: unknown): boolean {

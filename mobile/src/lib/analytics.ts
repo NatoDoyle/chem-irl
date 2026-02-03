@@ -23,7 +23,25 @@ export type AnalyticsEvent =
   | 'message_sent'
   | 'photo_uploaded'
   | 'photo_deleted'
-  | 'profile_updated';
+  | 'profile_updated'
+  | 'signup_name_entered'
+  | 'onboarding_dob_completed'
+  | 'onboarding_gender_completed'
+  | 'onboarding_orientation_completed'
+  | 'onboarding_location_permission_completed'
+  | 'onboarding_height_completed'
+  | 'onboarding_languages_completed'
+  | 'onboarding_relationship_intent_completed'
+  | 'onboarding_family_plans_completed'
+  | 'onboarding_pets_completed'
+  | 'onboarding_lifestyle_completed'
+  | 'onboarding_interests_completed'
+  | 'onboarding_ideal_first_dates_completed'
+  | 'onboarding_love_language_completed'
+  | 'onboarding_personality_type_completed'
+  | 'onboarding_astrology_completed'
+  | 'onboarding_work_education_completed'
+  | 'onboarding_completed';
 
 export interface AnalyticsProperties {
   [key: string]: string | number | boolean | null | undefined;
