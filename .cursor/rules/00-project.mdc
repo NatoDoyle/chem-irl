@@ -12,6 +12,7 @@ alwaysApply: true
 - If you need to change multiple independent things, split into separate commits.
 - Never modify already-applied Supabase migrations. If a migration timestamp exists in `supabase_migrations.schema_migrations`, treat that file as immutable and create a new timestamped migration instead.
 - If a change would touch >5 files OR delete/rename any file, STOP and ask before proceeding.
+- If the working tree contains unrelated modifications, stash or restore them before creating a new branch.
 
 ## Pre-commit hygiene (required for atomic pushes)
 - Before staging, check what changed: `git status --porcelain` and `git diff --name-only`.
