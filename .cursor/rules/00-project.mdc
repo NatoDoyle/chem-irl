@@ -1,3 +1,8 @@
+---
+description: Project-wide Cursor rules and output contract. Consult before making changes.
+alwaysApply: true
+---
+
 # Cursor instruction (consult before making changes)
 
 Cursor must consult both this file (.cursorrules) and .cursor/rules/*.mdc before making changes. If conflict exists, prefer the stricter rule.
