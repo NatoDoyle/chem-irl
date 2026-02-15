@@ -10,6 +10,7 @@ Cursor must consult both this file (.cursorrules) and .cursor/rules/*.mdc before
 - Never modify already-applied Supabase migrations. If a migration timestamp exists in `supabase_migrations.schema_migrations`, treat that file as immutable and create a new timestamped migration instead.
 - If a change would touch >5 files OR delete/rename any file, STOP and ask before proceeding.
 - If the working tree contains unrelated modifications, stash or restore them before creating a new branch.
+- Before creating a branch, run `git status --porcelain`. If any unrelated paths are dirty, STOP and ask whether to `git restore` or `git stash`.
 
 ## Pre-commit hygiene (required for atomic pushes)
 - Before staging, check what changed: `git status --porcelain` and `git diff --name-only`.
