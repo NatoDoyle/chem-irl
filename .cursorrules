@@ -8,6 +8,7 @@ Cursor must consult both this file (.cursorrules) and .cursor/rules/*.mdc before
 - Make the smallest possible diff to achieve the requested outcome.
 - If you need to change multiple independent things, split into separate commits.
 - Never modify already-applied Supabase migrations. If a migration timestamp exists in `supabase_migrations.schema_migrations`, treat that file as immutable and create a new timestamped migration instead.
+- If a change would touch >5 files OR delete/rename any file, STOP and ask before proceeding.
 
 ## Pre-commit hygiene (required for atomic pushes)
 - Before staging, check what changed: `git status --porcelain` and `git diff --name-only`.
