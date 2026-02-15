@@ -61,7 +61,16 @@ class LargeSecureStore {
   }
 }
 
+const customFetch: typeof fetch = (...args) => {
+  const url = typeof args[0] === 'string' ? args[0] : (args[0] as Request)?.url;
+  if (__DEV__ && url && String(url).includes('/rest/v1/')) {
+    console.warn('[supabase] REST URL', url);
+  }
+  return fetch(...args);
+};
+
 export const supabase = createClient(supabaseUrl, supabaseKey, {
+  global: { fetch: customFetch },
   auth: {
     storage: new LargeSecureStore(),
     autoRefreshToken: true,
