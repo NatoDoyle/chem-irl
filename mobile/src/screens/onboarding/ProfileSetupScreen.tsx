@@ -83,7 +83,7 @@ export default function ProfileSetupScreen() {
 
       // Upsert profile
       const { error } = await supabase.from('profiles').upsert({
-        user_id: user.id,
+        id: user.id,
         prompts: {
           headline: sanitizedHeadline,
           bio: sanitizedBio,

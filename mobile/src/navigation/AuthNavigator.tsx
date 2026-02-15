@@ -31,8 +31,8 @@ export default function AuthNavigator() {
         const { data: profile } = await supabase
           .from('profiles')
           .select('signup_completed')
-          .eq('user_id', session.user.id)
-          .single();
+          .eq('id', session.user.id)
+          .maybeSingle();
 
         // If user has session but signup not complete, route to signup
         if (profile && profile.signup_completed !== true) {

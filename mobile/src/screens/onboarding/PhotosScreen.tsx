@@ -43,8 +43,8 @@ export default function PhotosScreen() {
       const { data: profile } = await supabase
         .from('profiles')
         .select('photos')
-        .eq('user_id', user.id)
-        .single();
+        .eq('id', user.id)
+        .maybeSingle();
 
       if (profile?.photos && Array.isArray(profile.photos)) {
         setPhotos(profile.photos as string[]);
@@ -130,8 +130,8 @@ export default function PhotosScreen() {
       const { data: profileData } = await supabase
         .from('profiles')
         .select('photos')
-        .eq('user_id', user.id)
-        .single();
+        .eq('id', user.id)
+        .maybeSingle();
 
       const existingPhotos = (profileData?.photos as string[]) || [];
 
@@ -151,7 +151,7 @@ export default function PhotosScreen() {
       const updatedPhotos = [...existingPhotos, publicUrl].slice(0, 6);
 
       const { error: updateError } = await supabase.from('profiles').upsert({
-        user_id: user.id,
+        id: user.id,
         photos: updatedPhotos,
         completion_pct: updatedPhotos.length >= 1 ? 100 : 50,
       });

@@ -16,6 +16,7 @@ import { supabase } from '../../lib/supabase/client';
 import { BRAND_COLORS } from '../../config/brand';
 import { deletePhotoFromStorage } from '../../lib/storage';
 import { getErrorAlert } from '../../lib/errors';
+import { ensureProfileExists } from '../../lib/profile';
 import { sanitizeText, sanitizeMultilineText } from '../../lib/sanitize';
 import { addBreadcrumb, clearUserContext } from '../../lib/sentry';
 import { trackEvent } from '../../lib/analytics';
@@ -61,11 +62,22 @@ export default function ProfileScreen() {
         return;
       }
 
-      const { data: profile, error } = await supabase
+      let { data: profile, error } = await supabase
         .from('profiles')
         .select('prompts, photos')
-        .eq('user_id', user.id)
-        .single();
+        .eq('id', user.id)
+        .maybeSingle();
+
+      if (profile === null && !error) {
+        await ensureProfileExists(user.id);
+        const next = await supabase
+          .from('profiles')
+          .select('prompts, photos')
+          .eq('id', user.id)
+          .maybeSingle();
+        profile = next.data;
+        error = next.error;
+      }
 
       if (error) {
         console.error('Error loading profile:', error);
@@ -109,7 +121,7 @@ export default function ProfileScreen() {
                     // Update profile to remove invalid URLs
                     const updatedPhotos = reconcileResult.validUrls;
                     const { error: updateError } = await supabase.from('profiles').upsert({
-                      user_id: user.id,
+                      id: user.id,
                       photos: updatedPhotos,
                     });
 
@@ -180,7 +192,7 @@ export default function ProfileScreen() {
       const sanitizedBio = sanitizeMultilineText(bioTrimmed);
 
       const { error } = await supabase.from('profiles').upsert({
-        user_id: user.id,
+        id: user.id,
         prompts: {
           headline: sanitizedHeadline,
           bio: sanitizedBio,
@@ -401,7 +413,7 @@ export default function ProfileScreen() {
 
       // Storage deletion verified - now update database
       const { error: updateError } = await supabase.from('profiles').upsert({
-        user_id: user.id,
+        id: user.id,
         photos: updatedPhotos,
         completion_pct: updatedPhotos.length >= 1 ? 100 : 50,
       });

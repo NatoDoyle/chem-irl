@@ -94,14 +94,14 @@ export default function DiscoverScreen() {
           try {
             const { data: profilesData } = await supabase
               .from('profiles')
-              .select('user_id, photos')
-              .in('user_id', userIds);
+              .select('id, photos')
+              .in('id', userIds);
 
             // Create a map for O(1) lookup
             if (profilesData) {
               profilesMap = new Map(
                 profilesData.map((profile) => [
-                  profile.user_id,
+                  profile.id,
                   { photos: Array.isArray(profile.photos) ? profile.photos : [] },
                 ])
               );

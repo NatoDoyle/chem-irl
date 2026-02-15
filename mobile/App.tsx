@@ -17,6 +17,7 @@ import AuthNavigator from './src/navigation/AuthNavigator';
 import OnboardingNavigator from './src/navigation/OnboardingNavigator';
 import MainNavigator from './src/navigation/MainNavigator';
 import { isSessionExpiredError, getErrorAlert, isRecoverableError } from './src/lib/errors';
+import { ensureProfileExists } from './src/lib/profile';
 import { addBreadcrumb, setUserContext, clearUserContext } from './src/lib/sentry';
 import { identifyUser, resetUser } from './src/lib/analytics';
 import { BRAND_COLORS } from './src/config/brand';
@@ -72,12 +73,23 @@ export default function App() {
       }
 
       if (session) {
-        // Check if profile is complete and signup is completed
-        const { data: profile, error: profileError } = await supabase
+        // Check if profile is complete and signup is completed (id + maybeSingle; create if missing)
+        let { data: profile, error: profileError } = await supabase
           .from('profiles')
           .select('completion_pct, signup_completed')
-          .eq('user_id', session.user.id)
-          .single();
+          .eq('id', session.user.id)
+          .maybeSingle();
+
+        if (profile === null && !profileError) {
+          await ensureProfileExists(session.user.id);
+          const next = await supabase
+            .from('profiles')
+            .select('completion_pct, signup_completed')
+            .eq('id', session.user.id)
+            .maybeSingle();
+          profile = next.data;
+          profileError = next.error;
+        }
 
         // If profile fetch failed due to session expiry, handle it
         if (profileError && isSessionExpiredError(profileError)) {
@@ -218,12 +230,23 @@ export default function App() {
           });
         }
         try {
-          // Check profile completion and signup status on auth change
-          const { data: profile, error: profileError } = await supabase
+          // Check profile completion and signup status on auth change (id + maybeSingle; create if missing)
+          let { data: profile, error: profileError } = await supabase
             .from('profiles')
             .select('completion_pct, signup_completed')
-            .eq('user_id', session.user.id)
-            .single();
+            .eq('id', session.user.id)
+            .maybeSingle();
+
+          if (profile === null && !profileError) {
+            await ensureProfileExists(session.user.id);
+            const next = await supabase
+              .from('profiles')
+              .select('completion_pct, signup_completed')
+              .eq('id', session.user.id)
+              .maybeSingle();
+            profile = next.data;
+            profileError = next.error;
+          }
 
           // If profile fetch failed due to session expiry, handle it
           if (profileError && isSessionExpiredError(profileError)) {
