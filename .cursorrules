@@ -74,6 +74,7 @@ Cursor must consult both this file (.cursorrules) and .cursor/rules/*.mdc before
 - Function return type changes: do not replace an existing function's RETURNS TABLE shape in-place. Create a `_v2` function and switch the client to it.
 - Check if a migration timestamp is applied: `SELECT 1 FROM supabase_migrations.schema_migrations WHERE version = '<timestamp>';` (run in Dashboard SQL Editor). If it returns a row, do not edit that migration file; create a new timestamped migration instead.
 
+---
 CURSOR OUTPUT CONTRACT (STRICT)
 
 You must NOT write “tools called”, “implementation complete”, “all checks pass”, “committed”, “pushed”, or any narrative implying actions happened unless you provide verifiable proof in this message.
