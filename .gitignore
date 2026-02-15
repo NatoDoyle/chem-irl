@@ -67,3 +67,6 @@ next
 # Ignore accidental artifacts
 chem-irl@*
 next
+
+# Supabase CLI temp files
+supabase/.temp/
