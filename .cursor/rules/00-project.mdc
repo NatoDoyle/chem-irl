@@ -1,3 +1,8 @@
+---
+description: Project-wide Cursor rules and output contract. Consult before making changes.
+alwaysApply: true
+---
+
 # Cursor instruction (consult before making changes)
 
 Cursor must consult both this file (.cursorrules) and .cursor/rules/*.mdc before making changes. If conflict exists, prefer the stricter rule.
@@ -31,7 +36,7 @@ Cursor must consult both this file (.cursorrules) and .cursor/rules/*.mdc before
 ---
 CURSOR OUTPUT CONTRACT (STRICT)
 
-You must NOT write “tools called”, “implementation complete”, “all checks pass”, “committed”, “pushed”, or any narrative implying actions happened unless you provide verifiable proof in this message.
+You must NOT write "tools called", "implementation complete", "all checks pass", "committed", "pushed", or any narrative implying actions happened unless you provide verifiable proof in this message.
 
 You MUST choose exactly ONE mode:
 
@@ -52,7 +57,7 @@ Required sections (in this exact order):
 - For each command, paste the full transcript including stdout/stderr.
 - If a command was NOT run, do not include it.
 
-Required commands to claim “quality gates pass”:
+Required commands to claim "quality gates pass":
 - cd mobile && npm run lint -- --max-warnings 0
 - cd mobile && npm run type-check
 - cd mobile && npm test
@@ -67,11 +72,11 @@ Required commands to claim “quality gates pass”:
 
 5) COMMITS (ONLY if you actually committed)
 - List real SHAs + messages.
-- If no commits were made, write exactly: “No commits made.”
+- If no commits were made, write exactly: "No commits made."
 
 BANNED in MODE A unless proven above:
-- “All checks pass” without command transcripts.
-- “Committed/pushed” without SHAs and git log output.
+- "All checks pass" without command transcripts.
+- "Committed/pushed" without SHAs and git log output.
 
 ========================
 MODE B — PLAN/REVIEW ONLY (DEFAULT if you cannot run commands or did not change code)
@@ -79,7 +84,7 @@ MODE B — PLAN/REVIEW ONLY (DEFAULT if you cannot run commands or did not chang
 Required sections (in this exact order):
 
 1) STATUS
-- Write exactly one line: “No code changes made.”
+- Write exactly one line: "No code changes made."
 
 2) FINDINGS
 - Bullet list of what you observed in the repo (file paths + what to inspect).
@@ -95,7 +100,7 @@ Required sections (in this exact order):
 ========================
 GLOBAL RULES
 ========================
-- Never fabricate terminal output. If you can’t paste real output, you are in MODE B.
-- Never write “tools called” anywhere.
-- Never say “verified” unless you show the evidence (diffs/transcripts).
+- Never fabricate terminal output. If you can't paste real output, you are in MODE B.
+- Never write "tools called" anywhere.
+- Never say "verified" unless you show the evidence (diffs/transcripts).
 - Keep it copy/paste friendly: no extra headings outside the required sections.
