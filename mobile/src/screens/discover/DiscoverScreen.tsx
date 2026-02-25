@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, MutableRefObject } from 'react';
 import { View, Text, StyleSheet, ActivityIndicator, Alert, TouchableOpacity } from 'react-native';
 import { supabase } from '../../lib/supabase/client';
 import { FeedItem } from '../../lib/types';
@@ -27,113 +27,114 @@ export default function DiscoverScreen() {
   const [seenUserIds, setSeenUserIds] = useState<Set<string>>(new Set());
   // Throttle like actions to prevent spam (min 1 second between likes)
   const likeThrottleRef = useRef(createThrottle(() => {}, 1000));
+  const feedLenRef: MutableRefObject<number> = useRef(0);
+  const seenIdsRef: MutableRefObject<Set<string>> = useRef(new Set());
+  feedLenRef.current = feed.length;
+  seenIdsRef.current = seenUserIds;
 
-  const loadFeed = useCallback(
-    async (reset: boolean = false) => {
-      if (reset) {
-        setError(null);
-        setLoading(true);
-        setFeed([]);
-        setHasMore(true);
-        setSeenUserIds(new Set());
-      } else {
-        setLoadingMore(true);
-      }
+  const loadFeed = useCallback(async (reset: boolean = false) => {
+    if (reset) {
+      setError(null);
+      setLoading(true);
+      setFeed([]);
+      setHasMore(true);
+      setSeenUserIds(new Set());
+      feedLenRef.current = 0;
+      seenIdsRef.current = new Set();
+    } else {
+      setLoadingMore(true);
+    }
 
-      try {
-        const {
-          data: { user },
-        } = await supabase.auth.getUser();
-        if (!user) {
-          setLoading(false);
-          setLoadingMore(false);
-          return;
-        }
-
-        // Calculate how many new items we need
-        // Since RPC doesn't support offset, we request more items and filter duplicates
-        const currentFeedSize = reset ? 0 : feed.length;
-        const requestLimit = currentFeedSize + FEED_PAGE_SIZE;
-
-        const { data, error: rpcError } = await supabase.rpc('get_discovery_feed', {
-          p_viewer: user.id,
-          p_limit: requestLimit,
-        });
-
-        if (rpcError) {
-          console.error('Error loading feed:', rpcError);
-          const { message } = getErrorAlert(rpcError, 'Failed to load discovery feed');
-          setError(message);
-          setLoading(false);
-          setLoadingMore(false);
-          return;
-        }
-
-        const allItems = (data || []) as FeedItem[];
-
-        // Filter out users we've already seen (due to RPC not supporting offset)
-        const newItems = allItems.filter((item: FeedItem) => !seenUserIds.has(item.user_id));
-
-        // If we got fewer new items than requested, we've reached the end
-        if (newItems.length === 0 || allItems.length < requestLimit) {
-          setHasMore(false);
-        }
-
-        // Update seen user IDs
-        const newSeenIds = new Set(seenUserIds);
-        newItems.forEach((item) => newSeenIds.add(item.user_id));
-        setSeenUserIds(newSeenIds);
-
-        // Batch fetch all profiles at once to avoid N+1 query pattern
-        // Extract user IDs from feed items
-        const userIds = newItems.map((item: FeedItem) => item.user_id);
-
-        // Batch fetch all profiles in a single query
-        let profilesMap = new Map<string, { photos: string[] }>();
-        if (userIds.length > 0) {
-          try {
-            const { data: profilesData } = await supabase
-              .from('profiles')
-              .select('id, photos')
-              .in('id', userIds);
-
-            // Create a map for O(1) lookup
-            if (profilesData) {
-              profilesMap = new Map(
-                profilesData.map((profile) => [
-                  profile.id,
-                  { photos: Array.isArray(profile.photos) ? profile.photos : [] },
-                ])
-              );
-            }
-          } catch (error) {
-            console.error('Error batch fetching profiles:', error);
-            // Continue with empty map - will use fallback below
-          }
-        }
-
-        // Map feed items with photos from batch fetch
-        const feedWithPhotos: FeedItemWithPhotos[] = newItems.map((item: FeedItem) => {
-          const profile = profilesMap.get(item.user_id);
-          return {
-            ...item,
-            photos: profile?.photos ?? item.photos ?? [],
-          };
-        });
-
-        setFeed((prev) => (reset ? feedWithPhotos : [...prev, ...feedWithPhotos]));
-        setError(null);
-      } catch (error: any) {
-        console.error('Error loading feed:', error);
-        const { message } = getErrorAlert(error, 'Failed to load discovery feed');
-        setError(message);
-      } finally {
+    try {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) {
         setLoading(false);
         setLoadingMore(false);
+        return;
       }
-    },
-    [feed.length, seenUserIds]
-  );
+
+      const currentFeedSize = reset ? 0 : feedLenRef.current;
+      const requestLimit = currentFeedSize + FEED_PAGE_SIZE;
+      const currentSeenIds = reset ? new Set<string>() : seenIdsRef.current;
+
+      const { data, error: rpcError } = await supabase.rpc('get_discovery_feed', {
+        p_viewer: user.id,
+        p_limit: requestLimit,
+      });
+
+      if (rpcError) {
+        console.error('Error loading feed:', rpcError);
+        const { message } = getErrorAlert(rpcError, 'Failed to load discovery feed');
+        setError(message);
+        setLoading(false);
+        setLoadingMore(false);
+        return;
+      }
+
+      const allItems = (data || []) as FeedItem[];
+
+      // Filter out users we've already seen (due to RPC not supporting offset)
+      const newItems = allItems.filter((item: FeedItem) => !currentSeenIds.has(item.user_id));
+
+      // If we got fewer new items than requested, we've reached the end
+      if (newItems.length === 0 || allItems.length < requestLimit) {
+        setHasMore(false);
+      }
+
+      // Update seen user IDs
+      const newSeenIds = new Set(currentSeenIds);
+      newItems.forEach((item) => newSeenIds.add(item.user_id));
+      setSeenUserIds(newSeenIds);
+      seenIdsRef.current = newSeenIds;
+
+      // Batch fetch all profiles at once to avoid N+1 query pattern
+      const userIds = newItems.map((item: FeedItem) => item.user_id);
+
+      let profilesMap = new Map<string, { photos: string[] }>();
+      if (userIds.length > 0) {
+        try {
+          const { data: profilesData } = await supabase
+            .from('profiles')
+            .select('id, photos')
+            .in('id', userIds);
+
+          if (profilesData) {
+            profilesMap = new Map(
+              profilesData.map((profile) => [
+                profile.id,
+                { photos: Array.isArray(profile.photos) ? profile.photos : [] },
+              ])
+            );
+          }
+        } catch (error) {
+          console.error('Error batch fetching profiles:', error);
+        }
+      }
+
+      const feedWithPhotos: FeedItemWithPhotos[] = newItems.map((item: FeedItem) => {
+        const profile = profilesMap.get(item.user_id);
+        return {
+          ...item,
+          photos: profile?.photos ?? item.photos ?? [],
+        };
+      });
+
+      setFeed((prev) => (reset ? feedWithPhotos : [...prev, ...feedWithPhotos]));
+      feedLenRef.current = reset
+        ? feedWithPhotos.length
+        : feedLenRef.current + feedWithPhotos.length;
+      setError(null);
+    } catch (error: any) {
+      console.error('Error loading feed:', error);
+      const { message } = getErrorAlert(error, 'Failed to load discovery feed');
+      setError(message);
+    } finally {
+      setLoading(false);
+      setLoadingMore(false);
+    }
+  }, []);
 
   useEffect(() => {
     loadFeed(true);

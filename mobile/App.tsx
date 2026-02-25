@@ -1,6 +1,6 @@
 import { NavigationContainer, NavigationContainerRef } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { useEffect, useState, useCallback, useRef } from 'react';
+import { useEffect, useState, useCallback, useRef, useMemo } from 'react';
 import {
   ActivityIndicator,
   View,
@@ -27,6 +27,7 @@ import {
   setupNotificationListeners,
   handleNotificationTap,
 } from './src/lib/notifications';
+import ProfileRefreshContext from './src/contexts/ProfileRefreshContext';
 
 const Stack = createNativeStackNavigator();
 
@@ -54,6 +55,7 @@ export default function App() {
   const [retryAttempts, setRetryAttempts] = useState(0);
   const [signupIncomplete, setSignupIncomplete] = useState(false);
   const navigationRef = useRef<NavigationContainerRef<any>>(null);
+  const screenOptions = useMemo(() => ({ headerShown: false }), []);
 
   // Retry logic with exponential backoff
   const checkSessionAndProfile = useCallback(async (attempt: number = 0): Promise<void> => {
@@ -129,17 +131,16 @@ export default function App() {
         const isProfileComplete = profile?.completion_pct >= 100;
 
         if (isSignupComplete && isProfileComplete) {
-          // Fully signed up and profile complete - show main app
           setSession(session);
           setProfileComplete(true);
           setSessionExpired(false);
+          setSignupIncomplete(false);
         } else if (isSignupComplete && !isProfileComplete) {
-          // Signup complete but profile incomplete - show onboarding
           setSession(session);
           setProfileComplete(false);
           setSessionExpired(false);
+          setSignupIncomplete(false);
         } else {
-          // Signup not complete - user must complete email verification and name entry
           setSession(session);
           setProfileComplete(false);
           setSessionExpired(false);
@@ -149,6 +150,7 @@ export default function App() {
       } else {
         setSession(null);
         setSessionExpired(false);
+        setSignupIncomplete(false);
         setProfileError(null);
         setRetryAttempts(0);
         setLoading(false);
@@ -180,6 +182,11 @@ export default function App() {
     }
   }, []);
 
+  const refreshProfile = useCallback(() => {
+    setLoading(true);
+    checkSessionAndProfile();
+  }, [checkSessionAndProfile]);
+
   useEffect(() => {
     checkSessionAndProfile();
 
@@ -190,31 +197,22 @@ export default function App() {
       // Add breadcrumb for auth state change
       addBreadcrumb(`Auth state changed: ${event}`, 'auth', 'info');
 
-      // Handle session expiry events
-      if (event === 'SIGNED_OUT' || event === 'TOKEN_REFRESHED' || !session) {
-        if (event === 'SIGNED_OUT' || !session) {
-          clearUserContext();
-          // Check if this is due to expiry or explicit sign out
-          // Try to get session to check for expiry error
-          try {
-            const { error: sessionError } = await supabase.auth.getSession();
+      // TOKEN_REFRESHED means the session is still valid — just update the session object
+      if (event === 'TOKEN_REFRESHED' && session) {
+        setSession(session);
+        return;
+      }
 
-            if (sessionError && isSessionExpiredError(sessionError)) {
-              setSessionExpired(true);
-            }
-          } catch (error) {
-            if (isSessionExpiredError(error)) {
-              setSessionExpired(true);
-            }
-          }
-        }
+      // Handle signed-out / no-session
+      if (event === 'SIGNED_OUT' || !session) {
         clearUserContext();
         resetUser();
-        unregisterDeviceToken().catch((error) => {
-          console.error('Error unregistering device token:', error);
+        unregisterDeviceToken().catch((err) => {
+          console.error('Error unregistering device token:', err);
         });
         setSession(null);
         setProfileComplete(false);
+        setSignupIncomplete(false);
         return;
       }
 
@@ -366,20 +364,20 @@ export default function App() {
     );
   }
 
-  const screenOptions = { headerShown: false };
-
   return (
-    <NavigationContainer ref={navigationRef}>
-      <Stack.Navigator screenOptions={screenOptions}>
-        {!session || signupIncomplete ? (
-          <Stack.Screen name="Auth" component={AuthNavigator} />
-        ) : !profileComplete ? (
-          <Stack.Screen name="Onboarding" component={OnboardingNavigator} />
-        ) : (
-          <Stack.Screen name="Main" component={MainNavigator} />
-        )}
-      </Stack.Navigator>
-    </NavigationContainer>
+    <ProfileRefreshContext.Provider value={refreshProfile}>
+      <NavigationContainer ref={navigationRef}>
+        <Stack.Navigator screenOptions={screenOptions}>
+          <Stack.Screen name="Root">
+            {() => {
+              if (!session || signupIncomplete) return <AuthNavigator />;
+              if (!profileComplete) return <OnboardingNavigator />;
+              return <MainNavigator />;
+            }}
+          </Stack.Screen>
+        </Stack.Navigator>
+      </NavigationContainer>
+    </ProfileRefreshContext.Provider>
   );
 }
 
