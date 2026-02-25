@@ -19,7 +19,7 @@ import { useNavigation } from '@react-navigation/native';
 type PhotoUploadState = 'idle' | 'uploading' | 'success' | 'error';
 
 export default function PhotosScreen() {
-  const navigation = useNavigation();
+  const navigation = useNavigation<any>();
   const [photos, setPhotos] = useState<string[]>([]);
   const [uploading, setUploading] = useState(false);
   // Track upload state per photo (by index)
@@ -211,16 +211,13 @@ export default function PhotosScreen() {
     await uploadPhoto(storedURI);
   };
 
-  const handleContinue = async () => {
+  const handleContinue = () => {
     if (photos.length === 0) {
       Alert.alert('Photo required', 'Please add at least one photo to continue');
       return;
     }
 
-    // Profile is complete, app will automatically show main navigator
-    // on next render due to profile completion check
-    // Force a refresh by navigating back to root
-    navigation.getParent()?.goBack();
+    navigation.navigate('LocationPermission');
   };
 
   return (

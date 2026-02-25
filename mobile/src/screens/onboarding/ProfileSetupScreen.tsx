@@ -16,12 +16,7 @@ import { BRAND_COLORS } from '../../config/brand';
 import { getErrorAlert } from '../../lib/errors';
 import { sanitizeText, sanitizeMultilineText } from '../../lib/sanitize';
 import { trackEvent } from '../../lib/analytics';
-
-type OnboardingStackParamList = {
-  ProfileSetup: undefined;
-  Photos: undefined;
-  Preferences: undefined;
-};
+import type { OnboardingStackParamList } from '../../navigation/OnboardingNavigator';
 
 type ProfileSetupScreenNavigationProp = NativeStackNavigationProp<
   OnboardingStackParamList,
@@ -105,7 +100,7 @@ export default function ProfileSetupScreen() {
       });
 
       // Navigate to photos screen
-      navigation.navigate('Photos' as any);
+      navigation.navigate('Photos');
     } catch (error: any) {
       const { title, message } = getErrorAlert(error, 'Failed to create profile');
       Alert.alert(title, message);
