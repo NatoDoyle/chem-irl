@@ -78,6 +78,18 @@ Cursor must consult both this file (.cursorrules) and .cursor/rules/*.mdc before
 - Function return type changes: do not replace an existing function's RETURNS TABLE shape in-place. Create a `_v2` function and switch the client to it.
 - Check if a migration timestamp is applied: `SELECT 1 FROM supabase_migrations.schema_migrations WHERE version = '<timestamp>';` (run in Dashboard SQL Editor). If it returns a row, do not edit that migration file; create a new timestamped migration instead.
 
+## Branch hygiene (keep repo manageable)
+- Keep at most 3 active WIP branches at a time. Everything else must be merged or archived/deleted.
+- Before starting new work:
+  - `git fetch origin --prune`
+  - `git branch -vv` (review active branches)
+- Categorize each branch:
+  - READY → open PR and squash merge; then delete local + remote branch.
+  - WIP → ensure it is pushed; rename to `wip/<topic>` if not ready to merge.
+  - ABANDONED → tag as `archive/<branch>` (optional), then delete local + remote.
+- Never delete a branch without first confirming it's merged or tagged/archived.
+- Never merge into `main` locally; use PR + squash merge by default.
+
 ---
 CURSOR OUTPUT CONTRACT (STRICT)
 
