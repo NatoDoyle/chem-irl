@@ -113,14 +113,14 @@ export default function MatchesScreen() {
           try {
             const { data: profilesData } = await supabase
               .from('profiles')
-              .select('user_id, photos, prompts')
-              .in('user_id', otherUserIds);
+              .select('id, photos, prompts')
+              .in('id', otherUserIds);
 
             // Create a map for O(1) lookup
             if (profilesData) {
               profilesMap = new Map(
                 profilesData.map((profile) => [
-                  profile.user_id,
+                  profile.id,
                   {
                     photos: (profile.photos as string[]) || [],
                     prompts: (profile.prompts as Record<string, string>) || {},

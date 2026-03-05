@@ -23,8 +23,8 @@ BEGIN
   )
   ON CONFLICT (user_id) DO NOTHING;
 
-  -- Insert into profiles table (if not exists)
-  INSERT INTO public.profiles (user_id, prompts, availability, photos, completion_pct, signup_completed, created_at, updated_at)
+  -- Insert into profiles table (profiles uses id, not user_id)
+  INSERT INTO public.profiles (id, prompts, availability, photos, completion_pct, signup_completed, created_at, updated_at)
   VALUES (
     NEW.id,
     '{}'::JSONB,
@@ -35,7 +35,7 @@ BEGIN
     NOW(),
     NOW()
   )
-  ON CONFLICT (user_id) DO NOTHING;
+  ON CONFLICT (id) DO NOTHING;
 
   RETURN NEW;
 END;

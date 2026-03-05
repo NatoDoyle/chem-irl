@@ -19,7 +19,7 @@ import { useNavigation } from '@react-navigation/native';
 type PhotoUploadState = 'idle' | 'uploading' | 'success' | 'error';
 
 export default function PhotosScreen() {
-  const navigation = useNavigation();
+  const navigation = useNavigation<any>();
   const [photos, setPhotos] = useState<string[]>([]);
   const [uploading, setUploading] = useState(false);
   // Track upload state per photo (by index)
@@ -43,8 +43,8 @@ export default function PhotosScreen() {
       const { data: profile } = await supabase
         .from('profiles')
         .select('photos')
-        .eq('user_id', user.id)
-        .single();
+        .eq('id', user.id)
+        .maybeSingle();
 
       if (profile?.photos && Array.isArray(profile.photos)) {
         setPhotos(profile.photos as string[]);
@@ -130,8 +130,8 @@ export default function PhotosScreen() {
       const { data: profileData } = await supabase
         .from('profiles')
         .select('photos')
-        .eq('user_id', user.id)
-        .single();
+        .eq('id', user.id)
+        .maybeSingle();
 
       const existingPhotos = (profileData?.photos as string[]) || [];
 
@@ -151,7 +151,7 @@ export default function PhotosScreen() {
       const updatedPhotos = [...existingPhotos, publicUrl].slice(0, 6);
 
       const { error: updateError } = await supabase.from('profiles').upsert({
-        user_id: user.id,
+        id: user.id,
         photos: updatedPhotos,
         completion_pct: updatedPhotos.length >= 1 ? 100 : 50,
       });
@@ -211,16 +211,13 @@ export default function PhotosScreen() {
     await uploadPhoto(storedURI);
   };
 
-  const handleContinue = async () => {
+  const handleContinue = () => {
     if (photos.length === 0) {
       Alert.alert('Photo required', 'Please add at least one photo to continue');
       return;
     }
 
-    // Profile is complete, app will automatically show main navigator
-    // on next render due to profile completion check
-    // Force a refresh by navigating back to root
-    navigation.getParent()?.goBack();
+    navigation.navigate('LocationPermission');
   };
 
   return (

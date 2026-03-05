@@ -71,14 +71,17 @@ export default function MatchDetailScreen() {
       setMatch(matchData as Match);
       const otherUserId = matchData.user_a === user.id ? matchData.user_b : matchData.user_a;
 
-      // Load other user's profile
-      const { data: profile } = await supabase
+      // Load other user's profile (id = otherUserId; maybeSingle for missing profile)
+      const { data: profile, error: profileError } = await supabase
         .from('profiles')
         .select('photos, prompts')
-        .eq('user_id', otherUserId)
-        .single();
+        .eq('id', otherUserId)
+        .maybeSingle();
 
-      if (profile) {
+      if (profileError) {
+        const { message } = getErrorAlert(profileError, 'Failed to load match profile');
+        setError(message);
+      } else if (profile) {
         const photos = (profile.photos as string[]) || [];
         const prompts = (profile.prompts as Record<string, string>) || {};
         setOtherUserPhoto(photos[0] || '');

@@ -147,7 +147,7 @@ export async function completeSignup(fullName: string) {
 
     // Update profile with full_name and signup_completed
     const { error } = await supabase.from('profiles').upsert({
-      user_id: user.id,
+      id: user.id,
       full_name: fullName.trim(),
       signup_completed: true,
     });

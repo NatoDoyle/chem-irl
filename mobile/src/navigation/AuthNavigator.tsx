@@ -1,11 +1,8 @@
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { useEffect } from 'react';
-import { useNavigation } from '@react-navigation/native';
 import AuthGateScreen from '../screens/auth/AuthGateScreen';
 import SignUpEmailScreen from '../screens/auth/SignUpEmailScreen';
 import LoginEmailScreen from '../screens/auth/LoginEmailScreen';
 import EmailCodeVerifyScreen from '../screens/auth/EmailCodeVerifyScreen';
-import { supabase } from '../lib/supabase/client';
 
 export type AuthStackParamList = {
   AuthGate: undefined;
@@ -16,41 +13,11 @@ export type AuthStackParamList = {
 
 const Stack = createNativeStackNavigator<AuthStackParamList>();
 
+const screenOptions = { headerShown: false };
+
 export default function AuthNavigator() {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const navigation = useNavigation<any>();
-
-  // Check if user has session but signup is incomplete, route to SignUpEmail
-  useEffect(() => {
-    const checkSignupStatus = async () => {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-
-      if (session?.user) {
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('signup_completed')
-          .eq('user_id', session.user.id)
-          .single();
-
-        // If user has session but signup not complete, route to signup
-        if (profile && profile.signup_completed !== true) {
-          navigation.navigate('SignUpEmail');
-        }
-      }
-    };
-
-    checkSignupStatus();
-  }, [navigation]);
-
   return (
-    <Stack.Navigator
-      screenOptions={{
-        headerShown: false,
-      }}
-      initialRouteName="AuthGate"
-    >
+    <Stack.Navigator screenOptions={screenOptions} initialRouteName="AuthGate">
       <Stack.Screen name="AuthGate" component={AuthGateScreen} />
       <Stack.Screen name="SignUpEmail" component={SignUpEmailScreen} />
       <Stack.Screen name="LoginEmail" component={LoginEmailScreen} />

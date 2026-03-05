@@ -79,7 +79,7 @@ export default function DebugScreen() {
               }
 
               const { error } = await supabase.from('profiles').upsert({
-                user_id: user.id,
+                id: user.id,
                 completion_pct: 0,
               });
 
@@ -138,17 +138,19 @@ export default function DebugScreen() {
       const { data: profile, error } = await supabase
         .from('profiles')
         .select('*')
-        .eq('user_id', user.id)
-        .single();
+        .eq('id', user.id)
+        .maybeSingle();
 
       if (error) {
         Alert.alert('Error', error.message);
         return;
       }
 
-      Alert.alert('Profile Data', JSON.stringify(profile, null, 2).substring(0, 500), [
-        { text: 'OK' },
-      ]);
+      Alert.alert(
+        'Profile Data',
+        profile ? JSON.stringify(profile, null, 2).substring(0, 500) : 'No profile row',
+        [{ text: 'OK' }]
+      );
     } catch (error: any) {
       Alert.alert('Error', error.message || 'Failed to fetch profile');
     } finally {
