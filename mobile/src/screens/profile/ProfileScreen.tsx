@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
+import * as FileSystem from 'expo-file-system';
 import { compressImage } from '../../lib/imageCompression';
 import { supabase } from '../../lib/supabase/client';
 import { BRAND_COLORS } from '../../config/brand';
@@ -539,14 +540,23 @@ export default function ProfileScreen() {
       }
 
       const compressedUri = await compressImage(uri);
-      const response = await fetch(compressedUri);
-      const blob = await response.blob();
+
+      // Read file as base64 and convert to ArrayBuffer (cross-platform; fetch+blob fails on Android)
+      const base64 = await FileSystem.readAsStringAsync(compressedUri, {
+        encoding: FileSystem.EncodingType.Base64,
+      });
+      const binaryStr = atob(base64);
+      const bytes = new Uint8Array(binaryStr.length);
+      for (let i = 0; i < binaryStr.length; i++) {
+        bytes[i] = binaryStr.charCodeAt(i);
+      }
+
       const fileExt = 'jpg';
       const fileName = `${user.id}/${Date.now()}.${fileExt}`;
 
       const { error: uploadError } = await supabase.storage
         .from('profiles')
-        .upload(fileName, blob, { contentType: `image/${fileExt}`, upsert: false });
+        .upload(fileName, bytes, { contentType: 'image/jpeg', upsert: false });
 
       if (uploadError) {
         setPhotoUploadStates((prev) => new Map(prev).set(tempIndex, 'error'));
