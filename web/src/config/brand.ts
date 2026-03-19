@@ -48,6 +48,9 @@ export const BRAND_COLORS = {
   },
   // On-primary text (white for dark primary)
   onPrimary: '#FFFFFF',
+  // Warm tokens (web Golden Hour direction)
+  accentWarm: '#F97316',
+  backgroundWarm: '#FFFBF7',
 } as const;
 
 export const BRAND_MESSAGES = {
