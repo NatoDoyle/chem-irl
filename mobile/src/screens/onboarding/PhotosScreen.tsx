@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
-import * as FileSystem from 'expo-file-system';
+import * as FileSystem from 'expo-file-system/legacy';
 import { compressImage } from '../../lib/imageCompression';
 import { trackEvent } from '../../lib/analytics';
 import { supabase } from '../../lib/supabase/client';
