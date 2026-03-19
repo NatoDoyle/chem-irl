@@ -14,7 +14,7 @@ import * as ImagePicker from 'expo-image-picker';
 import * as FileSystem from 'expo-file-system';
 import { compressImage } from '../../lib/imageCompression';
 import { supabase } from '../../lib/supabase/client';
-import { BRAND_COLORS } from '../../config/brand';
+import { BRAND_COLORS, GOLDEN_HOUR } from '../../config/brand';
 import { deletePhotoFromStorage } from '../../lib/storage';
 import { getErrorAlert } from '../../lib/errors';
 import { ensureProfileExists } from '../../lib/profile';
@@ -1066,7 +1066,7 @@ export default function ProfileScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: GOLDEN_HOUR.bg,
   },
   loadingContainer: {
     flex: 1,
@@ -1100,7 +1100,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 14,
     borderBottomWidth: 1,
-    borderBottomColor: '#E2E8F0',
+    borderBottomColor: GOLDEN_HOUR.borderDefault,
   },
   sectionHeaderLeft: {
     flex: 1,
@@ -1139,11 +1139,11 @@ const styles = StyleSheet.create({
   },
   input: {
     borderWidth: 1,
-    borderColor: '#E2E8F0',
-    borderRadius: 8,
+    borderColor: GOLDEN_HOUR.borderDefault,
+    borderRadius: GOLDEN_HOUR.radius.lg,
     padding: 14,
     fontSize: 16,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: GOLDEN_HOUR.inputBg,
     color: BRAND_COLORS.text[900],
   },
   textArea: {
@@ -1168,8 +1168,8 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderRadius: 20,
     borderWidth: 1.5,
-    borderColor: '#E2E8F0',
-    backgroundColor: '#F8FAFC',
+    borderColor: GOLDEN_HOUR.borderDefault,
+    backgroundColor: GOLDEN_HOUR.inputBg,
   },
   chipSelected: {
     borderColor: BRAND_COLORS.primary,
@@ -1197,7 +1197,7 @@ const styles = StyleSheet.create({
   photo: {
     width: 100,
     height: 125,
-    borderRadius: 8,
+    borderRadius: GOLDEN_HOUR.radius.lg,
     backgroundColor: '#E2E8F0',
   },
   uploadOverlay: {
@@ -1207,7 +1207,7 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    borderRadius: 8,
+    borderRadius: GOLDEN_HOUR.radius.lg,
     justifyContent: 'center',
     alignItems: 'center',
     zIndex: 1,
@@ -1253,7 +1253,7 @@ const styles = StyleSheet.create({
     right: -8,
     width: 24,
     height: 24,
-    borderRadius: 12,
+    borderRadius: GOLDEN_HOUR.radius.lg,
     backgroundColor: BRAND_COLORS.danger,
     justifyContent: 'center',
     alignItems: 'center',
@@ -1267,13 +1267,13 @@ const styles = StyleSheet.create({
   addPhotoButton: {
     width: 100,
     height: 125,
-    borderRadius: 8,
+    borderRadius: GOLDEN_HOUR.radius.lg,
     borderWidth: 2,
     borderColor: BRAND_COLORS.primary,
     borderStyle: 'dashed',
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#F8FAFC',
+    backgroundColor: GOLDEN_HOUR.inputBg,
   },
   addPhotoText: {
     color: BRAND_COLORS.primary,
@@ -1285,9 +1285,10 @@ const styles = StyleSheet.create({
   saveButton: {
     backgroundColor: BRAND_COLORS.primary,
     paddingVertical: 16,
-    borderRadius: 8,
+    borderRadius: GOLDEN_HOUR.radius.lg,
     alignItems: 'center',
     marginTop: 24,
+    ...GOLDEN_HOUR.shadow.warm,
   },
   buttonDisabled: {
     opacity: 0.6,
@@ -1301,7 +1302,7 @@ const styles = StyleSheet.create({
     backgroundColor: BRAND_COLORS.danger,
     paddingVertical: 12,
     paddingHorizontal: 24,
-    borderRadius: 8,
+    borderRadius: GOLDEN_HOUR.radius.lg,
     alignSelf: 'flex-start',
     marginTop: 16,
   },
