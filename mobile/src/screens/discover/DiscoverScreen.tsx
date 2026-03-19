@@ -59,7 +59,7 @@ export default function DiscoverScreen() {
       const requestLimit = currentFeedSize + FEED_PAGE_SIZE;
       const currentSeenIds = reset ? new Set<string>() : seenIdsRef.current;
 
-      const { data, error: rpcError } = await supabase.rpc('get_discovery_feed', {
+      const { data, error: rpcError } = await supabase.rpc('get_discovery_feed_v2', {
         p_viewer: user.id,
         p_limit: requestLimit,
       });

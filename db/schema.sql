@@ -165,6 +165,15 @@ CREATE TABLE enforcements (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- Scoring events table (event-sourced scoring v2)
+CREATE TABLE scoring_events (
+  event_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  user_id UUID NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+  event_type TEXT NOT NULL,
+  payload JSONB DEFAULT '{}',
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
 -- Create indexes for performance
 CREATE INDEX idx_likes_liker_id ON likes(liker_id);
 CREATE INDEX idx_likes_likee_id ON likes(likee_id);
@@ -196,6 +205,8 @@ CREATE INDEX idx_proposals_windows ON proposals USING GIN (windows);
 CREATE INDEX idx_proposals_date_types ON proposals USING GIN (date_types);
 CREATE INDEX idx_confirms_chosen_window ON confirms USING GIN (chosen_window);
 CREATE INDEX idx_reports_evidence ON reports USING GIN (evidence);
+CREATE INDEX idx_scoring_events_user_type ON scoring_events(user_id, event_type, created_at);
+CREATE INDEX idx_scoring_events_created ON scoring_events(created_at);
 
 
 
