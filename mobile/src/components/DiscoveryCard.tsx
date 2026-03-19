@@ -40,8 +40,8 @@ export default function DiscoveryCard({ item, onLike, onPass }: DiscoveryCardPro
               <Text style={styles.scoreValue}>{item.action_speed}</Text>
             </View>
             <View style={styles.scoreItem}>
-              <Text style={styles.scoreLabel}>Quality</Text>
-              <Text style={styles.scoreValue}>{item.profile_quality}</Text>
+              <Text style={styles.scoreLabel}>Appeal</Text>
+              <Text style={styles.scoreValue}>{item.attractiveness}</Text>
             </View>
             <View style={styles.scoreItem}>
               <Text style={styles.scoreLabel}>Reliability</Text>

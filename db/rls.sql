@@ -30,6 +30,7 @@ ALTER TABLE purchases ENABLE ROW LEVEL SECURITY;
 ALTER TABLE credits_ledger ENABLE ROW LEVEL SECURITY;
 ALTER TABLE reports ENABLE ROW LEVEL SECURITY;
 ALTER TABLE enforcements ENABLE ROW LEVEL SECURITY;
+ALTER TABLE scoring_events ENABLE ROW LEVEL SECURITY;
 
 -- Users table policies
 CREATE POLICY "Users can view own profile" ON users
@@ -202,6 +203,10 @@ CREATE POLICY "Moderators can manage enforcements" ON enforcements
     )
   );
 
+-- Scoring events table policies
+CREATE POLICY "System can manage scoring events" ON scoring_events
+  FOR ALL USING (true);
+
 -- Create functions for common operations
 CREATE OR REPLACE FUNCTION get_user_matches(user_uuid UUID)
 RETURNS TABLE(match_id UUID, other_user_id UUID, other_user_email TEXT, created_at TIMESTAMPTZ)
@@ -296,6 +301,66 @@ AS $$
     COALESCE(s.reliability, 70) DESC,
     p.updated_at DESC
   LIMIT p_limit;
+$$;
+
+-- Discovery feed v2: composite score ranking + impression tracking
+CREATE OR REPLACE FUNCTION get_discovery_feed_v2(p_viewer UUID, p_limit INTEGER DEFAULT 20)
+RETURNS TABLE (
+  user_id UUID,
+  headline TEXT,
+  bio TEXT,
+  availability_summary TEXT,
+  action_speed INTEGER,
+  attractiveness INTEGER,
+  reliability INTEGER,
+  composite_score NUMERIC
+)
+LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+DECLARE
+  v_result RECORD;
+BEGIN
+  FOR v_result IN
+    SELECT
+      p.user_id,
+      COALESCE(p.prompts ->> 'headline', '') AS headline,
+      COALESCE(p.prompts ->> 'bio', '') AS bio,
+      COALESCE(p.availability ->> 'summary', '') AS availability_summary,
+      COALESCE(s.action_speed, 50) AS action_speed,
+      COALESCE(s.profile_quality, 50) AS attractiveness,
+      COALESCE(s.reliability, 70) AS reliability,
+      (0.60 * COALESCE(s.action_speed, 50)
+       + 0.30 * COALESCE(s.profile_quality, 50)
+       + 0.10 * COALESCE(s.reliability, 70))::NUMERIC AS composite_score
+    FROM profiles p
+    LEFT JOIN scores_daily s ON s.user_id = p.user_id AND s.day = CURRENT_DATE
+    WHERE p.user_id <> p_viewer
+      AND p.completion_pct >= 80
+      AND NOT EXISTS (
+        SELECT 1 FROM likes l WHERE l.liker_id = p_viewer AND l.likee_id = p.user_id
+      )
+      AND NOT EXISTS (
+        SELECT 1 FROM matches m
+        WHERE ((m.user_a = p_viewer AND m.user_b = p.user_id)
+            OR (m.user_a = p.user_id AND m.user_b = p_viewer))
+          AND m.status = 'open'
+      )
+    ORDER BY composite_score DESC, p.updated_at DESC
+    LIMIT p_limit
+  LOOP
+    INSERT INTO scoring_events (user_id, event_type, payload)
+    VALUES (v_result.user_id, 'feed_impression', jsonb_build_object('viewer_id', p_viewer));
+
+    user_id := v_result.user_id;
+    headline := v_result.headline;
+    bio := v_result.bio;
+    availability_summary := v_result.availability_summary;
+    action_speed := v_result.action_speed;
+    attractiveness := v_result.attractiveness;
+    reliability := v_result.reliability;
+    composite_score := v_result.composite_score;
+    RETURN NEXT;
+  END LOOP;
+END;
 $$;
 
 -- Like and match detection function

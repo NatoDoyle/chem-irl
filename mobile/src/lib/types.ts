@@ -43,9 +43,10 @@ export interface FeedItem {
   bio: string;
   availability_summary: string;
   action_speed: number;
-  profile_quality: number;
+  attractiveness: number;
   reliability: number;
-  photos?: string[]; // Added for mobile app
+  composite_score: number;
+  photos?: string[];
 }
 
 export interface Like {

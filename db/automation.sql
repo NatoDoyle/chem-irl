@@ -4,7 +4,7 @@
 -- ============================================================================
 -- FUNCTION 1: Expire Proposals
 -- ============================================================================
--- Safely updates proposals.status to 'expired' for proposals where expires_at < NOW()
+-- Expires active proposals past their deadline and emits proposal_expired scoring events.
 -- Idempotent: Can be run multiple times safely (only updates proposals that need updating)
 CREATE OR REPLACE FUNCTION expire_proposals()
 RETURNS TABLE(
@@ -18,16 +18,20 @@ AS $$
 DECLARE
   v_expired_count INTEGER;
 BEGIN
-  -- Update proposals that are expired but not already marked as expired
-  -- Only update 'active' proposals to avoid overwriting 'confirmed' status
-  WITH updated AS (
+  WITH expiring AS (
     UPDATE proposals
     SET status = 'expired'
     WHERE expires_at < NOW()
-      AND status = 'active'  -- Only expire active proposals (confirmed ones should stay confirmed)
-    RETURNING proposal_id
+      AND status = 'active'
+    RETURNING proposal_id, match_id, sender_id
+  ),
+  emit_events AS (
+    INSERT INTO scoring_events (user_id, event_type, payload)
+    SELECT sender_id, 'proposal_expired',
+      jsonb_build_object('match_id', match_id, 'proposal_id', proposal_id)
+    FROM expiring
   )
-  SELECT COUNT(*) INTO v_expired_count FROM updated;
+  SELECT COUNT(*) INTO v_expired_count FROM expiring;
 
   RETURN QUERY SELECT
     v_expired_count,
@@ -36,10 +40,9 @@ END;
 $$;
 
 -- ============================================================================
--- FUNCTION 2: Run Daily Scoring
+-- FUNCTION 2: Run Daily Scoring (DEPRECATED — replaced by materialize_scores)
 -- ============================================================================
--- Wrapper function that calls update_daily_action_speed() and returns status
--- This allows pg_cron to see the result and log it
+-- Kept for rollback compatibility. Active cron now calls materialize_scores().
 CREATE OR REPLACE FUNCTION run_daily_scoring()
 RETURNS TABLE(
   success BOOLEAN,
@@ -52,10 +55,7 @@ AS $$
 DECLARE
   v_user_count INTEGER;
 BEGIN
-  -- Call the existing update_daily_action_speed function
   PERFORM update_daily_action_speed();
-
-  -- Count how many users have scores for today to verify it ran
   SELECT COUNT(DISTINCT user_id) INTO v_user_count
   FROM scores_daily
   WHERE day = CURRENT_DATE;
@@ -68,6 +68,49 @@ EXCEPTION
     RETURN QUERY SELECT
       FALSE,
       format('Daily scoring failed: %s', SQLERRM)::TEXT;
+END;
+$$;
+
+-- ============================================================================
+-- FUNCTION 3: Emit Stale Match Events
+-- ============================================================================
+-- Detects matches >72h old with no proposals and emits match_stale events.
+-- Idempotent: won't emit duplicate events for the same match+user.
+CREATE OR REPLACE FUNCTION emit_stale_match_events()
+RETURNS INTEGER LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+DECLARE
+  v_count INTEGER := 0;
+  v_partial INTEGER;
+BEGIN
+  INSERT INTO scoring_events (user_id, event_type, payload)
+  SELECT m.user_a, 'match_stale', jsonb_build_object('match_id', m.match_id)
+  FROM matches m
+  WHERE m.status = 'open'
+    AND m.created_at < NOW() - INTERVAL '72 hours'
+    AND NOT EXISTS (SELECT 1 FROM proposals p WHERE p.match_id = m.match_id)
+    AND NOT EXISTS (
+      SELECT 1 FROM scoring_events se
+      WHERE se.user_id = m.user_a AND se.event_type = 'match_stale'
+        AND (se.payload->>'match_id')::UUID = m.match_id
+    );
+  GET DIAGNOSTICS v_partial = ROW_COUNT;
+  v_count := v_count + v_partial;
+
+  INSERT INTO scoring_events (user_id, event_type, payload)
+  SELECT m.user_b, 'match_stale', jsonb_build_object('match_id', m.match_id)
+  FROM matches m
+  WHERE m.status = 'open'
+    AND m.created_at < NOW() - INTERVAL '72 hours'
+    AND NOT EXISTS (SELECT 1 FROM proposals p WHERE p.match_id = m.match_id)
+    AND NOT EXISTS (
+      SELECT 1 FROM scoring_events se
+      WHERE se.user_id = m.user_b AND se.event_type = 'match_stale'
+        AND (se.payload->>'match_id')::UUID = m.match_id
+    );
+  GET DIAGNOSTICS v_partial = ROW_COUNT;
+  v_count := v_count + v_partial;
+
+  RETURN v_count;
 END;
 $$;
 
@@ -90,13 +133,19 @@ SELECT cron.schedule(
   $$SELECT expire_proposals();$$
 );
 
--- Schedule: Daily scoring at midnight UTC
+-- Schedule: Daily score materialization at midnight UTC (v2 event-sourced scoring)
 -- Cron expression: '0 0 * * *' = At 00:00 UTC every day
--- Note: If job already exists, unschedule it first with: SELECT cron.unschedule('daily_scoring_midnight');
 SELECT cron.schedule(
-  'daily_scoring_midnight',
+  'materialize_scores_daily',
   '0 0 * * *',  -- Daily at midnight UTC
-  $$SELECT run_daily_scoring();$$
+  $$SELECT materialize_scores();$$
+);
+
+-- Schedule: Stale match detection at 00:05 UTC daily
+SELECT cron.schedule(
+  'stale_matches_daily',
+  '5 0 * * *',  -- Daily at 00:05 UTC
+  $$SELECT emit_stale_match_events();$$
 );
 
 -- ============================================================================
