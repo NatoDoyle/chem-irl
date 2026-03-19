@@ -1,3 +1,5 @@
+import { Platform } from 'react-native';
+
 export const BRAND = {
   name: 'Chem IRL',
   domain: 'chemirl.app',
@@ -48,6 +50,35 @@ export const BRAND_COLORS = {
   },
   // On-primary text (white for dark primary)
   onPrimary: '#FFFFFF',
+} as const;
+
+export const GOLDEN_HOUR = {
+  bg: '#FFFBF7', // warm off-white background
+  surface: '#FFFFFF', // cards/inputs on top of warm bg
+  inputBg: '#FFF8F3', // warm-tinted input background (replaces #F8FAFC)
+  borderDefault: '#F0E6DB', // warm border (replaces #E2E8F0)
+  coral: '#F97316', // warm accent for secondary CTAs
+  radius: { sm: 8, md: 14, lg: 20, full: 9999 },
+  shadow: {
+    warm: Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 8 },
+        shadowOpacity: 0.06,
+        shadowRadius: 24,
+      },
+      android: { elevation: 4 },
+    }),
+    warmLg: Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 12 },
+        shadowOpacity: 0.1,
+        shadowRadius: 32,
+      },
+      android: { elevation: 8 },
+    }),
+  },
 } as const;
 
 export const BRAND_MESSAGES = {
