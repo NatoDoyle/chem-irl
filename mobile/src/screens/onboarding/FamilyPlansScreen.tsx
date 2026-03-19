@@ -11,7 +11,7 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { supabase } from '../../lib/supabase/client';
-import { BRAND_COLORS } from '../../config/brand';
+import { BRAND_COLORS, GOLDEN_HOUR } from '../../config/brand';
 import { getErrorAlert } from '../../lib/errors';
 import { trackEvent } from '../../lib/analytics';
 import type { OnboardingStackParamList } from '../../navigation/OnboardingNavigator';
@@ -139,7 +139,7 @@ export default function FamilyPlansScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: GOLDEN_HOUR.bg,
   },
   content: {
     padding: 24,
@@ -161,10 +161,10 @@ const styles = StyleSheet.create({
   },
   optionButton: {
     borderWidth: 2,
-    borderColor: '#E2E8F0',
-    borderRadius: 8,
+    borderColor: GOLDEN_HOUR.borderDefault,
+    borderRadius: GOLDEN_HOUR.radius.lg,
     padding: 16,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: GOLDEN_HOUR.inputBg,
   },
   optionButtonSelected: {
     borderColor: BRAND_COLORS.primary,
@@ -182,8 +182,9 @@ const styles = StyleSheet.create({
   button: {
     marginTop: 8,
     backgroundColor: BRAND_COLORS.primary,
+    ...GOLDEN_HOUR.shadow.warm,
     paddingVertical: 16,
-    borderRadius: 8,
+    borderRadius: GOLDEN_HOUR.radius.lg,
     alignItems: 'center',
   },
   buttonDisabled: {
