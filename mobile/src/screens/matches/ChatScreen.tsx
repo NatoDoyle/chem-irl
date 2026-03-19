@@ -15,7 +15,7 @@ import {
 import { useRoute, useFocusEffect } from '@react-navigation/native';
 import { supabase } from '../../lib/supabase/client';
 import { Message } from '../../lib/types';
-import { BRAND_COLORS } from '../../config/brand';
+import { BRAND_COLORS, GOLDEN_HOUR } from '../../config/brand';
 import { getErrorAlert, isRecoverableError } from '../../lib/errors';
 import { enqueue, processQueue, getQueueSize, QueuedMessage } from '../../lib/offlineQueue';
 import ConnectionStatus from '../../components/ConnectionStatus';
@@ -579,7 +579,7 @@ export default function ChatScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: GOLDEN_HOUR.bg,
   },
   messagesList: {
     padding: 16,
@@ -629,8 +629,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     padding: 16,
     borderTopWidth: 1,
-    borderTopColor: '#E2E8F0',
-    backgroundColor: '#fff',
+    borderTopColor: GOLDEN_HOUR.borderDefault,
+    backgroundColor: GOLDEN_HOUR.surface,
     alignItems: 'flex-end',
   },
   inputWrapper: {
@@ -640,7 +640,7 @@ const styles = StyleSheet.create({
   },
   input: {
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: GOLDEN_HOUR.borderDefault,
     borderRadius: 20,
     paddingHorizontal: 16,
     paddingVertical: 10,
