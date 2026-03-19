@@ -202,6 +202,57 @@ CREATE POLICY "Moderators can manage enforcements" ON enforcements
     )
   );
 
+-- Scoring events table policies
+ALTER TABLE scoring_events ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "System can manage scoring events" ON scoring_events
+  FOR ALL USING (true);
+
+-- Bonds ledger table policies
+ALTER TABLE bonds_ledger ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can view own bonds" ON bonds_ledger
+  FOR SELECT USING (auth.uid() = user_id);
+
+CREATE POLICY "System can manage bonds" ON bonds_ledger
+  FOR ALL USING (true);
+
+-- Subscriptions table policies
+ALTER TABLE subscriptions ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can view own subscriptions" ON subscriptions
+  FOR SELECT USING (auth.uid() = user_id);
+
+CREATE POLICY "System can manage subscriptions" ON subscriptions
+  FOR ALL USING (true);
+
+-- Passes table policies
+ALTER TABLE passes ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can view own passes" ON passes
+  FOR SELECT USING (auth.uid() = passer_id);
+
+CREATE POLICY "Users can insert own passes" ON passes
+  FOR INSERT WITH CHECK (auth.uid() = passer_id);
+
+CREATE POLICY "System can manage passes" ON passes
+  FOR ALL USING (true);
+
+-- Cancellations table policies
+ALTER TABLE cancellations ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can view cancellations in their matches" ON cancellations
+  FOR SELECT USING (
+    EXISTS (
+      SELECT 1 FROM matches m
+      WHERE m.match_id = cancellations.match_id
+        AND (m.user_a = auth.uid() OR m.user_b = auth.uid())
+    )
+  );
+
+CREATE POLICY "System can manage cancellations" ON cancellations
+  FOR ALL USING (true);
+
 -- Create functions for common operations
 CREATE OR REPLACE FUNCTION get_user_matches(user_uuid UUID)
 RETURNS TABLE(match_id UUID, other_user_id UUID, other_user_email TEXT, created_at TIMESTAMPTZ)

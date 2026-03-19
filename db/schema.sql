@@ -13,7 +13,7 @@ CREATE TYPE proposal_status AS ENUM ('active', 'expired', 'confirmed', 'reopened
 CREATE TYPE report_category AS ENUM ('spam_scam', 'fake_impersonation', 'harassment_hate', 'threat_coercion', 'nudity', 'minor', 'off_platform_solicitation', 'other');
 CREATE TYPE enforcement_action AS ENUM ('warning', 'content_removal', 'temporary_ban', 'permanent_ban', 'device_ban');
 CREATE TYPE purchase_type AS ENUM ('credits', 'subscription', 'bond');
-CREATE TYPE credit_feature AS ENUM ('reopen', 'fast_pass', 'extra_chat', 'stack_pass');
+CREATE TYPE credit_feature AS ENUM ('reopen', 'fast_pass', 'extra_chat', 'stack_pass', 'revive', 'undo_pass', 'reschedule');
 
 -- Users table
 CREATE TABLE users (
@@ -165,6 +165,62 @@ CREATE TABLE enforcements (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- Scoring events table (event-sourced scoring v2)
+CREATE TABLE scoring_events (
+  event_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  user_id UUID NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+  event_type TEXT NOT NULL,
+  payload JSONB DEFAULT '{}',
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Bonds ledger table (monetization: seriousness bonds)
+CREATE TABLE bonds_ledger (
+  entry_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  user_id UUID NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+  delta INTEGER NOT NULL,
+  match_id UUID REFERENCES matches(match_id) ON DELETE SET NULL,
+  reason TEXT NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Subscriptions table (monetization: toolkit subscription)
+CREATE TABLE subscriptions (
+  subscription_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  user_id UUID NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+  plan TEXT NOT NULL DEFAULT 'toolkit',
+  status TEXT NOT NULL DEFAULT 'active'
+    CHECK (status IN ('active', 'cancelled', 'expired', 'past_due')),
+  platform TEXT NOT NULL
+    CHECK (platform IN ('ios', 'android', 'web')),
+  platform_subscription_id TEXT,
+  current_period_start TIMESTAMPTZ NOT NULL,
+  current_period_end TIMESTAMPTZ NOT NULL,
+  cancel_at_period_end BOOLEAN DEFAULT FALSE,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Passes table (monetization: needed for undo_pass credit action)
+CREATE TABLE passes (
+  pass_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  passer_id UUID NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+  passee_id UUID NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(passer_id, passee_id)
+);
+
+-- Cancellations table (monetization: needed for reschedule credit action)
+CREATE TABLE cancellations (
+  cancellation_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  confirm_id UUID NOT NULL REFERENCES confirms(confirm_id) ON DELETE CASCADE,
+  match_id UUID NOT NULL REFERENCES matches(match_id) ON DELETE CASCADE,
+  cancelled_by UUID NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+  is_late BOOLEAN NOT NULL DEFAULT FALSE,
+  rescheduled BOOLEAN NOT NULL DEFAULT FALSE,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
 -- Create indexes for performance
 CREATE INDEX idx_likes_liker_id ON likes(liker_id);
 CREATE INDEX idx_likes_likee_id ON likes(likee_id);
@@ -187,6 +243,16 @@ CREATE INDEX idx_reports_reporter_id ON reports(reporter_id);
 CREATE INDEX idx_reports_accused_id ON reports(accused_id);
 CREATE INDEX idx_reports_status ON reports(status);
 CREATE INDEX idx_enforcements_accused_id ON enforcements(accused_id);
+CREATE INDEX idx_scoring_events_user_type ON scoring_events(user_id, event_type, created_at);
+CREATE INDEX idx_scoring_events_created ON scoring_events(created_at);
+CREATE INDEX idx_bonds_ledger_user_id ON bonds_ledger(user_id);
+CREATE INDEX idx_bonds_ledger_user_match_reason ON bonds_ledger(user_id, match_id, reason);
+CREATE INDEX idx_subscriptions_user_id ON subscriptions(user_id);
+CREATE INDEX idx_subscriptions_status ON subscriptions(status);
+CREATE INDEX idx_subscriptions_period_end ON subscriptions(current_period_end);
+CREATE INDEX idx_passes_passer_id ON passes(passer_id);
+CREATE INDEX idx_cancellations_match_id ON cancellations(match_id);
+CREATE INDEX idx_cancellations_cancelled_by ON cancellations(cancelled_by);
 
 -- Create GIN indexes for JSONB columns
 CREATE INDEX idx_profiles_prompts ON profiles USING GIN (prompts);
