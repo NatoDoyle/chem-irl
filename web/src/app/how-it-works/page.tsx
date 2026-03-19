@@ -1,127 +1,172 @@
-import { BRAND_COLORS } from "@/config/brand";
+import { AnimatedSection } from '@/components/AnimatedSection';
+import type { Metadata } from 'next';
+
+export const metadata: Metadata = {
+  title: 'How It Works - Chem IRL',
+  description:
+    'Get from match to meeting in days, not weeks. Learn how Chem IRL works.',
+};
+
+const STEPS = [
+  {
+    number: '01',
+    title: 'Like to Match',
+    description:
+      'Browse profiles and swipe right on people you\'d like to meet.',
+    detail:
+      'When you both like each other, you match instantly. Our discovery feed shows you people based on your preferences and proximity \u2014 no algorithms hiding profiles behind paywalls.',
+  },
+  {
+    number: '02',
+    title: 'Propose 2\u20133 Times',
+    description:
+      'Once matched, propose exactly 2\u20133 specific meeting times within the next 7 days.',
+    detail:
+      'Pick a date type \u2014 coffee, drinks, a walk \u2014 and add a one-line note. Structured proposals eliminate the \u201cso what are you up to this weekend\u201d back-and-forth that kills momentum.',
+  },
+  {
+    number: '03',
+    title: 'They Confirm',
+    description:
+      'Your match taps to confirm one of your proposed times, or counters with 2\u20133 alternatives.',
+    detail:
+      'Proposals expire after 72 hours. No response? The match moves on. This keeps things moving and respects everyone\u2019s time. No ghosting into oblivion.',
+  },
+  {
+    number: '04',
+    title: 'Meet & Mark',
+    description:
+      'Chat unlocks once a time is confirmed. Meet in person. Mark that you went.',
+    detail:
+      'After meeting, both people mark whether the date happened. Your Speed score reflects how often you follow through \u2014 better scores mean better visibility in discovery.',
+  },
+];
+
+const DIFFERENTIATORS = [
+  {
+    title: '72-Hour Rule',
+    description:
+      'Proposals expire in 72 hours. No endless texting. No ghosting into oblivion. Either you meet or you move on.',
+  },
+  {
+    title: 'Structured Proposals',
+    description:
+      'Exactly 2\u20133 times within 7 days. No vague \u201cmaybe this weekend\u201d plans. Specificity creates commitment.',
+  },
+  {
+    title: 'Receiver-Paid Reopen',
+    description:
+      'Expired? The receiver can reopen with credits and propose their own times. A fair system that rewards action.',
+  },
+];
 
 export default function HowItWorksPage() {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
-      <main className="container mx-auto px-4 py-16">
-        <div className="max-w-4xl mx-auto">
-          <h1 className="text-4xl md:text-5xl font-bold text-slate-900 mb-4 text-center">
-            How It Works
-          </h1>
-          <p className="text-xl text-slate-600 mb-12 text-center">
-            Get from match to meeting in days, not weeks.
-          </p>
+    <>
+      {/* Hero */}
+      <section className="pt-32 pb-16 px-4">
+        <div className="max-w-4xl mx-auto text-center">
+          <AnimatedSection>
+            <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-ink-900 mb-6">
+              How It Works
+            </h1>
+            <p className="text-xl text-ink-500 max-w-2xl mx-auto">
+              Get from match to meeting in days, not weeks. Here&apos;s how Chem
+              IRL makes it happen.
+            </p>
+          </AnimatedSection>
+        </div>
+      </section>
 
-          <div className="space-y-12">
-            {/* Step 1 */}
-            <div className="flex flex-col md:flex-row gap-8 items-center">
-              <div className="flex-shrink-0">
-                <div className="w-20 h-20 bg-blue-100 rounded-full flex items-center justify-center">
-                  <span className="text-3xl font-bold text-blue-600">1</span>
+      {/* Steps — zig-zag layout */}
+      <section className="py-12 px-4">
+        <div className="max-w-6xl mx-auto space-y-8">
+          {STEPS.map((step, i) => (
+            <div key={step.number}>
+              <AnimatedSection
+                direction={i % 2 === 0 ? 'left' : 'right'}
+                delay={i * 0.1}
+              >
+                <div
+                  className={`flex flex-col md:flex-row ${i % 2 === 1 ? 'md:flex-row-reverse' : ''} gap-8 md:gap-16 items-center`}
+                >
+                  <div className="flex-1 relative">
+                    <span className="font-mono text-7xl md:text-8xl font-bold text-aqua-100 absolute -top-6 -left-2 select-none">
+                      {step.number}
+                    </span>
+                    <div className="relative pt-8 pl-2">
+                      <h2 className="text-2xl md:text-3xl font-bold text-ink-900 mb-4">
+                        {step.title}
+                      </h2>
+                      <p className="text-lg text-ink-700 mb-3">
+                        {step.description}
+                      </p>
+                      <p className="text-ink-500">{step.detail}</p>
+                    </div>
+                  </div>
+                  <div className="flex-1">
+                    <div className="bg-aqua-50 rounded-brand p-12 aspect-[4/3] flex items-center justify-center">
+                      <div className="w-20 h-20 rounded-full bg-aqua-200 flex items-center justify-center">
+                        <span className="text-3xl font-bold text-aqua-700">
+                          {i + 1}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
                 </div>
-              </div>
-              <div className="flex-1">
-                <h2 className="text-2xl font-semibold text-slate-900 mb-3">
-                  Like to Match
-                </h2>
-                <p className="text-lg text-slate-600">
-                  Swipe right on profiles you&apos;re interested in. When you both like each other, you match.
-                </p>
-              </div>
-            </div>
+              </AnimatedSection>
 
-            {/* Step 2 */}
-            <div className="flex flex-col md:flex-row gap-8 items-center">
-              <div className="flex-shrink-0">
-                <div className="w-20 h-20 bg-blue-100 rounded-full flex items-center justify-center">
-                  <span className="text-3xl font-bold text-blue-600">2</span>
+              {i < STEPS.length - 1 && (
+                <div className="hidden md:flex justify-center my-4">
+                  <div className="w-px h-16 border-l-2 border-dashed border-aqua-200" />
                 </div>
-              </div>
-              <div className="flex-1">
-                <h2 className="text-2xl font-semibold text-slate-900 mb-3">
-                  Propose 2–3 Times
-                </h2>
-                <p className="text-lg text-slate-600">
-                  Suggest exactly 2–3 different times within the next 7 days. Add a first-date type and a one-line note.
-                </p>
-              </div>
+              )}
             </div>
+          ))}
+        </div>
+      </section>
 
-            {/* Step 3 */}
-            <div className="flex flex-col md:flex-row gap-8 items-center">
-              <div className="flex-shrink-0">
-                <div className="w-20 h-20 bg-blue-100 rounded-full flex items-center justify-center">
-                  <span className="text-3xl font-bold text-blue-600">3</span>
-                </div>
-              </div>
-              <div className="flex-1">
-                <h2 className="text-2xl font-semibold text-slate-900 mb-3">
-                  They Confirm
-                </h2>
-                <p className="text-lg text-slate-600">
-                  One tap to confirm a time, or suggest 2–3 alternatives if none of the times suit you.
-                </p>
-              </div>
-            </div>
-
-            {/* Step 4 */}
-            <div className="flex flex-col md:flex-row gap-8 items-center">
-              <div className="flex-shrink-0">
-                <div className="w-20 h-20 bg-blue-100 rounded-full flex items-center justify-center">
-                  <span className="text-3xl font-bold text-blue-600">4</span>
-                </div>
-              </div>
-              <div className="flex-1">
-                <h2 className="text-2xl font-semibold text-slate-900 mb-3">
-                  Meet & Mark
-                </h2>
-                <p className="text-lg text-slate-600">
-                  Chat unlocks after you confirm. Meet in person. Mark that you went. Rate the experience.
-                </p>
-              </div>
-            </div>
-          </div>
-
-          {/* Key Features */}
-          <div className="mt-16 pt-12 border-t border-slate-200">
-            <h2 className="text-3xl font-bold text-slate-900 mb-8 text-center">
+      {/* What Makes Us Different */}
+      <section className="py-20 px-4">
+        <div className="max-w-5xl mx-auto">
+          <AnimatedSection>
+            <h2 className="text-3xl md:text-4xl font-bold text-ink-900 text-center mb-16">
               What Makes Us Different
             </h2>
-            <div className="grid md:grid-cols-3 gap-6">
-              <div className="p-6 bg-white rounded-lg shadow-sm">
-                <h3 className="text-xl font-semibold text-slate-900 mb-2">72-Hour Rule</h3>
-                <p className="text-slate-600">
-                  Proposals expire in 72 hours. No endless texting. No ghosting.
-                </p>
-              </div>
-              <div className="p-6 bg-white rounded-lg shadow-sm">
-                <h3 className="text-xl font-semibold text-slate-900 mb-2">Structured Proposals</h3>
-                <p className="text-slate-600">
-                  Exactly 2–3 times within 7 days. No vague &quot;maybe this weekend&quot; plans.
-                </p>
-              </div>
-              <div className="p-6 bg-white rounded-lg shadow-sm">
-                <h3 className="text-xl font-semibold text-slate-900 mb-2">Receiver-Paid Reopen</h3>
-                <p className="text-slate-600">
-                  Expired? They can reopen with credits. Fair system that rewards action.
-                </p>
-              </div>
-            </div>
-          </div>
+          </AnimatedSection>
 
-          {/* CTA */}
-          <div className="mt-12 text-center">
-            <a
-              href="/download"
-              className="inline-block bg-blue-600 hover:bg-blue-700 text-white font-semibold py-4 px-8 rounded-full text-lg transition-colors"
-              style={{ backgroundColor: BRAND_COLORS.primary }}
-            >
-              Download the App
-            </a>
+          <div className="grid md:grid-cols-3 gap-8">
+            {DIFFERENTIATORS.map((item, i) => (
+              <AnimatedSection key={item.title} delay={i * 0.15}>
+                <div className="group bg-white rounded-brand p-8 shadow-warm hover:shadow-warm-lg transition-all duration-300">
+                  <div className="h-1 bg-gradient-to-r from-aqua-400 to-aqua-600 rounded-full mb-6 group-hover:h-1.5 transition-all" />
+                  <h3 className="text-xl font-bold text-ink-900 mb-3">
+                    {item.title}
+                  </h3>
+                  <p className="text-ink-500">{item.description}</p>
+                </div>
+              </AnimatedSection>
+            ))}
           </div>
         </div>
-      </main>
-    </div>
+      </section>
+
+      {/* CTA */}
+      <section className="py-20 px-4 bg-gradient-to-r from-aqua-600 to-aqua-700">
+        <AnimatedSection>
+          <div className="max-w-3xl mx-auto text-center">
+            <h2 className="text-3xl md:text-4xl font-bold text-white mb-6">
+              Ready to get started?
+            </h2>
+            <a
+              href="/download"
+              className="inline-flex items-center justify-center bg-white text-aqua-700 font-semibold py-4 px-8 rounded-brand text-lg hover:bg-aqua-50 transition-colors"
+            >
+              Join the Waitlist
+            </a>
+          </div>
+        </AnimatedSection>
+      </section>
+    </>
   );
 }
-
