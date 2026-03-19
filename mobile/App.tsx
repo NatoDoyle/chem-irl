@@ -1,4 +1,8 @@
-import { NavigationContainer, NavigationContainerRef } from '@react-navigation/native';
+import {
+  NavigationContainer,
+  NavigationContainerRef,
+  DefaultTheme,
+} from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { useEffect, useState, useCallback, useRef, useMemo } from 'react';
 import {
@@ -20,7 +24,7 @@ import { isSessionExpiredError, getErrorAlert, isRecoverableError } from './src/
 import { ensureProfileExists } from './src/lib/profile';
 import { addBreadcrumb, setUserContext, clearUserContext } from './src/lib/sentry';
 import { identifyUser, resetUser } from './src/lib/analytics';
-import { BRAND_COLORS } from './src/config/brand';
+import { BRAND_COLORS, GOLDEN_HOUR } from './src/config/brand';
 import {
   registerDeviceToken,
   unregisterDeviceToken,
@@ -30,6 +34,17 @@ import {
 import ProfileRefreshContext from './src/contexts/ProfileRefreshContext';
 
 const Stack = createNativeStackNavigator();
+
+const GoldenHourTheme = {
+  ...DefaultTheme,
+  colors: {
+    ...DefaultTheme.colors,
+    background: GOLDEN_HOUR.bg,
+    card: GOLDEN_HOUR.bg,
+    border: GOLDEN_HOUR.borderDefault,
+  },
+};
+
 
 // Tells Supabase Auth to continuously refresh the session automatically if
 // the app is in the foreground. When this is added, you will continue to receive
@@ -366,7 +381,7 @@ export default function App() {
 
   return (
     <ProfileRefreshContext.Provider value={refreshProfile}>
-      <NavigationContainer ref={navigationRef}>
+      <NavigationContainer ref={navigationRef} theme={GoldenHourTheme}>
         <Stack.Navigator screenOptions={screenOptions}>
           <Stack.Screen name="Root">
             {() => {
@@ -387,7 +402,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     padding: 24,
-    backgroundColor: '#fff',
+    backgroundColor: GOLDEN_HOUR.bg,
   },
   expiredTitle: {
     fontSize: 24,
@@ -407,9 +422,10 @@ const styles = StyleSheet.create({
     backgroundColor: BRAND_COLORS.primary,
     paddingVertical: 14,
     paddingHorizontal: 32,
-    borderRadius: 8,
+    borderRadius: GOLDEN_HOUR.radius.lg,
     minWidth: 200,
     alignItems: 'center',
+    ...GOLDEN_HOUR.shadow.warm,
   },
   signInButtonText: {
     color: '#fff',
@@ -421,7 +437,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     padding: 24,
-    backgroundColor: '#fff',
+    backgroundColor: GOLDEN_HOUR.bg,
   },
   errorTitle: {
     fontSize: 24,
@@ -447,9 +463,10 @@ const styles = StyleSheet.create({
     backgroundColor: BRAND_COLORS.primary,
     paddingVertical: 14,
     paddingHorizontal: 32,
-    borderRadius: 8,
+    borderRadius: GOLDEN_HOUR.radius.lg,
     minWidth: 200,
     alignItems: 'center',
+    ...GOLDEN_HOUR.shadow.warm,
   },
   retryButtonText: {
     color: '#fff',
