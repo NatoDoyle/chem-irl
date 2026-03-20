@@ -104,15 +104,15 @@ No changes needed - uses existing environment variables for build-time constants
 ### Mobile App
 ```bash
 cd mobile
-npm start
+bun start
 # Then scan QR code with Expo Go app
 ```
 
 ### Website
 ```bash
 cd web
-npm run build
-npm run start
+bun run build
+bun run start
 # Or deploy to Vercel (static export)
 ```
 

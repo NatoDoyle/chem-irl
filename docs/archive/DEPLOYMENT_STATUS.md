@@ -46,8 +46,8 @@ See `mobile/ENV_SETUP.md` for detailed instructions.
 
 ```bash
 cd mobile
-npm install  # If not done already
-npm start
+bun install  # If not done already
+bun start
 ```
 
 **Step 3: Test on Phone**
@@ -86,7 +86,7 @@ npm start
 
 1. **Deploy website** (choose CLI or Dashboard method above)
 2. **Set up mobile `.env`** (see `mobile/ENV_SETUP.md`)
-3. **Test mobile app** (run `npm start` in `mobile/` directory)
+3. **Test mobile app** (run `bun start` in `mobile/` directory)
 4. **Verify everything works!**
 
 ---

@@ -7,7 +7,7 @@ Quick guide to deploy and test the website and mobile app.
 ### Website Deployment
 
 - Vercel account (free tier works)
-- Vercel CLI installed: `npm i -g vercel`
+- Vercel CLI installed: `bun install -g vercel`
 
 ### Mobile App Testing
 
@@ -73,13 +73,13 @@ EXPO_PUBLIC_APP_URL=https://chemirl.app
 
 ```bash
 cd mobile
-npm install
+bun install
 ```
 
 ### Step 3: Start Development Server
 
 ```bash
-npm start
+bun start
 ```
 
 This will:
@@ -99,13 +99,13 @@ This will:
 **Option B: iOS Simulator (macOS only)**
 
 ```bash
-npm run ios
+bun run ios
 ```
 
 **Option C: Android Emulator**
 
 ```bash
-npm run android
+bun run android
 ```
 
 ### Step 5: Test Core Features
@@ -140,7 +140,7 @@ npm run android
 ### Install EAS CLI
 
 ```bash
-npm install -g eas-cli
+bun install -g eas-cli
 eas login
 ```
 
@@ -236,7 +236,7 @@ See [`../../DATABASE_SETUP.md`](../../DATABASE_SETUP.md) for details.
 
 - Check `web/next.config.ts` has `output: 'export'`
 - Ensure no API routes exist
-- Run `npm run build` locally first
+- Run `bun run build` locally first
 
 ### Mobile App Won't Connect
 

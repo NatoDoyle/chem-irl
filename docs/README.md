@@ -84,7 +84,7 @@ docs/
 Run the documentation link checker to validate all markdown links:
 
 ```bash
-npm run docs:check
+bun run docs:check
 ```
 
 This will check all markdown files (excluding archives) and report any broken links.

@@ -19,9 +19,9 @@ Your configuration looks correct:
 2. **General** → **Framework Preset**: Should be "Next.js"
 3. **Build & Development Settings**:
    - **Root Directory**: `web`
-   - **Build Command**: `npm run build` (or leave empty for auto-detect)
+   - **Build Command**: `bun run build` (or leave empty for auto-detect)
    - **Output Directory**: `out`
-   - **Install Command**: `npm install`
+   - **Install Command**: `bun install`
 
 ### Issue 2: Build Fails on Vercel
 
@@ -32,7 +32,7 @@ Your configuration looks correct:
 
 **Common Build Errors**:
 - **Missing dependencies**: Ensure `package.json` has all dependencies
-- **TypeScript errors**: Run `npm run build` locally first
+- **TypeScript errors**: Run `bun run build` locally first
 - **Environment variables**: Add to Vercel project settings if needed
 
 ### Issue 3: Static Export Not Working
@@ -40,7 +40,7 @@ Your configuration looks correct:
 **Verify locally first**:
 ```bash
 cd web
-npm run build
+bun run build
 # Check that out/ directory is created
 ls out/
 ```
@@ -54,8 +54,8 @@ For static exports, `vercel.json` might need adjustment. Try this minimal versio
 ```json
 {
   "outputDirectory": "out",
-  "buildCommand": "npm run build",
-  "installCommand": "npm install"
+  "buildCommand": "bun run build",
+  "installCommand": "bun install"
 }
 ```
 
@@ -79,15 +79,15 @@ If auto-deploy isn't working, you can manually trigger:
 ### 1. Verify Local Build
 ```bash
 cd web
-npm install
-npm run build
+bun install
+bun run build
 ```
 ✅ Should create `out/` directory with HTML files
 
 ### 2. Check Vercel Project Settings
 - Root Directory: `web` ✓
 - Framework: Next.js ✓
-- Build Command: `npm run build` ✓
+- Build Command: `bun run build` ✓
 - Output Directory: `out` ✓
 
 ### 3. Check Git Connection
@@ -116,7 +116,7 @@ Then add back headers/redirects one by one to identify the issue.
 ## Still Not Working?
 
 1. **Check Vercel Build Logs**: Look for specific error messages
-2. **Test Local Build**: Ensure `npm run build` works locally
+2. **Test Local Build**: Ensure `bun run build` works locally
 3. **Check Vercel Status**: [status.vercel.com](https://status.vercel.com)
 4. **Vercel Support**: Contact Vercel support with build logs
 
@@ -128,7 +128,7 @@ If Vercel continues to have issues, Netlify also supports static exports:
 2. Import GitHub repo
 3. Settings:
    - Base directory: `web`
-   - Build command: `npm run build`
+   - Build command: `bun run build`
    - Publish directory: `web/out`
 
 

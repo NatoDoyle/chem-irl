@@ -57,13 +57,13 @@
 
 ## Installation Instructions
 
-**Prerequisites:** Node.js 18+ and npm must be installed on your system.
+**Prerequisites:** Node.js 18+ and bun must be installed on your system.
 
 ### Install Web Dependencies
 
 ```bash
 cd web
-npm install
+bun install
 ```
 
 **Expected output:** Creates `web/node_modules/` with all packages from `package.json`
@@ -72,7 +72,7 @@ npm install
 
 ```bash
 cd mobile
-npm install
+bun install
 ```
 
 **Expected output:** Creates `mobile/node_modules/` with all packages from `package.json`
@@ -82,13 +82,13 @@ npm install
 **Check web:**
 ```bash
 cd web
-npm list @supabase/supabase-js next react 2>/dev/null
+bun pm ls @supabase/supabase-js next react 2>/dev/null
 ```
 
 **Check mobile:**
 ```bash
 cd mobile
-npm list jest eslint prettier expo 2>/dev/null
+bun pm ls jest eslint prettier expo 2>/dev/null
 ```
 
 ## Recent Changes Requiring Installation
@@ -107,29 +107,29 @@ npm list jest eslint prettier expo 2>/dev/null
 **Web:**
 ```bash
 cd web
-npm run build      # Build static site
-npm run dev        # Start dev server
-npm run lint       # Lint code
-npm run type-check # TypeScript check
+bun run build      # Build static site
+bun run dev        # Start dev server
+bun run lint       # Lint code
+bun run type-check # TypeScript check
 ```
 
 **Mobile:**
 ```bash
 cd mobile
-npm start          # Start Expo dev server
-npm test           # Run Jest tests
-npm run lint       # Lint code
-npm run format     # Format code
-npm run type-check # TypeScript check
+bun start          # Start Expo dev server
+bun test           # Run Jest tests
+bun run lint       # Lint code
+bun run format     # Format code
+bun run type-check # TypeScript check
 ```
 
 ## Troubleshooting
 
-**If `npm install` fails:**
+**If `bun install` fails:**
 1. Ensure Node.js 18+ is installed: `node --version`
-2. Clear npm cache: `npm cache clean --force`
-3. Delete `package-lock.json` and try again (will regenerate)
-4. Check internet connection (npm needs to download packages)
+2. Clear bun cache: `bun pm cache rm`
+3. Delete `bun.lock` and try again (will regenerate)
+4. Check internet connection (bun needs to download packages)
 
 **If specific packages fail:**
 - Check package versions are compatible with Node.js version

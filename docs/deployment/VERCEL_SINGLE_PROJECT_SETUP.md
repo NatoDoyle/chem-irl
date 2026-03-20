@@ -12,9 +12,9 @@
 - **Project Name**: `chem-irl`
 - **Root Directory**: `.` or empty (repo root, NOT "web")
 - **Framework Preset**: Next.js (auto-detected)
-- **Build Command**: Auto-detected (`npm run build`)
+- **Build Command**: Auto-detected (`bun run build`)
 - **Output Directory**: Auto-detected (`out` for static export)
-- **Install Command**: Auto-detected (`npm install`)
+- **Install Command**: Auto-detected (`bun install`)
 
 ### 2. Git Settings
 **URL**: https://vercel.com/nathans-projects-23715d38/chem-irl/settings/git
@@ -53,7 +53,7 @@ Your code is correctly set up:
 - ✅ `vercel.json` - No buildCommand/outputDirectory (auto-detected)
 - ✅ `next.config.ts` - Static export configured
 - ✅ `package.json` - Clean dependencies (no unused packages)
-- ✅ Build works locally (`npm run build` succeeds)
+- ✅ Build works locally (`bun run build` succeeds)
 
 ## Monitoring
 

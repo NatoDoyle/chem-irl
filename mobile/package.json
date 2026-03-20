@@ -12,18 +12,18 @@
     "lint:fix": "eslint . --ext .ts,.tsx --fix",
     "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md}\"",
     "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,md}\"",
-    "test": "npm run test:unit",
+    "test": "bun run test:unit",
     "test:unit": "jest -c jest.unit.config.js",
     "test:native": "jest -c jest.native.config.js",
     "check:env": "tsx scripts/checkEnv.ts",
-    "prebuild": "npm run check:env",
+    "prebuild": "bun run check:env",
     "use:staging": "tsx scripts/switchEnv.ts staging",
     "use:production": "tsx scripts/switchEnv.ts production",
     "verify:staging": "tsx scripts/verifySupabase.ts",
     "test:two-device": "tsx scripts/printTwoDeviceWorkflow.ts",
     "test:log:new": "tsx scripts/newTestRunLog.ts",
     "test:beta:smoke:new": "tsx scripts/newBetaSmokeRun.ts",
-    "test:beta:smoke": "echo '📋 Beta Smoke Checklist: docs/BETA_SMOKE_CHECKLIST.md' && echo '📱 Install Guide: docs/INSTALL_ON_PHONES.md' && echo '💡 Run: npm run test:beta:smoke:new'"
+    "test:beta:smoke": "echo '📋 Beta Smoke Checklist: docs/BETA_SMOKE_CHECKLIST.md' && echo '📱 Install Guide: docs/INSTALL_ON_PHONES.md' && echo '💡 Run: bun run test:beta:smoke:new'"
   },
   "dependencies": {
     "@react-native-async-storage/async-storage": "^2.2.0",
@@ -83,7 +83,7 @@
     "tsx": "^4.21.0",
     "typescript": "~5.9.2"
   },
-  "_comment": "Jest config moved to explicit config files. Use 'test:unit' for unit tests (default via 'npm test') or 'test:native' for React Native component tests.",
+  "_comment": "Jest config moved to explicit config files. Use 'test:unit' for unit tests (default via 'bun test') or 'test:native' for React Native component tests.",
   "jest": {
     "preset": "jest-expo",
     "setupFiles": [
