@@ -84,6 +84,24 @@ export interface Confirm {
   created_at: string;
 }
 
+export const DayOfWeek = {
+  Monday: 'monday',
+  Tuesday: 'tuesday',
+  Wednesday: 'wednesday',
+  Thursday: 'thursday',
+  Friday: 'friday',
+  Saturday: 'saturday',
+  Sunday: 'sunday',
+} as const;
+// eslint-disable-next-line @typescript-eslint/no-redeclare
+export type DayOfWeek = (typeof DayOfWeek)[keyof typeof DayOfWeek];
+
+export interface WeeklySlot {
+  day: DayOfWeek;
+  start_time: string; // "HH:MM" local time
+  end_time: string; // "HH:MM" local time
+}
+
 export interface Message {
   message_id: string;
   match_id: string;

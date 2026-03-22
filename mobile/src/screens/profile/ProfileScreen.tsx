@@ -43,6 +43,13 @@ import {
   type UserGender,
   type UserOrientation,
 } from '../../config/profileOptions';
+import type { WeeklySlot } from '../../lib/types';
+import {
+  generateAvailabilitySummary,
+  formatSlotDisplay,
+  validateWeeklySlot,
+} from '../../lib/availability';
+import AvailabilitySlotPicker from '../../components/AvailabilitySlotPicker';
 
 type PhotoUploadState = 'idle' | 'uploading' | 'success' | 'error';
 type PhotoDeletionState = 'idle' | 'deleting';
@@ -68,6 +75,9 @@ export default function ProfileScreen() {
   const [smoking, setSmoking] = useState<string | null>(null);
   const [drugs, setDrugs] = useState<string | null>(null);
   const [diet, setDiet] = useState('');
+
+  // Availability (profiles.availability.weekly_slots)
+  const [weeklySlots, setWeeklySlots] = useState<WeeklySlot[]>([]);
 
   // Preferences (profiles.prompts.preferences)
   const [interests, setInterests] = useState<string[]>([]);
@@ -122,7 +132,7 @@ export default function ProfileScreen() {
       // Load profiles data
       let { data: profile, error } = await supabase
         .from('profiles')
-        .select('prompts, photos')
+        .select('prompts, photos, availability')
         .eq('id', user.id)
         .maybeSingle();
 
@@ -130,7 +140,7 @@ export default function ProfileScreen() {
         await ensureProfileExists(user.id);
         const next = await supabase
           .from('profiles')
-          .select('prompts, photos')
+          .select('prompts, photos, availability')
           .eq('id', user.id)
           .maybeSingle();
         profile = next.data;
@@ -167,6 +177,9 @@ export default function ProfileScreen() {
         setAstrologySign(preferences.astrology_sign || null);
         setJobTitle(preferences.job_title || '');
         setEducation(preferences.education || '');
+
+        const availability = (profile.availability ?? {}) as Record<string, any>;
+        setWeeklySlots(availability.weekly_slots || []);
 
         const loadedPhotos = (profile.photos as string[]) || [];
         setPhotos(loadedPhotos);
@@ -264,14 +277,15 @@ export default function ProfileScreen() {
         return;
       }
 
-      // Get current prompts to preserve any fields we don't edit here
+      // Get current prompts and availability to preserve fields we don't edit here
       const { data: currentProfile } = await supabase
         .from('profiles')
-        .select('prompts')
+        .select('prompts, availability')
         .eq('id', user.id)
         .maybeSingle();
 
       const currentPrompts = (currentProfile?.prompts ?? {}) as Record<string, any>;
+      const currentAvailability = (currentProfile?.availability ?? {}) as Record<string, any>;
 
       const sanitizedHeadline = headlineTrimmed ? sanitizeText(headlineTrimmed) : '';
       const sanitizedBio = bioTrimmed ? sanitizeMultilineText(bioTrimmed) : '';
@@ -314,10 +328,17 @@ export default function ProfileScreen() {
         preferences,
       };
 
+      const updatedAvailability = {
+        ...currentAvailability,
+        weekly_slots: weeklySlots,
+        summary: generateAvailabilitySummary(weeklySlots),
+      };
+
       const profilePayload: any = {
         id: user.id,
         prompts,
         photos,
+        availability: updatedAvailability,
         completion_pct: photos.length >= 1 ? 100 : 50,
       };
       if (parsedHeight !== null) {
@@ -561,6 +582,23 @@ export default function ProfileScreen() {
     addBreadcrumb('User signing out', 'auth', 'info');
     clearUserContext();
     await supabase.auth.signOut();
+  };
+
+  const addSlot = (slot: WeeklySlot) => {
+    const error = validateWeeklySlot(slot);
+    if (error) {
+      Alert.alert('Invalid time slot', error);
+      return;
+    }
+    if (weeklySlots.length >= 3) {
+      Alert.alert('Limit', 'You can add up to 3 recurring time slots');
+      return;
+    }
+    setWeeklySlots([...weeklySlots, slot]);
+  };
+
+  const removeSlot = (index: number) => {
+    setWeeklySlots(weeklySlots.filter((_, i) => i !== index));
   };
 
   const toggleMultiSelect = (value: string, current: string[], setter: (v: string[]) => void) => {
@@ -913,6 +951,29 @@ export default function ProfileScreen() {
         </View>
       )}
 
+      {/* ── When I'm Usually Free ── */}
+      {renderSectionHeader(
+        "When I'm Usually Free",
+        'availability',
+        weeklySlots.length > 0 ? weeklySlots.map(formatSlotDisplay).join(', ') : undefined
+      )}
+      {expandedSections.has('availability') && (
+        <View style={styles.sectionBody}>
+          {weeklySlots.map((slot, index) => (
+            <View key={index} style={styles.slotRow}>
+              <Text style={styles.slotText}>{formatSlotDisplay(slot)}</Text>
+              <TouchableOpacity onPress={() => removeSlot(index)} disabled={saving}>
+                <Text style={styles.clearLink}>Remove</Text>
+              </TouchableOpacity>
+            </View>
+          ))}
+          {weeklySlots.length < 3 && <AvailabilitySlotPicker onAdd={addSlot} disabled={saving} />}
+          {weeklySlots.length === 0 && (
+            <Text style={styles.fieldHint}>Add times when you're usually free for dates</Text>
+          )}
+        </View>
+      )}
+
       {/* ── Save ── */}
       <TouchableOpacity
         style={[styles.saveButton, saving && styles.buttonDisabled]}
@@ -1025,6 +1086,28 @@ const styles = StyleSheet.create({
     color: BRAND_COLORS.danger,
     fontWeight: '500',
     marginTop: 4,
+  },
+
+  // Availability slots
+  slotRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: GOLDEN_HOUR.inputBg,
+    padding: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: GOLDEN_HOUR.borderDefault,
+  },
+  slotText: {
+    fontSize: 14,
+    color: BRAND_COLORS.text[900],
+    flex: 1,
+  },
+  fieldHint: {
+    fontSize: 13,
+    color: BRAND_COLORS.text[600],
+    fontStyle: 'italic',
   },
 
   // Chips / pickers

@@ -1,6 +1,16 @@
-import type { UserGender, UserOrientation } from '../lib/types';
+import type { UserGender, UserOrientation, DayOfWeek } from '../lib/types';
 
 export type { UserGender, UserOrientation };
+
+export const DAY_OF_WEEK_OPTIONS: { value: DayOfWeek; label: string; shortLabel: string }[] = [
+  { value: 'monday', label: 'Monday', shortLabel: 'Mon' },
+  { value: 'tuesday', label: 'Tuesday', shortLabel: 'Tue' },
+  { value: 'wednesday', label: 'Wednesday', shortLabel: 'Wed' },
+  { value: 'thursday', label: 'Thursday', shortLabel: 'Thu' },
+  { value: 'friday', label: 'Friday', shortLabel: 'Fri' },
+  { value: 'saturday', label: 'Saturday', shortLabel: 'Sat' },
+  { value: 'sunday', label: 'Sunday', shortLabel: 'Sun' },
+];
 
 export const GENDER_OPTIONS: { value: UserGender; label: string }[] = [
   { value: 'male', label: 'Male' },

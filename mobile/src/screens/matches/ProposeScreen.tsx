@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useMemo, useEffect } from 'react';
 import {
   View,
   Text,
@@ -27,6 +27,8 @@ import {
   isValidTimeWindow,
   formatProposalTime,
 } from '../../lib/timezone';
+import { weeklySlotsToPrefillWindows } from '../../lib/availability';
+import type { WeeklySlot } from '../../lib/types';
 
 type ProposeRouteParams = {
   matchId: string;
@@ -39,6 +41,23 @@ const DATE_TYPES = ['Coffee', 'Drinks', 'Dinner', 'Walk', 'Activity', 'Other'];
 
 type PickerMode = 'date' | 'start-time' | 'end-time' | null;
 
+function hasWindowOverlap(
+  existingWindows: { start: string; end: string }[],
+  newWindow: { start: string; end: string }
+): boolean {
+  return existingWindows.some((window) => {
+    const wStart = new Date(window.start);
+    const wEnd = new Date(window.end);
+    const nStart = new Date(newWindow.start);
+    const nEnd = new Date(newWindow.end);
+    return (
+      (nStart >= wStart && nStart < wEnd) ||
+      (nEnd > wStart && nEnd <= wEnd) ||
+      (nStart <= wStart && nEnd >= wEnd)
+    );
+  });
+}
+
 export default function ProposeScreen() {
   const route = useRoute();
   const navigation = useNavigation<ProposeNavigationProp>();
@@ -49,6 +68,7 @@ export default function ProposeScreen() {
   const [note, setNote] = useState('');
   const [loading, setLoading] = useState(false);
   const [pickerMode, setPickerMode] = useState<PickerMode>(null);
+  const [isPrefilled, setIsPrefilled] = useState(false);
   // Throttle proposal submission to prevent spam (min 2 seconds between proposals)
   const submitThrottleRef = useRef(createThrottle(() => {}, 2000));
   const [tempWindow, setTempWindow] = useState<{
@@ -57,7 +77,47 @@ export default function ProposeScreen() {
     endTime: Date;
   } | null>(null);
 
+  const maximumDate = useMemo(() => {
+    const max = new Date();
+    max.setDate(max.getDate() + 7);
+    return max;
+  }, []);
+
+  // Pre-fill time windows from saved weekly availability
+  useEffect(() => {
+    const prefillFromAvailability = async () => {
+      try {
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
+        if (!user) return;
+
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('availability')
+          .eq('id', user.id)
+          .maybeSingle();
+
+        const availability = (profile?.availability ?? {}) as Record<string, any>;
+        const slots = availability.weekly_slots as WeeklySlot[] | undefined;
+
+        if (slots && slots.length > 0) {
+          const prefilled = weeklySlotsToPrefillWindows(slots);
+          if (prefilled.length > 0) {
+            setSelectedWindows(prefilled);
+            setIsPrefilled(true);
+          }
+        }
+      } catch {
+        // Non-critical: if prefill fails, user adds windows manually
+      }
+    };
+
+    prefillFromAvailability();
+  }, []);
+
   const addTimeWindow = () => {
+    setIsPrefilled(false);
     if (selectedWindows.length >= 3) {
       Alert.alert('Limit', 'You can only propose 2-3 time windows');
       return;
@@ -176,20 +236,7 @@ export default function ProposeScreen() {
           end: finalEndTime.toISOString(),
         };
 
-        const hasOverlap = selectedWindows.some((window) => {
-          const wStart = new Date(window.start);
-          const wEnd = new Date(window.end);
-          const nStart = new Date(newWindow.start);
-          const nEnd = new Date(newWindow.end);
-
-          return (
-            (nStart >= wStart && nStart < wEnd) ||
-            (nEnd > wStart && nEnd <= wEnd) ||
-            (nStart <= wStart && nEnd >= wEnd)
-          );
-        });
-
-        if (hasOverlap) {
+        if (hasWindowOverlap(selectedWindows, newWindow)) {
           Alert.alert('Error', 'Time windows cannot overlap');
           setPickerMode(null);
           setTempWindow(null);
@@ -238,20 +285,7 @@ export default function ProposeScreen() {
       end: endUTC,
     };
 
-    const hasOverlap = selectedWindows.some((window) => {
-      const wStart = new Date(window.start);
-      const wEnd = new Date(window.end);
-      const nStart = new Date(newWindow.start);
-      const nEnd = new Date(newWindow.end);
-
-      return (
-        (nStart >= wStart && nStart < wEnd) ||
-        (nEnd > wStart && nEnd <= wEnd) ||
-        (nStart <= wStart && nEnd >= wEnd)
-      );
-    });
-
-    if (hasOverlap) {
+    if (hasWindowOverlap(selectedWindows, newWindow)) {
       Alert.alert('Error', 'Time windows cannot overlap');
       setPickerMode(null);
       setTempWindow(null);
@@ -264,6 +298,7 @@ export default function ProposeScreen() {
   };
 
   const removeTimeWindow = (index: number) => {
+    setIsPrefilled(false);
     setSelectedWindows(selectedWindows.filter((_, i) => i !== index));
   };
 
@@ -426,6 +461,12 @@ export default function ProposeScreen() {
           Select 2-3 different times within the next 7 days
         </Text>
 
+        {isPrefilled && selectedWindows.length > 0 && (
+          <Text style={styles.prefillHint}>
+            Pre-filled from your usual availability. Edit or remove as needed.
+          </Text>
+        )}
+
         {selectedWindows.map((window, index) => (
           <View key={index} style={styles.windowItem}>
             <Text style={styles.windowText}>
@@ -451,11 +492,7 @@ export default function ProposeScreen() {
                 mode="date"
                 display={Platform.OS === 'ios' ? 'spinner' : 'default'}
                 minimumDate={new Date()}
-                maximumDate={(() => {
-                  const max = new Date();
-                  max.setDate(max.getDate() + 7);
-                  return max;
-                })()}
+                maximumDate={maximumDate}
                 onChange={handleDateChange}
               />
             )}
@@ -581,6 +618,12 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: BRAND_COLORS.text[600],
     marginBottom: 12,
+  },
+  prefillHint: {
+    fontSize: 13,
+    color: BRAND_COLORS.info,
+    fontStyle: 'italic',
+    marginBottom: 8,
   },
   windowItem: {
     flexDirection: 'row',
