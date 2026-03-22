@@ -108,12 +108,15 @@ export default function MatchesScreen() {
         );
 
         // Batch fetch all profiles in a single query
-        let profilesMap = new Map<string, { photos: string[]; prompts: Record<string, string> }>();
+        let profilesMap = new Map<
+          string,
+          { full_name: string | null; photos: string[]; prompts: Record<string, string> }
+        >();
         if (otherUserIds.length > 0) {
           try {
             const { data: profilesData } = await supabase
               .from('profiles')
-              .select('id, photos, prompts')
+              .select('id, full_name, photos, prompts')
               .in('id', otherUserIds);
 
             // Create a map for O(1) lookup
@@ -122,6 +125,7 @@ export default function MatchesScreen() {
                 profilesData.map((profile) => [
                   profile.id,
                   {
+                    full_name: (profile.full_name as string | null) ?? null,
                     photos: (profile.photos as string[]) || [],
                     prompts: (profile.prompts as Record<string, string>) || {},
                   },
@@ -145,7 +149,7 @@ export default function MatchesScreen() {
             ...match,
             otherUserId,
             otherUserPhoto: photos[0],
-            otherUserName: prompts.headline || 'No name',
+            otherUserName: profile?.full_name || prompts.headline || 'No name',
           };
         });
 
