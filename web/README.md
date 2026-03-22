@@ -24,16 +24,14 @@ The website provides:
 ```
 web/
 ├── src/
-│   └── app/
-│       ├── page.tsx           # Landing page
-│       ├── download/          # Download/waitlist page
-│       └── how-it-works/      # How it works page
-├── db/                        # Database migrations (shared with mobile)
-│   ├── schema.sql             # Database schema
-│   ├── rls.sql               # RLS policies
-│   ├── kpi_views.sql         # KPI views
-│   └── scoring.sql           # Scoring functions
-└── next.config.ts            # Static export config
+│   ├── app/
+│   │   ├── page.tsx           # Landing page
+│   │   ├── download/          # Download/waitlist page
+│   │   └── how-it-works/      # How it works page
+│   ├── components/            # Shared UI components
+│   └── config/                # Brand tokens
+├── vercel.json                # Vercel config with security headers
+└── next.config.ts             # Static export config
 ```
 
 ## Setup Instructions
@@ -41,7 +39,7 @@ web/
 ### 1. Install Dependencies
 
 ```bash
-npm install
+bun install
 ```
 
 ### 2. Environment Variables (Optional)
@@ -57,7 +55,7 @@ NEXT_PUBLIC_APP_URL=https://chemirl.app
 ### 3. Development
 
 ```bash
-npm run dev
+bun run dev
 ```
 
 Visit [http://localhost:3000](http://localhost:3000)
@@ -65,7 +63,7 @@ Visit [http://localhost:3000](http://localhost:3000)
 ### 4. Build Static Site
 
 ```bash
-npm run build
+bun run build
 ```
 
 Output is in `out/` directory - deploy this to any static hosting.
@@ -83,32 +81,20 @@ Or connect GitHub repo to Vercel dashboard.
 ### Other Static Hosting
 
 ```bash
-npm run build
+bun run build
 # Deploy out/ directory
 ```
-
-## Database Migrations
-
-The `db/` directory contains database migrations that are shared with the mobile app. These should be run in Supabase SQL Editor (not part of website deployment).
-
-See [`../DATABASE_SETUP.md`](../DATABASE_SETUP.md) for database setup instructions.
 
 ## Notes
 
 - This is a **static site only** - no server-side code
 - No API routes (removed during app-first pivot)
-- Database migrations are for reference only (run in Supabase)
 - All product functionality is in the mobile app (`../mobile/`)
 
 ## Related Documentation
 
-- [Main Documentation](../DOCUMENTATION.md) - Complete technical docs
+- [Documentation Index](../docs/README.md) - Organized documentation structure
 - [Mobile App README](../mobile/README.md) - Mobile app setup
-- [Database Setup](../DATABASE_SETUP.md) - Database migrations
-
-## Contributing
-
-This is a solo founder project. The codebase is designed to be maintainable by one person with clear separation of concerns and comprehensive documentation.
 
 ## License
 

@@ -62,8 +62,10 @@ CREATE POLICY "Users can delete own likes" ON likes
 CREATE POLICY "Users can view own matches" ON matches
   FOR SELECT USING (auth.uid() = user_a OR auth.uid() = user_b);
 
-CREATE POLICY "System can insert matches" ON matches
-  FOR INSERT WITH CHECK (true); -- Handled by application logic
+-- Match creation happens via create_like_and_check_match() SECURITY DEFINER RPC (no direct INSERT policy needed)
+
+CREATE POLICY "Users can update own matches" ON matches
+  FOR UPDATE USING (auth.uid() = user_a OR auth.uid() = user_b);
 
 -- Proposals table policies
 CREATE POLICY "Users can view proposals in their matches" ON proposals
@@ -156,8 +158,7 @@ CREATE POLICY "Users can update own surveys" ON surveys
 CREATE POLICY "Users can view own scores" ON scores_daily
   FOR SELECT USING (auth.uid() = user_id);
 
-CREATE POLICY "System can manage scores" ON scores_daily
-  FOR ALL USING (true); -- Handled by application logic
+-- System writes to scores_daily happen via SECURITY DEFINER RPCs (no direct INSERT/UPDATE policy needed)
 
 -- Purchases table policies
 CREATE POLICY "Users can view own purchases" ON purchases
@@ -170,8 +171,7 @@ CREATE POLICY "Users can insert own purchases" ON purchases
 CREATE POLICY "Users can view own credits" ON credits_ledger
   FOR SELECT USING (auth.uid() = user_id);
 
-CREATE POLICY "System can manage credits" ON credits_ledger
-  FOR ALL USING (true); -- Handled by application logic
+-- System writes to credits_ledger happen via SECURITY DEFINER RPCs (no direct INSERT/UPDATE policy needed)
 
 -- Reports table policies
 CREATE POLICY "Users can view own reports" ON reports
@@ -285,10 +285,10 @@ AS $$
       WHERE l.liker_id = p_viewer AND l.likee_id = p.user_id
     )
     AND NOT EXISTS (
-      SELECT 1 FROM matches m 
-      WHERE (m.user_a = p_viewer AND m.user_b = p.user_id) 
-         OR (m.user_a = p.user_id AND m.user_b = p_viewer)
-      AND m.status = 'open'
+      SELECT 1 FROM matches m
+      WHERE ((m.user_a = p_viewer AND m.user_b = p.user_id)
+         OR (m.user_a = p.user_id AND m.user_b = p_viewer))
+        AND m.status = 'open'
     )
   ORDER BY
     COALESCE(s.action_speed, 50) DESC,

@@ -12,6 +12,7 @@ import {
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
 import * as FileSystem from 'expo-file-system/legacy';
+import { decode } from 'base64-arraybuffer';
 import { compressImage } from '../../lib/imageCompression';
 import { supabase } from '../../lib/supabase/client';
 import { BRAND_COLORS, GOLDEN_HOUR } from '../../config/brand';
@@ -26,150 +27,25 @@ import {
   shouldRunReconciliation,
   markReconciliationComplete,
 } from '../../lib/reconcilePhotos';
-import type { UserGender, UserOrientation } from '../../lib/types';
+import {
+  GENDER_OPTIONS,
+  ORIENTATION_OPTIONS,
+  INTENT_OPTIONS,
+  FAMILY_PLANS_OPTIONS,
+  PETS_OPTIONS,
+  ACTIVITY_OPTIONS,
+  FREQUENCY_OPTIONS,
+  LOVE_LANGUAGE_OPTIONS,
+  ASTROLOGY_SIGNS,
+  MBTI_OPTIONS,
+  LANGUAGE_OPTIONS,
+  PRESET_INTERESTS,
+  type UserGender,
+  type UserOrientation,
+} from '../../config/profileOptions';
 
 type PhotoUploadState = 'idle' | 'uploading' | 'success' | 'error';
 type PhotoDeletionState = 'idle' | 'deleting';
-
-const GENDER_OPTIONS: { value: UserGender; label: string }[] = [
-  { value: 'male', label: 'Male' },
-  { value: 'female', label: 'Female' },
-  { value: 'non_binary', label: 'Non-binary' },
-  { value: 'other', label: 'Other' },
-];
-
-const ORIENTATION_OPTIONS: { value: UserOrientation; label: string }[] = [
-  { value: 'straight', label: 'Straight' },
-  { value: 'gay', label: 'Gay' },
-  { value: 'lesbian', label: 'Lesbian' },
-  { value: 'bisexual', label: 'Bisexual' },
-  { value: 'pansexual', label: 'Pansexual' },
-  { value: 'asexual', label: 'Asexual' },
-  { value: 'other', label: 'Other' },
-];
-
-const INTENT_OPTIONS = [
-  { value: 'casual', label: 'Casual dating' },
-  { value: 'dating_long_term', label: 'Dating → long-term' },
-  { value: 'long_term', label: 'Long-term relationship' },
-  { value: 'open', label: 'Open / exploring' },
-];
-
-const FAMILY_PLANS_OPTIONS = [
-  { value: 'wants_kids', label: 'Wants kids' },
-  { value: 'no_kids', label: "Doesn't want kids" },
-  { value: 'has_kids', label: 'Has kids' },
-  { value: 'unsure', label: 'Unsure' },
-];
-
-const PETS_OPTIONS = [
-  { value: 'has_pets', label: 'Has pets' },
-  { value: 'wants_pets', label: 'Wants pets' },
-  { value: 'allergic', label: "Allergic / doesn't want" },
-  { value: 'no_preference', label: 'No preference' },
-];
-
-const ACTIVITY_OPTIONS = [
-  { value: 'sedentary', label: 'Sedentary' },
-  { value: 'light', label: 'Light' },
-  { value: 'moderate', label: 'Moderate' },
-  { value: 'active', label: 'Active' },
-  { value: 'very_active', label: 'Very active' },
-];
-
-const FREQUENCY_OPTIONS = [
-  { value: 'never', label: 'Never' },
-  { value: 'sometimes', label: 'Sometimes' },
-  { value: 'regularly', label: 'Regularly' },
-  { value: 'prefer_not', label: 'Prefer not to say' },
-];
-
-const LOVE_LANGUAGE_OPTIONS = [
-  { value: 'words', label: 'Words of Affirmation' },
-  { value: 'acts', label: 'Acts of Service' },
-  { value: 'gifts', label: 'Receiving Gifts' },
-  { value: 'time', label: 'Quality Time' },
-  { value: 'touch', label: 'Physical Touch' },
-];
-
-const ASTROLOGY_SIGNS = [
-  'Aries',
-  'Taurus',
-  'Gemini',
-  'Cancer',
-  'Leo',
-  'Virgo',
-  'Libra',
-  'Scorpio',
-  'Sagittarius',
-  'Capricorn',
-  'Aquarius',
-  'Pisces',
-];
-
-const MBTI_OPTIONS = [
-  'INTJ',
-  'INTP',
-  'ENTJ',
-  'ENTP',
-  'INFJ',
-  'INFP',
-  'ENFJ',
-  'ENFP',
-  'ISTJ',
-  'ISFJ',
-  'ESTJ',
-  'ESFJ',
-  'ISTP',
-  'ISFP',
-  'ESTP',
-  'ESFP',
-];
-
-const LANGUAGE_OPTIONS = [
-  'English',
-  'Spanish',
-  'French',
-  'German',
-  'Italian',
-  'Portuguese',
-  'Dutch',
-  'Polish',
-  'Russian',
-  'Chinese',
-  'Japanese',
-  'Korean',
-  'Arabic',
-  'Hindi',
-  'Other',
-];
-
-const PRESET_INTERESTS = [
-  'Travel',
-  'Music',
-  'Movies',
-  'Sports',
-  'Cooking',
-  'Reading',
-  'Photography',
-  'Art',
-  'Dancing',
-  'Gaming',
-  'Hiking',
-  'Yoga',
-  'Fitness',
-  'Writing',
-  'Technology',
-  'Fashion',
-  'Food',
-  'Wine',
-  'Coffee',
-  'Pets',
-  'Volunteering',
-  'Comedy',
-  'Theater',
-  'Concerts',
-];
 
 export default function ProfileScreen() {
   // Profile content
@@ -541,22 +417,16 @@ export default function ProfileScreen() {
 
       const compressedUri = await compressImage(uri);
 
-      // Read file as base64 and convert to ArrayBuffer (cross-platform; fetch+blob fails on Android)
       const base64 = await FileSystem.readAsStringAsync(compressedUri, {
         encoding: FileSystem.EncodingType.Base64,
       });
-      const binaryStr = atob(base64);
-      const bytes = new Uint8Array(binaryStr.length);
-      for (let i = 0; i < binaryStr.length; i++) {
-        bytes[i] = binaryStr.charCodeAt(i);
-      }
 
       const fileExt = 'jpg';
       const fileName = `${user.id}/${Date.now()}.${fileExt}`;
 
       const { error: uploadError } = await supabase.storage
         .from('profiles')
-        .upload(fileName, bytes, { contentType: 'image/jpeg', upsert: false });
+        .upload(fileName, decode(base64), { contentType: 'image/jpeg', upsert: false });
 
       if (uploadError) {
         setPhotoUploadStates((prev) => new Map(prev).set(tempIndex, 'error'));

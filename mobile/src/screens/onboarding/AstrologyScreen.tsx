@@ -5,107 +5,34 @@ import {
   StyleSheet,
   TouchableOpacity,
   ScrollView,
-  Alert,
   ActivityIndicator,
 } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
-import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { supabase } from '../../lib/supabase/client';
 import { BRAND_COLORS, GOLDEN_HOUR } from '../../config/brand';
-import { getErrorAlert } from '../../lib/errors';
-import { trackEvent } from '../../lib/analytics';
-import type { OnboardingStackParamList } from '../../navigation/OnboardingNavigator';
-
-type AstrologyScreenNavigationProp = NativeStackNavigationProp<
-  OnboardingStackParamList,
-  'Astrology'
->;
-
-const ASTROLOGY_SIGNS = [
-  'Aries',
-  'Taurus',
-  'Gemini',
-  'Cancer',
-  'Leo',
-  'Virgo',
-  'Libra',
-  'Scorpio',
-  'Sagittarius',
-  'Capricorn',
-  'Aquarius',
-  'Pisces',
-];
+import { ASTROLOGY_SIGNS } from '../../config/profileOptions';
+import { onboardingStyles as sharedStyles } from './onboardingStyles';
+import { useOnboardingSave } from './useOnboardingSave';
 
 export default function AstrologyScreen() {
-  const navigation = useNavigation<AstrologyScreenNavigationProp>();
   const [selectedSign, setSelectedSign] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
+  const { save, loading } = useOnboardingSave({
+    fieldPath: 'preferences.astrology_sign',
+    nextScreen: 'WorkEducation',
+    eventName: 'onboarding_astrology_completed',
+  });
 
   const handleContinue = async () => {
-    setLoading(true);
-    try {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (!user) {
-        const { title, message } = getErrorAlert('Not authenticated', 'Authentication Error');
-        Alert.alert(title, message);
-        setLoading(false);
-        return;
-      }
-
-      // Get current profile to merge prompts
-      const { data: currentProfile } = await supabase
-        .from('profiles')
-        .select('prompts')
-        .eq('id', user.id)
-        .maybeSingle();
-
-      const currentPrompts = (currentProfile?.prompts ?? {}) as Record<string, any>;
-
-      const { error } = await supabase.from('profiles').upsert({
-        id: user.id,
-        prompts: {
-          ...currentPrompts,
-          preferences: {
-            ...(currentPrompts.preferences || {}),
-            astrology_sign: selectedSign,
-          },
-        },
-      });
-
-      if (error) {
-        const { title, message } = getErrorAlert(error, 'Failed to save astrology sign');
-        Alert.alert(title, message);
-        setLoading(false);
-        return;
-      }
-
-      // Track completion
-      trackEvent('onboarding_astrology_completed', {
-        hasSelection: !!selectedSign,
-      });
-
-      // Navigate to next screen
-      navigation.navigate('WorkEducation');
-    } catch (error: any) {
-      const { title, message } = getErrorAlert(error, 'Failed to save astrology sign');
-      Alert.alert(title, message);
-    } finally {
-      setLoading(false);
-    }
+    await save(selectedSign);
   };
 
   const handleSkip = async () => {
-    // Immediately skip without confirmation
     setSelectedSign(null);
-    await handleContinue();
+    await save(null);
   };
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <Text style={styles.title}>Astrology sign</Text>
-      <Text style={styles.subtitle}>Optional: Share your zodiac sign</Text>
+    <ScrollView style={sharedStyles.container} contentContainerStyle={sharedStyles.content}>
+      <Text style={sharedStyles.title}>Astrology sign</Text>
+      <Text style={sharedStyles.subtitle}>Optional: Share your zodiac sign</Text>
 
       <View style={styles.form}>
         <View style={styles.signsGrid}>
@@ -123,24 +50,28 @@ export default function AstrologyScreen() {
           ))}
         </View>
 
-        <View style={styles.buttonRow}>
+        <View style={sharedStyles.buttonRow}>
           <TouchableOpacity
-            style={[styles.skipButton, loading && styles.buttonDisabled]}
+            style={[sharedStyles.skipButton, loading && sharedStyles.buttonDisabled]}
             onPress={handleSkip}
             disabled={loading}
           >
-            <Text style={styles.skipButtonText}>Skip</Text>
+            <Text style={sharedStyles.skipButtonText}>Skip</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={[styles.button, loading && styles.buttonDisabled]}
+            style={[
+              sharedStyles.button,
+              styles.continueButton,
+              loading && sharedStyles.buttonDisabled,
+            ]}
             onPress={handleContinue}
             disabled={loading}
           >
             {loading ? (
               <ActivityIndicator color="#fff" />
             ) : (
-              <Text style={styles.buttonText}>Continue</Text>
+              <Text style={sharedStyles.buttonText}>Continue</Text>
             )}
           </TouchableOpacity>
         </View>
@@ -150,25 +81,6 @@ export default function AstrologyScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: GOLDEN_HOUR.bg,
-  },
-  content: {
-    padding: 24,
-    paddingTop: 60,
-  },
-  title: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    color: BRAND_COLORS.text[900],
-    marginBottom: 8,
-  },
-  subtitle: {
-    fontSize: 16,
-    color: BRAND_COLORS.text[600],
-    marginBottom: 32,
-  },
   form: {
     gap: 16,
   },
@@ -200,38 +112,8 @@ const styles = StyleSheet.create({
     color: BRAND_COLORS.primary,
     fontWeight: '600',
   },
-  buttonRow: {
-    flexDirection: 'row',
-    gap: 12,
-    marginTop: 8,
-  },
-  skipButton: {
-    flex: 1,
-    borderWidth: 2,
-    borderColor: GOLDEN_HOUR.borderDefault,
-    paddingVertical: 16,
-    borderRadius: GOLDEN_HOUR.radius.lg,
-    alignItems: 'center',
-  },
-  skipButtonText: {
-    color: BRAND_COLORS.text[700],
-    fontSize: 18,
-    fontWeight: '600',
-  },
-  button: {
+  continueButton: {
     flex: 2,
-    backgroundColor: BRAND_COLORS.primary,
-    paddingVertical: 16,
-    borderRadius: GOLDEN_HOUR.radius.lg,
-    alignItems: 'center',
-    ...GOLDEN_HOUR.shadow.warm,
-  },
-  buttonDisabled: {
-    opacity: 0.6,
-  },
-  buttonText: {
-    color: '#fff',
-    fontSize: 18,
-    fontWeight: '600',
+    marginTop: 0,
   },
 });

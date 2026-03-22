@@ -14,6 +14,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { supabase } from '../../lib/supabase/client';
 import { BRAND_COLORS, GOLDEN_HOUR } from '../../config/brand';
 import { getErrorAlert } from '../../lib/errors';
+import { sanitizeText } from '../../lib/sanitize';
 import { trackEvent } from '../../lib/analytics';
 import type { OnboardingStackParamList } from '../../navigation/OnboardingNavigator';
 
@@ -64,10 +65,10 @@ export default function WorkEducationScreen() {
       };
 
       if (jobTitle.trim()) {
-        preferences.job_title = jobTitle.trim();
+        preferences.job_title = sanitizeText(jobTitle.trim());
       }
       if (education.trim()) {
-        preferences.education = education.trim();
+        preferences.education = sanitizeText(education.trim());
       }
 
       const { error } = await supabase.from('profiles').upsert({

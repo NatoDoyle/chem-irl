@@ -15,39 +15,13 @@ import { supabase } from '../../lib/supabase/client';
 import { BRAND_COLORS, GOLDEN_HOUR } from '../../config/brand';
 import { getErrorAlert } from '../../lib/errors';
 import { trackEvent } from '../../lib/analytics';
+import { PRESET_INTERESTS } from '../../config/profileOptions';
 import type { OnboardingStackParamList } from '../../navigation/OnboardingNavigator';
 
 type InterestsScreenNavigationProp = NativeStackNavigationProp<
   OnboardingStackParamList,
   'Interests'
 >;
-
-const PRESET_INTERESTS = [
-  'Travel',
-  'Music',
-  'Movies',
-  'Sports',
-  'Cooking',
-  'Reading',
-  'Photography',
-  'Art',
-  'Dancing',
-  'Gaming',
-  'Hiking',
-  'Yoga',
-  'Fitness',
-  'Writing',
-  'Technology',
-  'Fashion',
-  'Food',
-  'Wine',
-  'Coffee',
-  'Pets',
-  'Volunteering',
-  'Comedy',
-  'Theater',
-  'Concerts',
-];
 
 const MIN_INTERESTS = 3;
 

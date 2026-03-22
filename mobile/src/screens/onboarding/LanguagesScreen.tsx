@@ -14,30 +14,13 @@ import { supabase } from '../../lib/supabase/client';
 import { BRAND_COLORS, GOLDEN_HOUR } from '../../config/brand';
 import { getErrorAlert } from '../../lib/errors';
 import { trackEvent } from '../../lib/analytics';
+import { LANGUAGE_OPTIONS } from '../../config/profileOptions';
 import type { OnboardingStackParamList } from '../../navigation/OnboardingNavigator';
 
 type LanguagesScreenNavigationProp = NativeStackNavigationProp<
   OnboardingStackParamList,
   'Languages'
 >;
-
-const LANGUAGE_OPTIONS = [
-  'English',
-  'Spanish',
-  'French',
-  'German',
-  'Italian',
-  'Portuguese',
-  'Dutch',
-  'Polish',
-  'Russian',
-  'Chinese',
-  'Japanese',
-  'Korean',
-  'Arabic',
-  'Hindi',
-  'Other',
-];
 
 export default function LanguagesScreen() {
   const navigation = useNavigation<LanguagesScreenNavigationProp>();

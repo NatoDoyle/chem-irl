@@ -270,10 +270,3 @@ export async function getQueueSize(): Promise<number> {
   const queue = await loadQueue();
   return queue.length;
 }
-
-/**
- * Clear all queued operations
- */
-export async function clearQueue(): Promise<void> {
-  await AsyncStorage.removeItem(QUEUE_STORAGE_KEY);
-}

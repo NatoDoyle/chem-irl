@@ -15,27 +15,13 @@ import { supabase } from '../../lib/supabase/client';
 import { BRAND_COLORS, GOLDEN_HOUR } from '../../config/brand';
 import { getErrorAlert } from '../../lib/errors';
 import { trackEvent } from '../../lib/analytics';
+import { FREQUENCY_OPTIONS, ACTIVITY_OPTIONS } from '../../config/profileOptions';
 import type { OnboardingStackParamList } from '../../navigation/OnboardingNavigator';
 
 type LifestyleScreenNavigationProp = NativeStackNavigationProp<
   OnboardingStackParamList,
   'Lifestyle'
 >;
-
-const FREQUENCY_OPTIONS = [
-  { value: 'never', label: 'Never' },
-  { value: 'sometimes', label: 'Sometimes' },
-  { value: 'regularly', label: 'Regularly' },
-  { value: 'prefer_not', label: 'Prefer not to say' },
-];
-
-const ACTIVITY_OPTIONS = [
-  { value: 'sedentary', label: 'Sedentary' },
-  { value: 'light', label: 'Light' },
-  { value: 'moderate', label: 'Moderate' },
-  { value: 'active', label: 'Active' },
-  { value: 'very_active', label: 'Very active' },
-];
 
 export default function LifestyleScreen() {
   const navigation = useNavigation<LifestyleScreenNavigationProp>();
