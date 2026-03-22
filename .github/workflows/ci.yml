@@ -33,7 +33,7 @@ jobs:
         run: bun run format:check
 
       - name: Run tests
-        run: bun test
+        run: bunx jest -c jest.unit.config.js
 
   web:
     name: Website
