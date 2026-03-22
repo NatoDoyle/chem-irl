@@ -14,7 +14,7 @@ import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { supabase } from '../../lib/supabase/client';
 import { Match } from '../../lib/types';
-import { BRAND_COLORS } from '../../config/brand';
+import { BRAND_COLORS, GOLDEN_HOUR } from '../../config/brand';
 import { getErrorAlert } from '../../lib/errors';
 import { createDebounce } from '../../lib/debounce';
 import type { RealtimeChannel } from '@supabase/supabase-js';
@@ -386,7 +386,7 @@ export default function MatchesScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: GOLDEN_HOUR.bg,
   },
   list: {
     padding: 16,
@@ -394,10 +394,11 @@ const styles = StyleSheet.create({
   matchCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F8FAFC',
-    borderRadius: 12,
+    backgroundColor: GOLDEN_HOUR.inputBg,
+    borderRadius: GOLDEN_HOUR.radius.lg,
     padding: 16,
     marginBottom: 12,
+    ...GOLDEN_HOUR.shadow.warm,
   },
   avatar: {
     width: 60,
@@ -440,8 +441,9 @@ const styles = StyleSheet.create({
     backgroundColor: BRAND_COLORS.primary,
     paddingVertical: 12,
     paddingHorizontal: 24,
-    borderRadius: 8,
+    borderRadius: GOLDEN_HOUR.radius.lg,
     marginTop: 8,
+    ...GOLDEN_HOUR.shadow.warm,
   },
   refreshButtonText: {
     color: '#fff',
@@ -466,8 +468,9 @@ const styles = StyleSheet.create({
     backgroundColor: BRAND_COLORS.primary,
     paddingVertical: 12,
     paddingHorizontal: 24,
-    borderRadius: 8,
+    borderRadius: GOLDEN_HOUR.radius.lg,
     marginTop: 8,
+    ...GOLDEN_HOUR.shadow.warm,
   },
   retryButtonText: {
     color: '#fff',

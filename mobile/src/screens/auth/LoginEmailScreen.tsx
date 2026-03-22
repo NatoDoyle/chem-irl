@@ -13,7 +13,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { AuthStackParamList } from '../../navigation/AuthNavigator';
 import { sendEmailOTP } from '../../lib/auth';
 import { getErrorAlert } from '../../lib/errors';
-import { BRAND_COLORS } from '../../config/brand';
+import { BRAND_COLORS, GOLDEN_HOUR } from '../../config/brand';
 
 type LoginEmailScreenNavigationProp = NativeStackNavigationProp<AuthStackParamList, 'LoginEmail'>;
 
@@ -107,7 +107,7 @@ export default function LoginEmailScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: GOLDEN_HOUR.bg,
     padding: 24,
     paddingTop: 80,
   },
@@ -127,18 +127,19 @@ const styles = StyleSheet.create({
   },
   input: {
     borderWidth: 1,
-    borderColor: '#E2E8F0',
-    borderRadius: 8,
+    borderColor: GOLDEN_HOUR.borderDefault,
+    borderRadius: GOLDEN_HOUR.radius.lg,
     padding: 16,
     fontSize: 16,
     marginBottom: 24,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: GOLDEN_HOUR.inputBg,
   },
   button: {
     backgroundColor: BRAND_COLORS.primary,
     paddingVertical: 16,
-    borderRadius: 8,
+    borderRadius: GOLDEN_HOUR.radius.lg,
     alignItems: 'center',
+    ...GOLDEN_HOUR.shadow.warm,
   },
   buttonDisabled: {
     opacity: 0.6,

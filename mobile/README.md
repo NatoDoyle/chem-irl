@@ -16,7 +16,7 @@ React Native mobile app for Chem IRL dating platform.
 ### 1. Install Dependencies
 
 ```bash
-npm install
+bun install
 ```
 
 ### 2. Environment Variables
@@ -48,16 +48,16 @@ EXPO_PUBLIC_ENVIRONMENT=development  # or production, staging, etc.
 
 ```bash
 # Start Expo dev server
-npm start
+bun start
 
 # Run on iOS (requires macOS)
-npm run ios
+bun run ios
 
 # Run on Android
-npm run android
+bun run android
 
 # Run on web (for testing)
-npm run web
+bun run web
 ```
 
 ## Project Structure
@@ -158,14 +158,14 @@ eas submit --platform android
 
 ### Recommended Workflow
 
-**Quick start:** Run `npm run test:two-device` to see the complete workflow.
+**Quick start:** Run `bun run test:two-device` to see the complete workflow.
 
 1. **Verify staging setup:**
 
    ```bash
-   npm run use:staging
-   npm start  # Restart required after switching
-   npm run verify:staging
+   bun run use:staging
+   bun start  # Restart required after switching
+   bun run verify:staging
    ```
 
 2. **Install on phones:**
@@ -175,7 +175,7 @@ eas submit --platform android
    - Follow [`docs/TWO_DEVICE_TEST_PLAN.md`](./docs/TWO_DEVICE_TEST_PLAN.md) step-by-step
 
 4. **Record results:**
-   - Run `npm run test:log:new` to generate a prefilled test run log
+   - Run `bun run test:log:new` to generate a prefilled test run log
    - Or use [`docs/TEST_RUN_LOG_TEMPLATE.md`](./docs/TEST_RUN_LOG_TEMPLATE.md) manually
 
 ### Beta smoke run
@@ -184,16 +184,16 @@ Quick smoke test of the core user loop:
 
 ```bash
 # Switch to staging environment
-npm run use:staging
+bun run use:staging
 
 # Restart Expo dev server (required after env switch)
-npm start
+bun start
 
 # Verify staging setup
-npm run verify:staging
+bun run verify:staging
 
 # Generate new beta smoke test log
-npm run test:beta:smoke:new
+bun run test:beta:smoke:new
 ```
 
 **Next steps:**

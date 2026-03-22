@@ -147,16 +147,16 @@ registerRootComponent(App);
 **Run Commands**:
 ```bash
 cd mobile
-npm install
+bun install
 # Create .env file with:
 # EXPO_PUBLIC_SUPABASE_URL=your_supabase_url
 # EXPO_PUBLIC_SUPABASE_ANON_KEY=your_anon_key
 # EXPO_PUBLIC_APP_URL=https://chemirl.app
 
-npm start              # Start Expo dev server
-npm run ios            # Run on iOS (requires macOS)
-npm run android        # Run on Android
-npm run web            # Run on web (for testing)
+bun start              # Start Expo dev server
+bun run ios            # Run on iOS (requires macOS)
+bun run android        # Run on Android
+bun run web            # Run on web (for testing)
 
 # Production build
 eas build --platform ios
@@ -192,10 +192,10 @@ App.tsx (root)
 **Run Commands**:
 ```bash
 cd web
-npm install
-npm run dev          # Development server (localhost:3000)
-npm run build        # Build static site (output to out/)
-npm start            # Serve built site (not typically used)
+bun install
+bun run dev          # Development server (localhost:3000)
+bun run build        # Build static site (output to out/)
+bun start            # Serve built site (not typically used)
 
 # Deploy (Vercel)
 vercel               # Or connect GitHub repo to Vercel
@@ -587,7 +587,7 @@ NEXT_PUBLIC_APP_URL=https://chemirl.app
 
 **Website**: NO TESTS
 - No test files found
-- Build verification: `npm run build`
+- Build verification: `bun run build`
 
 ### Linting
 
@@ -597,7 +597,7 @@ NEXT_PUBLIC_APP_URL=https://chemirl.app
 
 **Website**: ESLint (Next.js default)
 - Config: `web/eslint.config.mjs` (Next.js default)
-- Run: `npm run lint` (defined in `web/package.json`)
+- Run: `bun run lint` (defined in `web/package.json`)
 
 **Root**: ESLint config exists (`eslint.config.mjs`) but unused
 
@@ -610,7 +610,7 @@ NEXT_PUBLIC_APP_URL=https://chemirl.app
 
 **Website**: TypeScript
 - Config: `web/tsconfig.json`
-- Check via build: `npm run build`
+- Check via build: `bun run build`
 - All files use TypeScript (.tsx, .ts)
 
 ### Build Tools
@@ -632,7 +632,7 @@ NEXT_PUBLIC_APP_URL=https://chemirl.app
 - React Native Debugger: Not configured
 
 **Website**:
-- Next.js Dev Server: `npm run dev`
+- Next.js Dev Server: `bun run dev`
 - Browser DevTools: Standard web development
 
 ---
@@ -771,8 +771,8 @@ NEXT_PUBLIC_APP_URL=https://chemirl.app
 
 ### Prerequisites
 
-- Node.js 18+ and npm
-- Expo CLI: `npm install -g expo-cli` (or use npx)
+- Node.js 18+ and bun
+- Expo CLI: `bun install -g expo-cli` (or use npx)
 - Supabase account and project
 - Git
 
@@ -785,7 +785,7 @@ cd chem-irl
 
 # Setup mobile app
 cd mobile
-npm install
+bun install
 
 # Create .env file (copy from mobile/ENV_SETUP.md or create manually)
 cat > .env << EOF
@@ -795,11 +795,11 @@ EXPO_PUBLIC_APP_URL=https://chemirl.app
 EOF
 
 # Start development server
-npm start
+bun start
 
 # In another terminal, run on device:
 # - Scan QR code with Expo Go (iOS/Android)
-# - OR use: npm run ios (macOS) or npm run android
+# - OR use: bun run ios (macOS) or bun run android
 ```
 
 **Note**: If Expo Go shows navigation error, use development build instead (see `mobile/KNOWN_ISSUE_NEW_ARCH.md`)
@@ -809,14 +809,14 @@ npm start
 ```bash
 # From repo root
 cd web
-npm install
+bun install
 
 # Development
-npm run dev
+bun run dev
 # Visit http://localhost:3000
 
 # Build static site
-npm run build
+bun run build
 # Output in web/out/
 ```
 
@@ -870,7 +870,7 @@ npm run build
 
 **TypeScript Errors**:
 - Mobile: `cd mobile && npx tsc --noEmit`
-- Web: `cd web && npm run build`
+- Web: `cd web && bun run build`
 - Check `tsconfig.json` paths and includes
 
 ---

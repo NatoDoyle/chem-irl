@@ -5,9 +5,9 @@ This directory contains organized documentation for the Chem IRL dating app proj
 ## Quick Links
 
 ### 📖 Main Documentation
-- **[Complete Documentation](../DOCUMENTATION.md)** - Full technical documentation
-- **[Architecture Plan](../ARCHITECTURE_PIVOT_PLAN.md)** - Architecture decisions and pivot plan
-- **[Pivot Quick Start](../PIVOT_QUICK_START.md)** - Quick reference for app-first pivot
+- **[Complete Documentation](./archive/DOCUMENTATION.md)** - Full technical documentation
+- **[Architecture Plan](./archive/ARCHITECTURE_PIVOT_PLAN.md)** - Architecture decisions and pivot plan
+- **[Pivot Quick Start](./archive/PIVOT_QUICK_START.md)** - Quick reference for app-first pivot
 
 ### 🚀 Deployment
 - **[Deployment Guide](./deployment/DEPLOYMENT_GUIDE.md)** - Complete deployment guide
@@ -18,7 +18,7 @@ This directory contains organized documentation for the Chem IRL dating app proj
 ### ⚙️ Setup
 - **[Supabase Setup](./setup/SUPABASE_SETUP.md)** - Supabase connection and configuration
 - **[Postmark/Cloudflare Setup](./setup/POSTMARK_CLOUDFLARE_SETUP.md)** - Email and CDN configuration
-- **[Database Setup](../DATABASE_SETUP.md)** - Database migrations and setup (root level)
+- **[Database Setup](./setup/DATABASE_SETUP.md)** - Database migrations and setup
 
 ### 💻 Development
 - **[Development Guide](./development/DEVELOPING.md)** - Development workflow and best practices
@@ -75,8 +75,8 @@ docs/
 
 ## Getting Started
 
-1. **New to the project?** Start with [`../README.md`](../README.md) and [`../DOCUMENTATION.md`](../DOCUMENTATION.md)
-2. **Setting up locally?** Follow [`../DATABASE_SETUP.md`](../DATABASE_SETUP.md) and platform-specific READMEs
+1. **New to the project?** Start with [`../README.md`](../README.md) and [`./archive/DOCUMENTATION.md`](./archive/DOCUMENTATION.md)
+2. **Setting up locally?** Follow [`./setup/DATABASE_SETUP.md`](./setup/DATABASE_SETUP.md) and platform-specific READMEs
 3. **Ready to deploy?** See [`deployment/DEPLOYMENT_GUIDE.md`](./deployment/DEPLOYMENT_GUIDE.md)
 
 ## Documentation Quality
@@ -84,7 +84,7 @@ docs/
 Run the documentation link checker to validate all markdown links:
 
 ```bash
-npm run docs:check
+bun run docs:check
 ```
 
 This will check all markdown files (excluding archives) and report any broken links.

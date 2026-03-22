@@ -2,7 +2,7 @@ import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { AuthStackParamList } from '../../navigation/AuthNavigator';
-import { BRAND, BRAND_COLORS } from '../../config/brand';
+import { BRAND, BRAND_COLORS, GOLDEN_HOUR } from '../../config/brand';
 
 type AuthGateScreenNavigationProp = NativeStackNavigationProp<AuthStackParamList, 'AuthGate'>;
 
@@ -36,7 +36,7 @@ export default function AuthGateScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: GOLDEN_HOUR.bg,
     justifyContent: 'space-between',
     padding: 24,
     paddingTop: 80,
@@ -65,11 +65,12 @@ const styles = StyleSheet.create({
   button: {
     paddingVertical: 16,
     paddingHorizontal: 32,
-    borderRadius: 8,
+    borderRadius: GOLDEN_HOUR.radius.lg,
     alignItems: 'center',
+    ...GOLDEN_HOUR.shadow.warm,
   },
   buttonPrimary: {
-    backgroundColor: BRAND_COLORS.primary,
+    backgroundColor: GOLDEN_HOUR.coral,
   },
   buttonSecondary: {
     backgroundColor: 'transparent',

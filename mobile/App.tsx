@@ -1,4 +1,8 @@
-import { NavigationContainer, NavigationContainerRef } from '@react-navigation/native';
+import {
+  NavigationContainer,
+  NavigationContainerRef,
+  DefaultTheme,
+} from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { useEffect, useState, useCallback, useRef, useMemo } from 'react';
 import {
@@ -17,10 +21,10 @@ import AuthNavigator from './src/navigation/AuthNavigator';
 import OnboardingNavigator from './src/navigation/OnboardingNavigator';
 import MainNavigator from './src/navigation/MainNavigator';
 import { isSessionExpiredError, getErrorAlert, isRecoverableError } from './src/lib/errors';
-import { ensureProfileExists } from './src/lib/profile';
+import { resolveProfileState } from './src/lib/profile';
 import { addBreadcrumb, setUserContext, clearUserContext } from './src/lib/sentry';
 import { identifyUser, resetUser } from './src/lib/analytics';
-import { BRAND_COLORS } from './src/config/brand';
+import { BRAND_COLORS, GOLDEN_HOUR } from './src/config/brand';
 import {
   registerDeviceToken,
   unregisterDeviceToken,
@@ -30,6 +34,16 @@ import {
 import ProfileRefreshContext from './src/contexts/ProfileRefreshContext';
 
 const Stack = createNativeStackNavigator();
+
+const GoldenHourTheme = {
+  ...DefaultTheme,
+  colors: {
+    ...DefaultTheme.colors,
+    background: GOLDEN_HOUR.bg,
+    card: GOLDEN_HOUR.bg,
+    border: GOLDEN_HOUR.borderDefault,
+  },
+};
 
 // Tells Supabase Auth to continuously refresh the session automatically if
 // the app is in the foreground. When this is added, you will continue to receive
@@ -75,26 +89,9 @@ export default function App() {
       }
 
       if (session) {
-        // Check if profile is complete and signup is completed (id + maybeSingle; create if missing)
-        let { data: profile, error: profileError } = await supabase
-          .from('profiles')
-          .select('completion_pct, signup_completed')
-          .eq('id', session.user.id)
-          .maybeSingle();
+        const state = await resolveProfileState(session.user.id);
 
-        if (profile === null && !profileError) {
-          await ensureProfileExists(session.user.id);
-          const next = await supabase
-            .from('profiles')
-            .select('completion_pct, signup_completed')
-            .eq('id', session.user.id)
-            .maybeSingle();
-          profile = next.data;
-          profileError = next.error;
-        }
-
-        // If profile fetch failed due to session expiry, handle it
-        if (profileError && isSessionExpiredError(profileError)) {
+        if (state.kind === 'session-expired') {
           setSessionExpired(true);
           setSession(null);
           setLoading(false);
@@ -102,50 +99,32 @@ export default function App() {
           return;
         }
 
-        // If profile fetch failed with recoverable error, retry
-        if (profileError && isRecoverableError(profileError) && attempt < MAX_RETRY_ATTEMPTS) {
-          const delay = INITIAL_RETRY_DELAY * Math.pow(2, attempt);
-          setRetryAttempts(attempt + 1);
-          setTimeout(() => {
-            checkSessionAndProfile(attempt + 1);
-          }, delay);
-          return;
-        }
+        if (state.kind === 'error') {
+          // If recoverable error and retries left, retry with backoff
+          if (isRecoverableError(new Error(state.message)) && attempt < MAX_RETRY_ATTEMPTS) {
+            const delay = INITIAL_RETRY_DELAY * Math.pow(2, attempt);
+            setRetryAttempts(attempt + 1);
+            setTimeout(() => {
+              checkSessionAndProfile(attempt + 1);
+            }, delay);
+            return;
+          }
 
-        // If profile fetch failed and retries exhausted or non-recoverable error
-        if (profileError) {
-          const { message } = getErrorAlert(profileError, 'Failed to load profile');
+          const { message } = getErrorAlert(state.message, 'Failed to load profile');
           setProfileError(message);
           setLoading(false);
-          // Still set session so user can try to navigate (though may hit errors)
           setSession(session);
           setProfileComplete(false);
           return;
         }
 
-        // Success - profile loaded
+        // Success - apply resolved state
         setProfileError(null);
         setRetryAttempts(0);
-        // Check both signup_completed and profile completion
-        const isSignupComplete = profile?.signup_completed === true;
-        const isProfileComplete = profile?.completion_pct >= 100;
-
-        if (isSignupComplete && isProfileComplete) {
-          setSession(session);
-          setProfileComplete(true);
-          setSessionExpired(false);
-          setSignupIncomplete(false);
-        } else if (isSignupComplete && !isProfileComplete) {
-          setSession(session);
-          setProfileComplete(false);
-          setSessionExpired(false);
-          setSignupIncomplete(false);
-        } else {
-          setSession(session);
-          setProfileComplete(false);
-          setSessionExpired(false);
-          setSignupIncomplete(true);
-        }
+        setSession(session);
+        setSessionExpired(false);
+        setProfileComplete(state.kind === 'complete');
+        setSignupIncomplete(state.kind === 'signup-incomplete');
         setLoading(false);
       } else {
         setSession(null);
@@ -228,52 +207,25 @@ export default function App() {
           });
         }
         try {
-          // Check profile completion and signup status on auth change (id + maybeSingle; create if missing)
-          let { data: profile, error: profileError } = await supabase
-            .from('profiles')
-            .select('completion_pct, signup_completed')
-            .eq('id', session.user.id)
-            .maybeSingle();
+          const state = await resolveProfileState(session.user.id);
 
-          if (profile === null && !profileError) {
-            await ensureProfileExists(session.user.id);
-            const next = await supabase
-              .from('profiles')
-              .select('completion_pct, signup_completed')
-              .eq('id', session.user.id)
-              .maybeSingle();
-            profile = next.data;
-            profileError = next.error;
-          }
-
-          // If profile fetch failed due to session expiry, handle it
-          if (profileError && isSessionExpiredError(profileError)) {
+          if (state.kind === 'session-expired') {
             setSessionExpired(true);
             setSession(null);
             setProfileComplete(false);
             return;
           }
 
-          const isSignupComplete = profile?.signup_completed === true;
-          const isProfileComplete = profile?.completion_pct >= 100;
-
-          if (isSignupComplete && isProfileComplete) {
-            setSession(session);
-            setProfileComplete(true);
-            setSessionExpired(false);
-            setSignupIncomplete(false);
-          } else if (isSignupComplete && !isProfileComplete) {
-            setSession(session);
-            setProfileComplete(false);
-            setSessionExpired(false);
-            setSignupIncomplete(false);
-          } else {
-            // Signup not complete - user must complete email verification and name entry
-            setSession(session);
-            setProfileComplete(false);
-            setSessionExpired(false);
-            setSignupIncomplete(true);
+          if (state.kind === 'error') {
+            // On auth state change, don't retry — just log
+            console.warn('[App] Profile resolve error on auth change:', state.message);
+            return;
           }
+
+          setSession(session);
+          setSessionExpired(false);
+          setProfileComplete(state.kind === 'complete');
+          setSignupIncomplete(state.kind === 'signup-incomplete');
         } catch (error) {
           if (isSessionExpiredError(error)) {
             setSessionExpired(true);
@@ -366,7 +318,7 @@ export default function App() {
 
   return (
     <ProfileRefreshContext.Provider value={refreshProfile}>
-      <NavigationContainer ref={navigationRef}>
+      <NavigationContainer ref={navigationRef} theme={GoldenHourTheme}>
         <Stack.Navigator screenOptions={screenOptions}>
           <Stack.Screen name="Root">
             {() => {
@@ -387,7 +339,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     padding: 24,
-    backgroundColor: '#fff',
+    backgroundColor: GOLDEN_HOUR.bg,
   },
   expiredTitle: {
     fontSize: 24,
@@ -407,9 +359,10 @@ const styles = StyleSheet.create({
     backgroundColor: BRAND_COLORS.primary,
     paddingVertical: 14,
     paddingHorizontal: 32,
-    borderRadius: 8,
+    borderRadius: GOLDEN_HOUR.radius.lg,
     minWidth: 200,
     alignItems: 'center',
+    ...GOLDEN_HOUR.shadow.warm,
   },
   signInButtonText: {
     color: '#fff',
@@ -421,7 +374,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     padding: 24,
-    backgroundColor: '#fff',
+    backgroundColor: GOLDEN_HOUR.bg,
   },
   errorTitle: {
     fontSize: 24,
@@ -447,9 +400,10 @@ const styles = StyleSheet.create({
     backgroundColor: BRAND_COLORS.primary,
     paddingVertical: 14,
     paddingHorizontal: 32,
-    borderRadius: 8,
+    borderRadius: GOLDEN_HOUR.radius.lg,
     minWidth: 200,
     alignItems: 'center',
+    ...GOLDEN_HOUR.shadow.warm,
   },
   retryButtonText: {
     color: '#fff',

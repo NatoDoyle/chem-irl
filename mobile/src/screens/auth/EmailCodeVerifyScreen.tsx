@@ -11,7 +11,7 @@ import {
 import { useRoute } from '@react-navigation/native';
 import { verifyEmailOTP, sendEmailOTP, completeSignup } from '../../lib/auth';
 import { getErrorAlert } from '../../lib/errors';
-import { BRAND_COLORS } from '../../config/brand';
+import { BRAND_COLORS, GOLDEN_HOUR } from '../../config/brand';
 
 type RouteParams = {
   email: string;
@@ -194,7 +194,7 @@ export default function EmailCodeVerifyScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: GOLDEN_HOUR.bg,
     padding: 24,
     paddingTop: 80,
   },
@@ -221,12 +221,12 @@ const styles = StyleSheet.create({
   codeInput: {
     flex: 1,
     borderWidth: 2,
-    borderColor: '#E2E8F0',
-    borderRadius: 8,
+    borderColor: GOLDEN_HOUR.borderDefault,
+    borderRadius: GOLDEN_HOUR.radius.lg,
     padding: 16,
     fontSize: 24,
     textAlign: 'center',
-    backgroundColor: '#F8FAFC',
+    backgroundColor: GOLDEN_HOUR.inputBg,
     fontWeight: '600',
   },
   codeInputFilled: {
@@ -235,9 +235,10 @@ const styles = StyleSheet.create({
   button: {
     backgroundColor: BRAND_COLORS.primary,
     paddingVertical: 16,
-    borderRadius: 8,
+    borderRadius: GOLDEN_HOUR.radius.lg,
     alignItems: 'center',
     marginBottom: 16,
+    ...GOLDEN_HOUR.shadow.warm,
   },
   buttonDisabled: {
     opacity: 0.6,

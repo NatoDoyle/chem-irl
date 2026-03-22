@@ -47,15 +47,6 @@ export interface AnalyticsProperties {
 let analyticsEnabled = false;
 
 /**
- * Initialize analytics (can be extended to initialize SDK)
- */
-export function initAnalytics(): void {
-  // In production, initialize analytics SDK here
-  // For now, just enable logging
-  analyticsEnabled = process.env.EXPO_PUBLIC_ENVIRONMENT === 'production';
-}
-
-/**
  * Track an analytics event
  */
 export function trackEvent(event: AnalyticsEvent, properties?: AnalyticsProperties): void {

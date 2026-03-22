@@ -1,5 +1,55 @@
 import { supabase } from './supabase/client';
 import { PostgrestError } from '@supabase/supabase-js';
+import { isSessionExpiredError } from './errors';
+
+/**
+ * Resolved profile state for navigation decisions in App.tsx.
+ * Both checkSessionAndProfile and onAuthStateChange derive state from this.
+ */
+export type ProfileState =
+  | { kind: 'complete' }
+  | { kind: 'onboarding' }
+  | { kind: 'signup-incomplete' }
+  | { kind: 'session-expired' }
+  | { kind: 'error'; message: string };
+
+/**
+ * Fetches the profile for a user and determines the navigation state.
+ * Creates the profile row if it doesn't exist yet.
+ */
+export async function resolveProfileState(userId: string): Promise<ProfileState> {
+  let { data: profile, error } = await supabase
+    .from('profiles')
+    .select('completion_pct, signup_completed')
+    .eq('id', userId)
+    .maybeSingle();
+
+  if (profile === null && !error) {
+    await ensureProfileExists(userId);
+    const next = await supabase
+      .from('profiles')
+      .select('completion_pct, signup_completed')
+      .eq('id', userId)
+      .maybeSingle();
+    profile = next.data;
+    error = next.error;
+  }
+
+  if (error && isSessionExpiredError(error)) {
+    return { kind: 'session-expired' };
+  }
+
+  if (error) {
+    return { kind: 'error', message: error.message };
+  }
+
+  const isSignupComplete = profile?.signup_completed === true;
+  const isProfileComplete = profile?.completion_pct >= 100;
+
+  if (isSignupComplete && isProfileComplete) return { kind: 'complete' };
+  if (isSignupComplete) return { kind: 'onboarding' };
+  return { kind: 'signup-incomplete' };
+}
 
 /**
  * Ensures a profile row exists for the user. Upserts with default values if missing.

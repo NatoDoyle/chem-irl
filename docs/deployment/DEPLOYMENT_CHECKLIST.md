@@ -13,8 +13,8 @@ Use this checklist when deploying to production.
 
 ### 1) Code Quality (required)
 #### Web (Next.js)
-- [ ] `npm run lint` passes with no errors
-- [ ] `npm run build` succeeds
+- [ ] `bun run lint` passes with no errors
+- [ ] `bun run build` succeeds
 - [ ] All TypeScript errors resolved
 - [ ] No console errors in browser
 - [ ] All TODO comments addressed or explicitly documented

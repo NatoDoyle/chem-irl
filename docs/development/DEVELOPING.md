@@ -4,8 +4,8 @@ Copy-paste commands for setting up the development environment from scratch.
 
 ## Prerequisites
 
-- Node.js 18+ and npm
-- Expo CLI (for mobile): `npm install -g expo-cli`
+- Node.js 18+ and bun
+- Expo CLI (for mobile): `bun install -g expo-cli`
 - Supabase account: https://supabase.com
 - Git repository cloned
 
@@ -130,7 +130,7 @@ Run these SQL files in Supabase SQL Editor in this exact order:
 
 ```bash
 cd mobile
-npm install
+bun install
 ```
 
 ### Environment Variables
@@ -155,7 +155,7 @@ npm install
 ### Run Development Server
 
 ```bash
-npm start
+bun start
 ```
 
 This will:
@@ -173,9 +173,9 @@ This will:
 **To test in simulator:**
 
 ```bash
-npm run ios      # iOS simulator (macOS only)
-npm run android  # Android emulator
-npm run web      # Web browser (for quick testing)
+bun run ios      # iOS simulator (macOS only)
+bun run android  # Android emulator
+bun run web      # Web browser (for quick testing)
 ```
 
 ---
@@ -186,7 +186,7 @@ npm run web      # Web browser (for quick testing)
 
 ```bash
 cd web
-npm install
+bun install
 ```
 
 ### Environment Variables (Optional)
@@ -207,7 +207,7 @@ NEXT_PUBLIC_DOMAIN=chemirl.app
 ### Run Development Server
 
 ```bash
-npm run dev
+bun run dev
 ```
 
 Visit http://localhost:3000
@@ -215,7 +215,7 @@ Visit http://localhost:3000
 **Build static site:**
 
 ```bash
-npm run build
+bun run build
 ```
 
 Output is in `out/` directory (deploy to any static hosting).
@@ -233,15 +233,15 @@ Output is in `out/` directory (deploy to any static hosting).
 
 # 2. Mobile App
 cd mobile
-npm install
+bun install
 cp .env.example .env
 # Edit .env with your Supabase credentials
-npm start
+bun start
 
 # 3. Web Site (optional)
 cd web
-npm install
-npm run dev
+bun install
+bun run dev
 ```
 
 ---
@@ -252,7 +252,7 @@ npm run dev
 
 - Check `.env` file exists and has correct values
 - Verify Supabase project is active
-- Restart Expo dev server: Press `r` in terminal or restart `npm start`
+- Restart Expo dev server: Press `r` in terminal or restart `bun start`
 
 ### Mobile: "Deep linking not working"
 
@@ -273,8 +273,8 @@ npm run dev
 
 ### Web: "Module not found" errors
 
-- Run `npm install` in `web/` directory
-- Delete `node_modules` and `package-lock.json`, then `npm install` again
+- Run `bun install` in `web/` directory
+- Delete `node_modules` and `bun.lock`, then `bun install` again
 
 ---
 
@@ -286,4 +286,4 @@ After setup is complete:
 2. ✅ Test photo uploads
 3. ✅ Test discovery feed
 4. ✅ Test matches and proposals
-5. ✅ Review [DOCUMENTATION.md](../../DOCUMENTATION.md) for architecture details
+5. ✅ Review [DOCUMENTATION.md](../archive/DOCUMENTATION.md) for architecture details

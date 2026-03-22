@@ -12,7 +12,7 @@ import * as Location from 'expo-location';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { supabase } from '../../lib/supabase/client';
-import { BRAND_COLORS } from '../../config/brand';
+import { BRAND_COLORS, GOLDEN_HOUR } from '../../config/brand';
 import { getErrorAlert } from '../../lib/errors';
 import { trackEvent } from '../../lib/analytics';
 import type { OnboardingStackParamList } from '../../navigation/OnboardingNavigator';
@@ -206,7 +206,7 @@ export default function LocationPermissionScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: GOLDEN_HOUR.bg,
   },
   content: {
     padding: 24,
@@ -230,7 +230,7 @@ const styles = StyleSheet.create({
   successContainer: {
     padding: 16,
     backgroundColor: '#D1FAE5',
-    borderRadius: 8,
+    borderRadius: GOLDEN_HOUR.radius.lg,
     borderWidth: 1,
     borderColor: '#10B981',
   },
@@ -242,7 +242,7 @@ const styles = StyleSheet.create({
   errorContainer: {
     padding: 16,
     backgroundColor: '#FEE2E2',
-    borderRadius: 8,
+    borderRadius: GOLDEN_HOUR.radius.lg,
     borderWidth: 1,
     borderColor: '#EF4444',
   },
@@ -254,9 +254,10 @@ const styles = StyleSheet.create({
   button: {
     backgroundColor: BRAND_COLORS.primary,
     paddingVertical: 16,
-    borderRadius: 8,
+    borderRadius: GOLDEN_HOUR.radius.lg,
     alignItems: 'center',
     marginTop: 8,
+    ...GOLDEN_HOUR.shadow.warm,
   },
   buttonDisabled: {
     opacity: 0.6,

@@ -5,7 +5,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import { MainTabParamList } from '../navigation/MainNavigator';
 import { MatchesStackParamList } from '../navigation/MainNavigator';
-import { BRAND_COLORS } from '../config/brand';
+import { BRAND_COLORS, GOLDEN_HOUR } from '../config/brand';
 
 type NavigationProp = CompositeNavigationProp<
   BottomTabNavigationProp<MainTabParamList, 'MatchesStack'>,
@@ -73,12 +73,13 @@ const styles = StyleSheet.create({
     padding: 24,
   },
   modal: {
-    backgroundColor: '#fff',
-    borderRadius: 16,
+    backgroundColor: GOLDEN_HOUR.surface,
+    borderRadius: GOLDEN_HOUR.radius.lg,
     padding: 24,
     alignItems: 'center',
     maxWidth: 320,
     width: '100%',
+    ...GOLDEN_HOUR.shadow.warmLg,
   },
   title: {
     fontSize: 32,
@@ -101,14 +102,15 @@ const styles = StyleSheet.create({
     backgroundColor: BRAND_COLORS.primary,
     paddingVertical: 14,
     paddingHorizontal: 32,
-    borderRadius: 8,
+    borderRadius: GOLDEN_HOUR.radius.lg,
     width: '100%',
     alignItems: 'center',
+    ...GOLDEN_HOUR.shadow.warm,
   },
   secondaryButton: {
-    backgroundColor: 'transparent',
-    borderWidth: 2,
-    borderColor: BRAND_COLORS.primary,
+    backgroundColor: GOLDEN_HOUR.coral,
+    borderWidth: 0,
+    borderColor: undefined,
   },
   buttonText: {
     color: '#fff',
@@ -116,7 +118,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   secondaryButtonText: {
-    color: BRAND_COLORS.primary,
+    color: '#fff',
     fontSize: 18,
     fontWeight: '600',
   },

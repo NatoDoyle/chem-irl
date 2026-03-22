@@ -14,12 +14,6 @@ try {
   // Sentry not installed or not available
 }
 
-export interface AppError {
-  message: string;
-  code?: string;
-  recoverable?: boolean;
-}
-
 /**
  * Format error message for user display
  */

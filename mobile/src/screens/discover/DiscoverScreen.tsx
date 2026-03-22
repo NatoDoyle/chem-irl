@@ -4,7 +4,7 @@ import { supabase } from '../../lib/supabase/client';
 import { FeedItem } from '../../lib/types';
 import DiscoveryCardStack from '../../components/DiscoveryCardStack';
 import MatchModal from '../../components/MatchModal';
-import { BRAND_COLORS } from '../../config/brand';
+import { BRAND_COLORS, GOLDEN_HOUR } from '../../config/brand';
 import { getErrorAlert } from '../../lib/errors';
 import ConnectionStatus from '../../components/ConnectionStatus';
 import { createThrottle } from '../../lib/throttle';
@@ -270,7 +270,7 @@ export default function DiscoverScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: GOLDEN_HOUR.bg,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -289,8 +289,9 @@ const styles = StyleSheet.create({
     backgroundColor: BRAND_COLORS.primary,
     paddingVertical: 12,
     paddingHorizontal: 24,
-    borderRadius: 8,
+    borderRadius: GOLDEN_HOUR.radius.lg,
     marginTop: 8,
+    ...GOLDEN_HOUR.shadow.warm,
   },
   refreshButtonText: {
     color: '#fff',
@@ -315,8 +316,9 @@ const styles = StyleSheet.create({
     backgroundColor: BRAND_COLORS.primary,
     paddingVertical: 12,
     paddingHorizontal: 24,
-    borderRadius: 8,
+    borderRadius: GOLDEN_HOUR.radius.lg,
     marginTop: 8,
+    ...GOLDEN_HOUR.shadow.warm,
   },
   retryButtonText: {
     color: '#fff',

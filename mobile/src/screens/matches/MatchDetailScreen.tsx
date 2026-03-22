@@ -12,7 +12,7 @@ import { useRoute, useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { supabase } from '../../lib/supabase/client';
 import { Match, Proposal, Confirm } from '../../lib/types';
-import { BRAND_COLORS } from '../../config/brand';
+import { BRAND_COLORS, GOLDEN_HOUR } from '../../config/brand';
 import { getErrorAlert } from '../../lib/errors';
 import ProposalCard from '../../components/ProposalCard';
 
@@ -270,13 +270,13 @@ export default function MatchDetailScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: GOLDEN_HOUR.bg,
   },
   header: {
     alignItems: 'center',
     padding: 24,
     borderBottomWidth: 1,
-    borderBottomColor: '#E2E8F0',
+    borderBottomColor: GOLDEN_HOUR.borderDefault,
   },
   avatar: {
     width: 100,
@@ -294,7 +294,7 @@ const styles = StyleSheet.create({
     backgroundColor: BRAND_COLORS.success + '20',
     padding: 16,
     margin: 16,
-    borderRadius: 8,
+    borderRadius: GOLDEN_HOUR.radius.lg,
     alignItems: 'center',
   },
   confirmedText: {
@@ -307,7 +307,8 @@ const styles = StyleSheet.create({
     backgroundColor: BRAND_COLORS.primary,
     paddingVertical: 12,
     paddingHorizontal: 24,
-    borderRadius: 8,
+    borderRadius: GOLDEN_HOUR.radius.lg,
+    ...GOLDEN_HOUR.shadow.warm,
   },
   chatButtonText: {
     color: '#fff',
@@ -326,8 +327,9 @@ const styles = StyleSheet.create({
   proposeButton: {
     backgroundColor: BRAND_COLORS.primary,
     paddingVertical: 16,
-    borderRadius: 8,
+    borderRadius: GOLDEN_HOUR.radius.lg,
     alignItems: 'center',
+    ...GOLDEN_HOUR.shadow.warm,
   },
   proposeButtonText: {
     color: '#fff',
@@ -347,9 +349,10 @@ const styles = StyleSheet.create({
     backgroundColor: BRAND_COLORS.primary,
     paddingVertical: 12,
     paddingHorizontal: 24,
-    borderRadius: 8,
+    borderRadius: GOLDEN_HOUR.radius.lg,
     alignSelf: 'center',
     marginTop: 8,
+    ...GOLDEN_HOUR.shadow.warm,
   },
   retryButtonText: {
     color: '#fff',

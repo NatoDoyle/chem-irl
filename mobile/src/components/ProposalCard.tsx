@@ -1,6 +1,6 @@
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Proposal } from '../lib/types';
-import { BRAND_COLORS } from '../config/brand';
+import { BRAND_COLORS, GOLDEN_HOUR } from '../config/brand';
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase/client';
 import { Alert } from 'react-native';
@@ -214,8 +214,8 @@ export default function ProposalCard({
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: '#F8FAFC',
-    borderRadius: 12,
+    backgroundColor: GOLDEN_HOUR.inputBg,
+    borderRadius: GOLDEN_HOUR.radius.lg,
     padding: 16,
     marginBottom: 12,
   },
@@ -245,8 +245,9 @@ const styles = StyleSheet.create({
     backgroundColor: BRAND_COLORS.primary,
     paddingVertical: 12,
     paddingHorizontal: 16,
-    borderRadius: 8,
+    borderRadius: GOLDEN_HOUR.radius.lg,
     alignItems: 'center',
+    ...GOLDEN_HOUR.shadow.warm,
   },
   windowText: {
     color: '#fff',

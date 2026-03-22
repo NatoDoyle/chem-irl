@@ -10,11 +10,12 @@ import {
 } from 'react-native';
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
-import * as FileSystem from 'expo-file-system';
+import * as FileSystem from 'expo-file-system/legacy';
+import { decode } from 'base64-arraybuffer';
 import { compressImage } from '../../lib/imageCompression';
 import { trackEvent } from '../../lib/analytics';
 import { supabase } from '../../lib/supabase/client';
-import { BRAND_COLORS } from '../../config/brand';
+import { BRAND_COLORS, GOLDEN_HOUR } from '../../config/brand';
 import { useNavigation } from '@react-navigation/native';
 
 type PhotoUploadState = 'idle' | 'uploading' | 'success' | 'error';
@@ -98,23 +99,16 @@ export default function PhotosScreen() {
       // Compress image before upload
       const compressedUri = await compressImage(uri);
 
-      // Read file as base64 and convert to ArrayBuffer (cross-platform; fetch+blob fails on Android)
       const base64 = await FileSystem.readAsStringAsync(compressedUri, {
         encoding: FileSystem.EncodingType.Base64,
       });
-      const binaryStr = atob(base64);
-      const bytes = new Uint8Array(binaryStr.length);
-      for (let i = 0; i < binaryStr.length; i++) {
-        bytes[i] = binaryStr.charCodeAt(i);
-      }
 
       const fileExt = 'jpg';
       const fileName = `${user.id}/${Date.now()}.${fileExt}`;
 
-      // Upload to Supabase Storage
       const { error: uploadError } = await supabase.storage
         .from('profiles')
-        .upload(fileName, bytes, {
+        .upload(fileName, decode(base64), {
           contentType: 'image/jpeg',
           upsert: false,
         });
@@ -289,7 +283,7 @@ export default function PhotosScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: GOLDEN_HOUR.bg,
   },
   content: {
     padding: 24,
@@ -318,7 +312,7 @@ const styles = StyleSheet.create({
   photo: {
     width: 100,
     height: 125,
-    borderRadius: 8,
+    borderRadius: GOLDEN_HOUR.radius.md,
     backgroundColor: '#E2E8F0',
   },
   uploadOverlay: {
@@ -328,7 +322,7 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    borderRadius: 8,
+    borderRadius: GOLDEN_HOUR.radius.lg,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -364,13 +358,13 @@ const styles = StyleSheet.create({
   addPhotoButton: {
     width: 100,
     height: 125,
-    borderRadius: 8,
+    borderRadius: GOLDEN_HOUR.radius.lg,
     borderWidth: 2,
     borderColor: BRAND_COLORS.primary,
     borderStyle: 'dashed',
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#F8FAFC',
+    backgroundColor: GOLDEN_HOUR.inputBg,
   },
   addPhotoText: {
     color: BRAND_COLORS.primary,
@@ -380,8 +374,9 @@ const styles = StyleSheet.create({
   button: {
     backgroundColor: BRAND_COLORS.primary,
     paddingVertical: 16,
-    borderRadius: 8,
+    borderRadius: GOLDEN_HOUR.radius.lg,
     alignItems: 'center',
+    ...GOLDEN_HOUR.shadow.warm,
   },
   buttonDisabled: {
     opacity: 0.5,

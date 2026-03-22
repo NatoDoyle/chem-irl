@@ -1,7 +1,7 @@
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
 import { Image } from 'expo-image';
 import { FeedItem } from '../lib/types';
-import { BRAND_COLORS } from '../config/brand';
+import { BRAND_COLORS, GOLDEN_HOUR } from '../config/brand';
 
 interface DiscoveryCardProps {
   item: FeedItem & { photos: string[] };
@@ -68,14 +68,10 @@ export default function DiscoveryCard({ item, onLike, onPass }: DiscoveryCardPro
 const styles = StyleSheet.create({
   card: {
     flex: 1,
-    borderRadius: 16,
+    borderRadius: GOLDEN_HOUR.radius.lg,
     overflow: 'hidden',
-    backgroundColor: '#fff',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 8,
-    elevation: 5,
+    backgroundColor: GOLDEN_HOUR.surface,
+    ...GOLDEN_HOUR.shadow.warmLg,
   },
   image: {
     width: '100%',
@@ -117,7 +113,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-around',
     paddingTop: 12,
     borderTopWidth: 1,
-    borderTopColor: '#E2E8F0',
+    borderTopColor: GOLDEN_HOUR.borderDefault,
   },
   scoreItem: {
     alignItems: 'center',
@@ -141,7 +137,7 @@ const styles = StyleSheet.create({
   actionButton: {
     flex: 1,
     paddingVertical: 14,
-    borderRadius: 8,
+    borderRadius: GOLDEN_HOUR.radius.lg,
     alignItems: 'center',
   },
   passButton: {
