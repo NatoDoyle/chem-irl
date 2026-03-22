@@ -198,7 +198,7 @@ Before testing, ensure database is set up:
    - `db/kpi_views.sql`
    - `db/scoring.sql`
 
-See [`../../DATABASE_SETUP.md`](../../DATABASE_SETUP.md) for details.
+See [`../setup/DATABASE_SETUP.md`](../setup/DATABASE_SETUP.md) for details.
 
 ---
 
@@ -272,7 +272,7 @@ After successful deployment and testing:
 
 ## Support
 
-- [Complete Documentation](../../DOCUMENTATION.md) - Full technical docs
+- [Complete Documentation](../archive/DOCUMENTATION.md) - Full technical docs
 - [Mobile README](../../mobile/README.md) - Mobile app details
 - [Web README](../../web/README.md) - Website details
 - [Documentation Index](../../docs/README.md) - All documentation

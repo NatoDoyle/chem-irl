@@ -286,4 +286,4 @@ After setup is complete:
 2. ✅ Test photo uploads
 3. ✅ Test discovery feed
 4. ✅ Test matches and proposals
-5. ✅ Review [DOCUMENTATION.md](../../DOCUMENTATION.md) for architecture details
+5. ✅ Review [DOCUMENTATION.md](../archive/DOCUMENTATION.md) for architecture details
