@@ -1,13 +1,14 @@
-import { useState, useEffect, useRef, useCallback, memo } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo, memo } from 'react';
 import {
   View,
   Text,
   StyleSheet,
-  FlatList,
+  SectionList,
   TouchableOpacity,
   ActivityIndicator,
   RefreshControl,
   AppState,
+  Alert,
 } from 'react-native';
 import { Image } from 'expo-image';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
@@ -17,10 +18,12 @@ import { Match } from '../../lib/types';
 import { BRAND_COLORS, GOLDEN_HOUR } from '../../config/brand';
 import { getErrorAlert } from '../../lib/errors';
 import { createDebounce } from '../../lib/debounce';
+import { formatCountdown } from '../../lib/countdown';
 import type { RealtimeChannel } from '@supabase/supabase-js';
 
 const REFRESH_THROTTLE_MS = 10000; // 10 seconds - minimum time between auto-refreshes
 const REALTIME_DEBOUNCE_MS = 750; // 750ms debounce for realtime subscription callbacks
+const TICK_INTERVAL_MS = 60000; // 60 seconds - countdown update interval
 
 const PLACEHOLDER_IMAGE = require('../../../assets/icon.png');
 
@@ -37,23 +40,107 @@ interface MatchWithProfile extends Match {
   otherUserName?: string;
 }
 
-// Memoized match item component for better FlatList performance
+interface MatchSection {
+  title: 'Active' | 'Expired';
+  data: MatchWithProfile[];
+}
+
+const URGENCY_COLORS = {
+  normal: BRAND_COLORS.text[600],
+  warning: BRAND_COLORS.warning,
+  urgent: BRAND_COLORS.danger,
+  expired: BRAND_COLORS.text[400],
+} as const;
+
+// Memoized match item component for SectionList performance
 const MatchItem = memo(
-  ({ item, onPress }: { item: MatchWithProfile; onPress: (matchId: string) => void }) => (
-    <TouchableOpacity style={styles.matchCard} onPress={() => onPress(item.match_id)}>
-      <Image
-        source={item.otherUserPhoto ? { uri: item.otherUserPhoto } : PLACEHOLDER_IMAGE}
-        style={styles.avatar}
-        contentFit="cover"
-        cachePolicy="memory-disk"
-      />
-      <View style={styles.matchInfo}>
-        <Text style={styles.matchName}>{item.otherUserName}</Text>
-        <Text style={styles.matchStatus}>{item.status === 'open' ? 'Open' : item.status}</Text>
-      </View>
-      <Text style={styles.chevron}>›</Text>
-    </TouchableOpacity>
-  )
+  ({
+    item,
+    onPress,
+    onReopen,
+    tick: _tick,
+  }: {
+    item: MatchWithProfile;
+    onPress: (matchId: string) => void;
+    onReopen: (matchId: string) => void;
+    tick: number; // breaks memoization every 60s for countdown refresh
+  }) => {
+    const [reopening, setReopening] = useState(false);
+    const isExpired = item.status === 'expired';
+
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- _tick intentionally busts cache every 60s
+    const countdown = useMemo(() => formatCountdown(item.expires_at), [item.expires_at, _tick]);
+
+    const handleReopen = async () => {
+      setReopening(true);
+      try {
+        const { data, error } = await supabase.rpc('reopen_match', {
+          p_match_id: item.match_id,
+        });
+        if (error) {
+          const { title, message } = getErrorAlert(error, 'Failed to reopen match');
+          Alert.alert(title, message);
+          setReopening(false);
+          return;
+        }
+        if (data?.success) {
+          onReopen(item.match_id);
+        } else {
+          Alert.alert('Error', data?.error || 'Could not reopen match.');
+          setReopening(false);
+        }
+      } catch (err: any) {
+        const { title, message } = getErrorAlert(err, 'Failed to reopen match');
+        Alert.alert(title, message);
+        setReopening(false);
+      }
+    };
+
+    if (isExpired) {
+      return (
+        <TouchableOpacity
+          style={[styles.matchCard, styles.expiredCard]}
+          onPress={() => onPress(item.match_id)}
+        >
+          <Image
+            source={item.otherUserPhoto ? { uri: item.otherUserPhoto } : PLACEHOLDER_IMAGE}
+            style={styles.avatar}
+            contentFit="cover"
+            cachePolicy="memory-disk"
+          />
+          <View style={styles.matchInfo}>
+            <Text style={[styles.matchName, styles.expiredText]}>{item.otherUserName}</Text>
+            <Text style={styles.expiredStatus}>Expired</Text>
+          </View>
+          <TouchableOpacity style={styles.reopenButton} onPress={handleReopen} disabled={reopening}>
+            {reopening ? (
+              <ActivityIndicator size="small" color="#fff" />
+            ) : (
+              <Text style={styles.reopenButtonText}>Reopen</Text>
+            )}
+          </TouchableOpacity>
+        </TouchableOpacity>
+      );
+    }
+
+    return (
+      <TouchableOpacity style={styles.matchCard} onPress={() => onPress(item.match_id)}>
+        <Image
+          source={item.otherUserPhoto ? { uri: item.otherUserPhoto } : PLACEHOLDER_IMAGE}
+          style={styles.avatar}
+          contentFit="cover"
+          cachePolicy="memory-disk"
+        />
+        <View style={styles.matchInfo}>
+          <Text style={styles.matchName}>{item.otherUserName}</Text>
+          <Text style={[styles.matchStatus, { color: URGENCY_COLORS[countdown.urgency] }]}>
+            {countdown.text}
+          </Text>
+        </View>
+        <Text style={styles.chevron}>›</Text>
+      </TouchableOpacity>
+    );
+  }
 );
 
 MatchItem.displayName = 'MatchItem';
@@ -64,11 +151,18 @@ export default function MatchesScreen() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [tick, setTick] = useState(0);
   const lastFetchTimeRef = useRef<number>(0);
   const userIdRef = useRef<string | null>(null);
   const channelsRef = useRef<RealtimeChannel[]>([]);
   const isMountedRef = useRef<boolean>(true);
   const debouncedRefreshRef = useRef<ReturnType<typeof createDebounce> | null>(null);
+
+  // 60-second tick for countdown updates
+  useEffect(() => {
+    const interval = setInterval(() => setTick((t) => t + 1), TICK_INTERVAL_MS);
+    return () => clearInterval(interval);
+  }, []);
 
   const loadMatches = useCallback(
     async (skipLoadingState: boolean = false) => {
@@ -88,9 +182,9 @@ export default function MatchesScreen() {
         // Get matches directly from matches table (RLS allows viewing own matches)
         const { data: matchesData, error: queryError } = await supabase
           .from('matches')
-          .select('match_id, user_a, user_b, status, created_at')
+          .select('match_id, user_a, user_b, status, created_at, expires_at')
           .or(`user_a.eq.${user.id},user_b.eq.${user.id}`)
-          .eq('status', 'open')
+          .in('status', ['open', 'expired'])
           .order('created_at', { ascending: false });
 
         if (queryError) {
@@ -108,12 +202,15 @@ export default function MatchesScreen() {
         );
 
         // Batch fetch all profiles in a single query
-        let profilesMap = new Map<string, { photos: string[]; prompts: Record<string, string> }>();
+        let profilesMap = new Map<
+          string,
+          { full_name: string | null; photos: string[]; prompts: Record<string, string> }
+        >();
         if (otherUserIds.length > 0) {
           try {
             const { data: profilesData } = await supabase
               .from('profiles')
-              .select('id, photos, prompts')
+              .select('id, full_name, photos, prompts')
               .in('id', otherUserIds);
 
             // Create a map for O(1) lookup
@@ -122,6 +219,7 @@ export default function MatchesScreen() {
                 profilesData.map((profile) => [
                   profile.id,
                   {
+                    full_name: (profile.full_name as string | null) ?? null,
                     photos: (profile.photos as string[]) || [],
                     prompts: (profile.prompts as Record<string, string>) || {},
                   },
@@ -145,7 +243,7 @@ export default function MatchesScreen() {
             ...match,
             otherUserId,
             otherUserPhoto: photos[0],
-            otherUserName: prompts.headline || 'No name',
+            otherUserName: profile?.full_name || prompts.headline || 'No name',
           };
         });
 
@@ -318,22 +416,42 @@ export default function MatchesScreen() {
     [navigation]
   );
 
-  // Calculate item height for getItemLayout optimization
-  // matchCard: padding 16 top + 16 bottom = 32, avatar 60, marginBottom 12
-  // Total: 32 + 60 + 12 = 104px
-  const ITEM_HEIGHT = 104;
-  const getItemLayout = useCallback(
-    (_data: unknown, index: number) => ({
-      length: ITEM_HEIGHT,
-      offset: ITEM_HEIGHT * index,
-      index,
-    }),
-    []
-  );
+  const handleReopen = useCallback(() => {
+    loadMatches(true);
+  }, [loadMatches]);
+
+  // Split matches into Active / Expired sections
+  const sections = useMemo<MatchSection[]>(() => {
+    const active = matches.filter((m) => m.status === 'open');
+    const expired = matches.filter((m) => m.status === 'expired');
+    const result: MatchSection[] = [];
+    if (active.length > 0) {
+      result.push({ title: 'Active', data: active });
+    }
+    if (expired.length > 0) {
+      result.push({ title: 'Expired', data: expired });
+    }
+    return result;
+  }, [matches]);
 
   const renderItem = useCallback(
-    ({ item }: { item: MatchWithProfile }) => <MatchItem item={item} onPress={handleMatchPress} />,
-    [handleMatchPress]
+    ({ item }: { item: MatchWithProfile }) => (
+      <MatchItem item={item} onPress={handleMatchPress} onReopen={handleReopen} tick={tick} />
+    ),
+    [handleMatchPress, handleReopen, tick]
+  );
+
+  const renderSectionHeader = useCallback(
+    ({ section }: { section: MatchSection }) => (
+      <Text
+        style={
+          section.title === 'Expired' ? styles.sectionHeaderExpired : styles.sectionHeaderActive
+        }
+      >
+        {section.title}
+      </Text>
+    ),
+    []
   );
 
   if (loading) {
@@ -370,14 +488,14 @@ export default function MatchesScreen() {
 
   return (
     <View style={styles.container}>
-      <FlatList
-        data={matches}
+      <SectionList
+        sections={sections}
         keyExtractor={(item) => item.match_id}
         renderItem={renderItem}
-        getItemLayout={getItemLayout}
-        removeClippedSubviews={true}
+        renderSectionHeader={renderSectionHeader}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
         contentContainerStyle={styles.list}
+        stickySectionHeadersEnabled={false}
       />
     </View>
   );
@@ -391,6 +509,24 @@ const styles = StyleSheet.create({
   list: {
     padding: 16,
   },
+  sectionHeaderActive: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: BRAND_COLORS.text[700],
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: 8,
+    marginTop: 4,
+  },
+  sectionHeaderExpired: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: BRAND_COLORS.text[400],
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: 8,
+    marginTop: 20,
+  },
   matchCard: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -399,6 +535,9 @@ const styles = StyleSheet.create({
     padding: 16,
     marginBottom: 12,
     ...GOLDEN_HOUR.shadow.warm,
+  },
+  expiredCard: {
+    opacity: 0.6,
   },
   avatar: {
     width: 60,
@@ -420,9 +559,29 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: BRAND_COLORS.text[600],
   },
+  expiredText: {
+    color: BRAND_COLORS.text[600],
+  },
+  expiredStatus: {
+    fontSize: 14,
+    color: BRAND_COLORS.text[400],
+  },
   chevron: {
     fontSize: 24,
     color: BRAND_COLORS.text[600],
+  },
+  reopenButton: {
+    backgroundColor: BRAND_COLORS.primary,
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    borderRadius: GOLDEN_HOUR.radius.sm,
+    minWidth: 72,
+    alignItems: 'center',
+  },
+  reopenButtonText: {
+    color: '#fff',
+    fontSize: 13,
+    fontWeight: '600',
   },
   emptyText: {
     fontSize: 20,

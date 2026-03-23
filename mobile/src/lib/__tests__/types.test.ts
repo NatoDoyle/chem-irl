@@ -45,6 +45,7 @@ describe('TypeScript Types', () => {
       user_b: '123e4567-e89b-12d3-a456-426614174002',
       status: 'open',
       created_at: new Date().toISOString(),
+      expires_at: new Date(Date.now() + 72 * 60 * 60 * 1000).toISOString(),
     };
 
     expect(match.match_id).toBeDefined();
