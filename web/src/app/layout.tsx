@@ -19,6 +19,7 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
+  metadataBase: new URL('https://chemirl.app'),
   title: 'Chem IRL - Spend less time texting. Test chemistry IRL.',
   description:
     "Chemistry and vibe aren't on a screen. Meet face to face. Chem IRL gets you from match to meeting in days, not weeks.",

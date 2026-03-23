@@ -1,4 +1,5 @@
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, Image, StyleSheet } from 'react-native';
+import { TouchableOpacity } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { AuthStackParamList } from '../../navigation/AuthNavigator';
@@ -12,6 +13,11 @@ export default function AuthGateScreen() {
   return (
     <View style={styles.container}>
       <View style={styles.content}>
+        <Image
+          source={require('../../../assets/logo-full.png')}
+          style={styles.logo}
+          resizeMode="contain"
+        />
         <Text style={styles.title}>{BRAND.tagline}</Text>
         <Text style={styles.description}>{BRAND.description}</Text>
       </View>
@@ -45,6 +51,13 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
     justifyContent: 'center',
+    alignItems: 'center',
+  },
+  logo: {
+    width: '70%',
+    height: undefined,
+    aspectRatio: 727 / 800,
+    marginBottom: 24,
   },
   title: {
     fontSize: 32,
