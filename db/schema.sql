@@ -57,6 +57,7 @@ CREATE TABLE matches (
   user_a UUID NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
   user_b UUID NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
   created_at TIMESTAMPTZ DEFAULT NOW(),
+  expires_at TIMESTAMPTZ NOT NULL DEFAULT NOW() + INTERVAL '72 hours',
   status match_status DEFAULT 'open',
   UNIQUE(user_a, user_b)
 );

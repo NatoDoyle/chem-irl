@@ -61,6 +61,7 @@ export interface Match {
   user_a: string;
   user_b: string;
   created_at: string;
+  expires_at: string;
   status: MatchStatus;
 }
 
