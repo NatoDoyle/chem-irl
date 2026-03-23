@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import Image from 'next/image';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
 
@@ -29,7 +30,8 @@ export function Nav() {
     >
       <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
         {/* Logo */}
-        <Link href="/" className="text-xl font-bold text-ink-900">
+        <Link href="/" className="flex items-center gap-2 text-xl font-bold text-ink-900">
+          <Image src="/logo-icon.png" alt="" width={32} height={32} />
           Chem <span className="text-aqua-600">IRL</span>
         </Link>
 

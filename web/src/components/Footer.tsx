@@ -1,3 +1,4 @@
+import Image from 'next/image';
 import Link from 'next/link';
 import { BRAND, BRAND_COLORS } from '@/config/brand';
 
@@ -35,7 +36,8 @@ export function Footer() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-12">
             {/* Logo + tagline */}
             <div className="sm:col-span-2 lg:col-span-1">
-              <Link href="/" className="text-xl font-bold">
+              <Link href="/" className="flex items-center gap-2 text-xl font-bold">
+                <Image src="/logo-icon.png" alt="" width={28} height={28} />
                 Chem <span className="text-aqua-400">IRL</span>
               </Link>
               <p className="mt-3 text-ink-400 text-sm">{BRAND.tagline}</p>
