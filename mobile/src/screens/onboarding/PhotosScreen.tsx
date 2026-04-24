@@ -15,7 +15,7 @@ import { decode } from 'base64-arraybuffer';
 import { compressImage } from '../../lib/imageCompression';
 import { trackEvent } from '../../lib/analytics';
 import { supabase } from '../../lib/supabase/client';
-import { BRAND_COLORS, GOLDEN_HOUR } from '../../config/brand';
+import { BRAND_COLORS, GOLDEN_HOUR, TYPOGRAPHY } from '../../config/brand';
 import { useNavigation } from '@react-navigation/native';
 
 type PhotoUploadState = 'idle' | 'uploading' | 'success' | 'error';
@@ -239,7 +239,7 @@ export default function PhotosScreen() {
               />
               {uploadState === 'uploading' && (
                 <View style={styles.uploadOverlay}>
-                  <ActivityIndicator color="#fff" size="small" />
+                  <ActivityIndicator color={BRAND_COLORS.onPrimary} size="small" />
                 </View>
               )}
               {uploadState === 'success' && (
@@ -291,12 +291,13 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 32,
-    fontWeight: 'bold',
+    fontFamily: TYPOGRAPHY.fontFamily.serifBold,
     color: BRAND_COLORS.text[900],
     marginBottom: 8,
   },
   subtitle: {
     fontSize: 16,
+    fontFamily: TYPOGRAPHY.fontFamily.regular,
     color: BRAND_COLORS.text[600],
     marginBottom: 32,
   },
@@ -313,7 +314,7 @@ const styles = StyleSheet.create({
     width: 100,
     height: 125,
     borderRadius: GOLDEN_HOUR.radius.md,
-    backgroundColor: '#E2E8F0',
+    backgroundColor: GOLDEN_HOUR.borderDefault,
   },
   uploadOverlay: {
     position: 'absolute',
@@ -321,39 +322,39 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    borderRadius: GOLDEN_HOUR.radius.lg,
+    backgroundColor: 'rgba(13, 15, 20, 0.7)',
+    borderRadius: GOLDEN_HOUR.radius.md,
     justifyContent: 'center',
     alignItems: 'center',
   },
   successOverlay: {
-    backgroundColor: 'rgba(34, 197, 94, 0.8)',
+    backgroundColor: 'rgba(22, 163, 74, 0.15)',
   },
   errorOverlay: {
-    backgroundColor: 'rgba(239, 68, 68, 0.8)',
+    backgroundColor: 'rgba(239, 68, 68, 0.15)',
     flexDirection: 'column',
     gap: 8,
   },
   checkmark: {
-    color: '#fff',
+    color: '#34D399',
     fontSize: 32,
-    fontWeight: 'bold',
+    fontFamily: TYPOGRAPHY.fontFamily.bold,
   },
   errorText: {
-    color: '#fff',
+    color: '#EF4444',
     fontSize: 24,
-    fontWeight: 'bold',
+    fontFamily: TYPOGRAPHY.fontFamily.bold,
   },
   retryButton: {
-    backgroundColor: '#fff',
+    backgroundColor: GOLDEN_HOUR.surface,
     paddingHorizontal: 12,
     paddingVertical: 4,
-    borderRadius: 4,
+    borderRadius: GOLDEN_HOUR.radius.sm,
   },
   retryText: {
     color: BRAND_COLORS.primary,
     fontSize: 12,
-    fontWeight: '600',
+    fontFamily: TYPOGRAPHY.fontFamily.semibold,
   },
   addPhotoButton: {
     width: 100,
@@ -369,7 +370,7 @@ const styles = StyleSheet.create({
   addPhotoText: {
     color: BRAND_COLORS.primary,
     fontSize: 14,
-    fontWeight: '600',
+    fontFamily: TYPOGRAPHY.fontFamily.semibold,
   },
   button: {
     backgroundColor: BRAND_COLORS.primary,
@@ -382,8 +383,8 @@ const styles = StyleSheet.create({
     opacity: 0.5,
   },
   buttonText: {
-    color: '#fff',
+    color: BRAND_COLORS.onPrimary,
     fontSize: 18,
-    fontWeight: '600',
+    fontFamily: TYPOGRAPHY.fontFamily.semibold,
   },
 });

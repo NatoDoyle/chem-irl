@@ -5,6 +5,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { supabase } from '../../lib/supabase/client';
 import { getErrorAlert } from '../../lib/errors';
 import { trackEvent } from '../../lib/analytics';
+import { BRAND_COLORS } from '../../config/brand';
 import { ORIENTATION_OPTIONS, type UserOrientation } from '../../config/profileOptions';
 import type { OnboardingStackParamList } from '../../navigation/OnboardingNavigator';
 import { onboardingStyles as styles } from './onboardingStyles';
@@ -106,7 +107,7 @@ export default function InterestedInScreen() {
           disabled={!selectedOrientation || loading}
         >
           {loading ? (
-            <ActivityIndicator color="#fff" />
+            <ActivityIndicator color={BRAND_COLORS.onPrimary} />
           ) : (
             <Text style={styles.buttonText}>Continue</Text>
           )}

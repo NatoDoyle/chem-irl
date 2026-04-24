@@ -1,10 +1,21 @@
 import { useState } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, Alert, ActivityIndicator } from 'react-native';
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  ScrollView,
+  Alert,
+  ActivityIndicator,
+  TextInput,
+  StyleSheet,
+} from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { supabase } from '../../lib/supabase/client';
 import { getErrorAlert } from '../../lib/errors';
 import { trackEvent } from '../../lib/analytics';
+import { BRAND_COLORS, MIDNIGHT, TYPOGRAPHY } from '../../config/brand';
 import { GENDER_OPTIONS, type UserGender } from '../../config/profileOptions';
 import type { OnboardingStackParamList } from '../../navigation/OnboardingNavigator';
 import { onboardingStyles as styles } from './onboardingStyles';
@@ -17,6 +28,7 @@ type GenderIdentityScreenNavigationProp = NativeStackNavigationProp<
 export default function GenderIdentityScreen() {
   const navigation = useNavigation<GenderIdentityScreenNavigationProp>();
   const [selectedGender, setSelectedGender] = useState<UserGender | null>(null);
+  const [otherText, setOtherText] = useState('');
   const [loading, setLoading] = useState(false);
 
   const handleContinue = async () => {
@@ -73,45 +85,152 @@ export default function GenderIdentityScreen() {
     }
   };
 
+  const handleSkip = () => {
+    navigation.navigate('InterestedIn');
+  };
+
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <Text style={styles.title}>What's your gender identity?</Text>
-      <Text style={styles.subtitle}>This helps us show you relevant matches</Text>
+    <View style={styles.container}>
+      <ScrollView
+        contentContainerStyle={[styles.content, { paddingBottom: 200 }]}
+        showsVerticalScrollIndicator={false}
+      >
+        <Text style={styles.title}>I identify as...</Text>
+        <Text style={styles.subtitle}>
+          Authenticity is the catalyst for real chemistry. Select the identity that fits you best.
+        </Text>
 
-      <View style={styles.form}>
-        {GENDER_OPTIONS.map((option) => (
-          <TouchableOpacity
-            key={option.value}
-            style={[
-              styles.optionButton,
-              selectedGender === option.value && styles.optionButtonSelected,
-            ]}
-            onPress={() => setSelectedGender(option.value)}
-            disabled={loading}
-          >
-            <Text
-              style={[
-                styles.optionText,
-                selectedGender === option.value && styles.optionTextSelected,
-              ]}
-            >
-              {option.label}
-            </Text>
-          </TouchableOpacity>
-        ))}
+        <View style={styles.form}>
+          {GENDER_OPTIONS.map((option) => {
+            const isSelected = selectedGender === option.value;
+            const isOther = option.value === 'other';
 
+            return (
+              <TouchableOpacity
+                key={option.value}
+                style={[styles.optionButton, isSelected && styles.optionButtonSelected]}
+                onPress={() => setSelectedGender(option.value)}
+                disabled={loading}
+                activeOpacity={0.7}
+              >
+                <View style={localStyles.optionRow}>
+                  <Text style={[styles.optionText, isSelected && styles.optionTextSelected]}>
+                    {option.label}
+                  </Text>
+                  <View
+                    style={[localStyles.radioOuter, isSelected && localStyles.radioOuterSelected]}
+                  >
+                    {isSelected && <View style={localStyles.radioInner} />}
+                  </View>
+                </View>
+
+                {isOther && isSelected && (
+                  <TextInput
+                    style={localStyles.otherInput}
+                    placeholder="Specify your identity"
+                    placeholderTextColor={BRAND_COLORS.text[400]}
+                    value={otherText}
+                    onChangeText={setOtherText}
+                    autoFocus
+                  />
+                )}
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+      </ScrollView>
+
+      <LinearGradient
+        colors={['transparent', MIDNIGHT.bg, MIDNIGHT.bg]}
+        locations={[0, 0.3, 1]}
+        style={localStyles.footer}
+        pointerEvents="box-none"
+      >
         <TouchableOpacity
-          style={[styles.button, (!selectedGender || loading) && styles.buttonDisabled]}
+          style={[
+            styles.button,
+            localStyles.footerButton,
+            (!selectedGender || loading) && styles.buttonDisabled,
+          ]}
           onPress={handleContinue}
           disabled={!selectedGender || loading}
         >
           {loading ? (
-            <ActivityIndicator color="#fff" />
+            <ActivityIndicator color={BRAND_COLORS.onPrimary} />
           ) : (
-            <Text style={styles.buttonText}>Continue</Text>
+            <Text style={localStyles.footerButtonText}>CONTINUE</Text>
           )}
         </TouchableOpacity>
-      </View>
-    </ScrollView>
+
+        <TouchableOpacity onPress={handleSkip} disabled={loading}>
+          <Text style={localStyles.skipText}>Skip for now</Text>
+        </TouchableOpacity>
+      </LinearGradient>
+    </View>
   );
 }
+
+const localStyles = StyleSheet.create({
+  optionRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  radioOuter: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: '#1a1f2e',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  radioOuterSelected: {
+    borderColor: BRAND_COLORS.primary,
+  },
+  radioInner: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: BRAND_COLORS.primary,
+  },
+  otherInput: {
+    marginTop: 16,
+    backgroundColor: 'rgba(13, 15, 20, 0.5)',
+    borderWidth: 1,
+    borderColor: '#1a1f2e',
+    borderRadius: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    color: BRAND_COLORS.text[900],
+    fontSize: TYPOGRAPHY.fontSize.base,
+    fontFamily: TYPOGRAPHY.fontFamily.regular,
+  },
+  footer: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    paddingHorizontal: 24,
+    paddingBottom: 40,
+    paddingTop: 24,
+  },
+  footerButton: {
+    borderRadius: 14,
+    marginTop: 0,
+  },
+  footerButtonText: {
+    color: BRAND_COLORS.onPrimary,
+    fontSize: TYPOGRAPHY.fontSize.sm,
+    fontFamily: TYPOGRAPHY.fontFamily.semibold,
+    letterSpacing: TYPOGRAPHY.letterSpacing.wide,
+    textTransform: 'uppercase',
+  },
+  skipText: {
+    color: BRAND_COLORS.text[500],
+    fontSize: TYPOGRAPHY.fontSize.sm,
+    fontFamily: TYPOGRAPHY.fontFamily.medium,
+    textAlign: 'center',
+    marginTop: 24,
+  },
+});

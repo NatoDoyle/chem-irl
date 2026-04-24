@@ -1,4 +1,8 @@
-import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import { createNativeStackNavigator, NativeStackHeaderProps } from '@react-navigation/native-stack';
+import { View, Text, StyleSheet } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import ProgressBar from '../components/ui/ProgressBar';
+import { BRAND_COLORS, MIDNIGHT, TYPOGRAPHY } from '../config/brand';
 import GenderIdentityScreen from '../screens/onboarding/GenderIdentityScreen';
 import InterestedInScreen from '../screens/onboarding/InterestedInScreen';
 import HeightScreen from '../screens/onboarding/HeightScreen';
@@ -37,13 +41,58 @@ export type OnboardingStackParamList = {
   ProfileReview: undefined;
 };
 
-const Stack = createNativeStackNavigator<OnboardingStackParamList>();
+const SCREEN_ORDER: (keyof OnboardingStackParamList)[] = [
+  'GenderIdentity',
+  'InterestedIn',
+  'Height',
+  'Languages',
+  'RelationshipIntent',
+  'FamilyPlans',
+  'Pets',
+  'Lifestyle',
+  'Interests',
+  'LoveLanguage',
+  'PersonalityType',
+  'Astrology',
+  'WorkEducation',
+  'ProfileSetup',
+  'Photos',
+  'LocationPermission',
+  'ProfileReview',
+];
 
-const screenOptions = { headerShown: false };
+const TOTAL_STEPS = SCREEN_ORDER.length;
+
+function OnboardingHeader({ route }: NativeStackHeaderProps) {
+  const insets = useSafeAreaInsets();
+  const step = SCREEN_ORDER.indexOf(route.name as keyof OnboardingStackParamList) + 1;
+  const pct = Math.round((step / TOTAL_STEPS) * 100);
+
+  return (
+    <View style={[styles.header, { paddingTop: insets.top }]}>
+      <Text style={styles.brandName}>Chem IRL</Text>
+      <View style={styles.stepRow}>
+        <Text style={styles.stepText}>
+          STEP {step} OF {TOTAL_STEPS}
+        </Text>
+        <Text style={styles.stepText}>{pct}% Complete</Text>
+      </View>
+      <ProgressBar current={step} total={TOTAL_STEPS} />
+    </View>
+  );
+}
+
+const Stack = createNativeStackNavigator<OnboardingStackParamList>();
 
 export default function OnboardingNavigator() {
   return (
-    <Stack.Navigator screenOptions={screenOptions}>
+    <Stack.Navigator
+      screenOptions={{
+        headerShown: true,
+        header: (props) => <OnboardingHeader {...props} />,
+        contentStyle: { backgroundColor: MIDNIGHT.bg },
+      }}
+    >
       <Stack.Screen name="GenderIdentity" component={GenderIdentityScreen} />
       <Stack.Screen name="InterestedIn" component={InterestedInScreen} />
       <Stack.Screen name="Height" component={HeightScreen} />
@@ -64,3 +113,28 @@ export default function OnboardingNavigator() {
     </Stack.Navigator>
   );
 }
+
+const styles = StyleSheet.create({
+  header: {
+    backgroundColor: MIDNIGHT.bg,
+    paddingHorizontal: 16,
+  },
+  brandName: {
+    fontFamily: TYPOGRAPHY.fontFamily.serifItalic,
+    fontSize: TYPOGRAPHY.fontSize.lg,
+    color: BRAND_COLORS.primary,
+    textAlign: 'center',
+    marginTop: 8,
+    marginBottom: 12,
+  },
+  stepRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+  },
+  stepText: {
+    fontFamily: TYPOGRAPHY.fontFamily.medium,
+    fontSize: TYPOGRAPHY.fontSize.xs,
+    color: BRAND_COLORS.text[600],
+  },
+});
