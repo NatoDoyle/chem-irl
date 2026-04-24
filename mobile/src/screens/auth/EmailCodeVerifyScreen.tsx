@@ -1,17 +1,13 @@
 import { useState, useRef, useEffect } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  TextInput,
-  TouchableOpacity,
-  ActivityIndicator,
-  Alert,
-} from 'react-native';
+import { View, Text, StyleSheet, TextInput, Alert } from 'react-native';
 import { useRoute } from '@react-navigation/native';
+import Animated, { FadeInDown } from 'react-native-reanimated';
 import { verifyEmailOTP, sendEmailOTP, completeSignup } from '../../lib/auth';
 import { getErrorAlert } from '../../lib/errors';
-import { BRAND_COLORS, GOLDEN_HOUR } from '../../config/brand';
+import { BRAND_COLORS, GOLDEN_HOUR, REFINED_WARMTH, TYPOGRAPHY, SPACING } from '../../config/brand';
+import GHScreen from '../../components/ui/GHScreen';
+import GHButton from '../../components/ui/GHButton';
+import AnimatedPressable from '../../components/ui/AnimatedPressable';
 
 type RouteParams = {
   email: string;
@@ -28,13 +24,11 @@ export default function EmailCodeVerifyScreen() {
   const inputRefs = useRef<(TextInput | null)[]>([]);
 
   useEffect(() => {
-    // Focus first input on mount
     inputRefs.current[0]?.focus();
   }, []);
 
   const handleCodeChange = (value: string, index: number) => {
     if (value.length > 1) {
-      // Handle paste
       const pastedCode = value.slice(0, 6).split('');
       const newCode = [...code];
       pastedCode.forEach((char, i) => {
@@ -43,7 +37,6 @@ export default function EmailCodeVerifyScreen() {
         }
       });
       setCode(newCode);
-      // Focus last filled input or submit
       const lastIndex = Math.min(index + pastedCode.length - 1, 5);
       inputRefs.current[lastIndex]?.focus();
       if (newCode.every((c) => c !== '')) {
@@ -56,12 +49,10 @@ export default function EmailCodeVerifyScreen() {
     newCode[index] = value;
     setCode(newCode);
 
-    // Auto-focus next input
     if (value && index < 5) {
       inputRefs.current[index + 1]?.focus();
     }
 
-    // Auto-submit when all 6 digits entered
     if (newCode.every((c) => c !== '') && newCode.join('').length === 6) {
       handleVerify(newCode.join(''));
     }
@@ -100,7 +91,6 @@ export default function EmailCodeVerifyScreen() {
       }
 
       if (isSignup && fullName) {
-        // Complete signup: update profile with full_name and signup_completed
         const signupResult = await completeSignup(fullName);
         if (!signupResult.success) {
           const { title, message } = getErrorAlert(
@@ -110,10 +100,6 @@ export default function EmailCodeVerifyScreen() {
           Alert.alert(title, message);
           return;
         }
-        // Navigation will be handled by App.tsx based on signup_completed flag
-      } else {
-        // Email login complete - navigation will be handled by App.tsx
-        // based on signup_completed and profile completion
       }
     } catch (error: any) {
       const { title, message } = getErrorAlert(error, 'Error');
@@ -143,117 +129,112 @@ export default function EmailCodeVerifyScreen() {
   };
 
   return (
-    <View style={styles.container}>
+    <GHScreen gradient>
       <View style={styles.content}>
-        <Text style={styles.title}>Enter verification code</Text>
-        <Text style={styles.subtitle}>
-          We sent a 6-digit code to {email}. Enter it below to verify your email.
-        </Text>
-
-        <View style={styles.codeContainer}>
-          {code.map((digit, index) => (
-            <TextInput
-              key={index}
-              ref={(ref) => {
-                inputRefs.current[index] = ref;
-              }}
-              style={[styles.codeInput, digit && styles.codeInputFilled]}
-              value={digit}
-              onChangeText={(value) => handleCodeChange(value, index)}
-              onKeyPress={({ nativeEvent }) => handleKeyPress(nativeEvent.key, index)}
-              keyboardType="number-pad"
-              maxLength={6}
-              selectTextOnFocus
-              editable={!loading}
-            />
-          ))}
-        </View>
-
-        <TouchableOpacity
-          style={[styles.button, loading && styles.buttonDisabled]}
-          onPress={() => handleVerify()}
-          disabled={loading || code.some((c) => !c)}
+        <Animated.Text
+          entering={FadeInDown.duration(REFINED_WARMTH.animation.duration.entrance)}
+          style={styles.title}
         >
-          {loading ? (
-            <ActivityIndicator color="#fff" />
-          ) : (
-            <Text style={styles.buttonText}>Verify</Text>
-          )}
-        </TouchableOpacity>
+          Enter verification code
+        </Animated.Text>
+        <Animated.Text
+          entering={FadeInDown.duration(REFINED_WARMTH.animation.duration.entrance).delay(100)}
+          style={styles.subtitle}
+        >
+          We sent a 6-digit code to {email}. Enter it below to verify your email.
+        </Animated.Text>
 
-        <TouchableOpacity style={styles.resendButton} onPress={handleResend} disabled={resending}>
-          <Text style={styles.resendText}>
-            {resending ? 'Resending...' : "Didn't receive code? Resend"}
-          </Text>
-        </TouchableOpacity>
+        <Animated.View
+          entering={FadeInDown.duration(REFINED_WARMTH.animation.duration.entrance).delay(200)}
+        >
+          <View style={styles.codeContainer}>
+            {code.map((digit, index) => (
+              <TextInput
+                key={index}
+                ref={(ref) => {
+                  inputRefs.current[index] = ref;
+                }}
+                style={[styles.codeInput, digit && styles.codeInputFilled]}
+                value={digit}
+                onChangeText={(value) => handleCodeChange(value, index)}
+                onKeyPress={({ nativeEvent }) => handleKeyPress(nativeEvent.key, index)}
+                keyboardType="number-pad"
+                maxLength={6}
+                selectTextOnFocus
+                editable={!loading}
+              />
+            ))}
+          </View>
+
+          <GHButton
+            title="Verify"
+            onPress={() => handleVerify()}
+            loading={loading}
+            disabled={loading || code.some((c) => !c)}
+          />
+
+          <AnimatedPressable
+            onPress={handleResend}
+            disabled={resending}
+            style={styles.resendButton}
+            haptic={false}
+          >
+            <Text style={styles.resendText}>
+              {resending ? 'Resending...' : "Didn't receive code? Resend"}
+            </Text>
+          </AnimatedPressable>
+        </Animated.View>
       </View>
-    </View>
+    </GHScreen>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: GOLDEN_HOUR.bg,
-    padding: 24,
-    paddingTop: 80,
-  },
   content: {
     flex: 1,
+    paddingTop: SPACING['2xl'],
   },
   title: {
-    fontSize: 28,
-    fontWeight: 'bold',
+    fontSize: TYPOGRAPHY.fontSize['2xl'],
+    fontFamily: TYPOGRAPHY.fontFamily.serifBold,
     color: BRAND_COLORS.text[900],
-    marginBottom: 8,
+    marginBottom: SPACING.sm,
   },
   subtitle: {
-    fontSize: 16,
+    fontSize: TYPOGRAPHY.fontSize.base,
+    fontFamily: TYPOGRAPHY.fontFamily.regular,
     color: BRAND_COLORS.text[600],
-    marginBottom: 32,
+    marginBottom: SPACING.xl,
   },
   codeContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 32,
-    gap: 8,
+    marginBottom: SPACING.xl,
+    gap: SPACING.sm,
   },
   codeInput: {
     flex: 1,
     borderWidth: 2,
     borderColor: GOLDEN_HOUR.borderDefault,
-    borderRadius: GOLDEN_HOUR.radius.lg,
-    padding: 16,
-    fontSize: 24,
+    borderRadius: REFINED_WARMTH.radius.md,
+    padding: SPACING.base,
+    fontSize: TYPOGRAPHY.fontSize['2xl'],
+    fontFamily: TYPOGRAPHY.fontFamily.semibold,
     textAlign: 'center',
     backgroundColor: GOLDEN_HOUR.inputBg,
-    fontWeight: '600',
+    color: BRAND_COLORS.text[900],
   },
   codeInputFilled: {
     borderColor: BRAND_COLORS.primary,
   },
-  button: {
-    backgroundColor: BRAND_COLORS.primary,
-    paddingVertical: 16,
-    borderRadius: GOLDEN_HOUR.radius.lg,
-    alignItems: 'center',
-    marginBottom: 16,
-    ...GOLDEN_HOUR.shadow.warm,
-  },
-  buttonDisabled: {
-    opacity: 0.6,
-  },
-  buttonText: {
-    color: '#fff',
-    fontSize: 18,
-    fontWeight: '600',
-  },
   resendButton: {
     alignItems: 'center',
-    paddingVertical: 8,
+    paddingVertical: SPACING.md,
+    marginTop: SPACING.base,
   },
   resendText: {
     color: BRAND_COLORS.primary,
-    fontSize: 16,
+    fontSize: TYPOGRAPHY.fontSize.base,
+    fontFamily: TYPOGRAPHY.fontFamily.medium,
   },
 });
