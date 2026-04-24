@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from '../../lib/supabase/client';
-import { BRAND_COLORS } from '../../config/brand';
+import { BRAND_COLORS, MIDNIGHT, TYPOGRAPHY, SPACING } from '../../config/brand';
 import Constants from 'expo-constants';
 
 export default function DebugScreen() {
@@ -200,7 +200,7 @@ export default function DebugScreen() {
           disabled={!!actionLoading}
         >
           {actionLoading === 'cache' ? (
-            <ActivityIndicator color="#fff" />
+            <ActivityIndicator color={BRAND_COLORS.onPrimary} />
           ) : (
             <Text style={styles.buttonText}>Clear AsyncStorage / Cache</Text>
           )}
@@ -212,7 +212,7 @@ export default function DebugScreen() {
           disabled={!!actionLoading}
         >
           {actionLoading === 'onboarding' ? (
-            <ActivityIndicator color="#fff" />
+            <ActivityIndicator color={BRAND_COLORS.onPrimary} />
           ) : (
             <Text style={styles.buttonText}>Reset Onboarding State</Text>
           )}
@@ -224,7 +224,7 @@ export default function DebugScreen() {
           disabled={!!actionLoading}
         >
           {actionLoading === 'refetch' ? (
-            <ActivityIndicator color="#fff" />
+            <ActivityIndicator color={BRAND_COLORS.onPrimary} />
           ) : (
             <Text style={styles.buttonText}>Refetch Profile</Text>
           )}
@@ -240,7 +240,7 @@ export default function DebugScreen() {
           disabled={!!actionLoading}
         >
           {actionLoading === 'signout' ? (
-            <ActivityIndicator color="#fff" />
+            <ActivityIndicator color={BRAND_COLORS.onPrimary} />
           ) : (
             <Text style={styles.buttonText}>Sign Out</Text>
           )}
@@ -253,46 +253,49 @@ export default function DebugScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: MIDNIGHT.bg,
   },
   content: {
-    padding: 24,
+    padding: SPACING.lg,
     paddingTop: 60,
   },
   title: {
-    fontSize: 32,
-    fontWeight: 'bold',
+    fontSize: TYPOGRAPHY.fontSize['3xl'],
+    fontFamily: TYPOGRAPHY.fontFamily.serifBold,
     color: BRAND_COLORS.text[900],
-    marginBottom: 8,
+    marginBottom: SPACING.sm,
   },
   subtitle: {
-    fontSize: 14,
-    color: BRAND_COLORS.text[600],
-    marginBottom: 32,
-    fontStyle: 'italic',
+    fontSize: TYPOGRAPHY.fontSize.sm,
+    fontFamily: TYPOGRAPHY.fontFamily.serifItalic,
+    color: BRAND_COLORS.text[500],
+    marginBottom: SPACING.xl,
   },
   section: {
-    marginBottom: 32,
+    marginBottom: SPACING.xl,
   },
   sectionTitle: {
-    fontSize: 18,
-    fontWeight: '600',
+    fontSize: TYPOGRAPHY.fontSize.lg,
+    fontFamily: TYPOGRAPHY.fontFamily.serifBold,
     color: BRAND_COLORS.text[900],
-    marginBottom: 16,
+    marginBottom: SPACING.base,
   },
   infoRow: {
     flexDirection: 'row',
-    marginBottom: 12,
     alignItems: 'flex-start',
+    ...MIDNIGHT.glassCard,
+    padding: SPACING.md,
+    marginBottom: SPACING.sm,
   },
   infoLabel: {
-    fontSize: 14,
-    fontWeight: '600',
+    fontSize: TYPOGRAPHY.fontSize.sm,
+    fontFamily: TYPOGRAPHY.fontFamily.semibold,
     color: BRAND_COLORS.text[600],
     width: 100,
   },
   infoValue: {
-    fontSize: 14,
+    fontSize: TYPOGRAPHY.fontSize.sm,
+    fontFamily: TYPOGRAPHY.fontFamily.regular,
     color: BRAND_COLORS.text[900],
     flex: 1,
   },
@@ -300,9 +303,10 @@ const styles = StyleSheet.create({
     backgroundColor: BRAND_COLORS.primary,
     paddingVertical: 14,
     paddingHorizontal: 20,
-    borderRadius: 8,
+    borderRadius: MIDNIGHT.radius.lg,
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: SPACING.md,
+    ...MIDNIGHT.glow.primary,
   },
   buttonDanger: {
     backgroundColor: BRAND_COLORS.danger,
@@ -311,8 +315,8 @@ const styles = StyleSheet.create({
     opacity: 0.6,
   },
   buttonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
+    color: BRAND_COLORS.onPrimary,
+    fontSize: TYPOGRAPHY.fontSize.base,
+    fontFamily: TYPOGRAPHY.fontFamily.semibold,
   },
 });

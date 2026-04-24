@@ -12,9 +12,9 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { supabase } from '../../lib/supabase/client';
-import { BRAND_COLORS, GOLDEN_HOUR } from '../../config/brand';
+import { BRAND_COLORS, GOLDEN_HOUR, TYPOGRAPHY } from '../../config/brand';
 import { getErrorAlert } from '../../lib/errors';
-import { sanitizeText, sanitizeMultilineText } from '../../lib/sanitize';
+import { sanitizeMultilineText } from '../../lib/sanitize';
 import { trackEvent } from '../../lib/analytics';
 import type { OnboardingStackParamList } from '../../navigation/OnboardingNavigator';
 
@@ -25,28 +25,14 @@ type ProfileSetupScreenNavigationProp = NativeStackNavigationProp<
 
 export default function ProfileSetupScreen() {
   const navigation = useNavigation<ProfileSetupScreenNavigationProp>();
-  const [headline, setHeadline] = useState('');
   const [bio, setBio] = useState('');
   const [loading, setLoading] = useState(false);
 
   const handleContinue = async () => {
-    const headlineTrimmed = headline.trim();
     const bioTrimmed = bio.trim();
 
-    if (!headlineTrimmed || !bioTrimmed) {
-      const { title, message } = getErrorAlert(
-        'Please fill in both headline and bio',
-        'Validation Error'
-      );
-      Alert.alert(title, message);
-      return;
-    }
-
-    if (headlineTrimmed.length < 5) {
-      const { title, message } = getErrorAlert(
-        'Headline must be at least 5 characters',
-        'Validation Error'
-      );
+    if (!bioTrimmed) {
+      const { title, message } = getErrorAlert('Please fill in your bio', 'Validation Error');
       Alert.alert(title, message);
       return;
     }
@@ -73,14 +59,12 @@ export default function ProfileSetupScreen() {
       }
 
       // Sanitize user inputs before storing
-      const sanitizedHeadline = sanitizeText(headlineTrimmed);
       const sanitizedBio = sanitizeMultilineText(bioTrimmed);
 
       // Upsert profile
       const { error } = await supabase.from('profiles').upsert({
         id: user.id,
         prompts: {
-          headline: sanitizedHeadline,
           bio: sanitizedBio,
         },
         completion_pct: 50, // Will be 100 after photos
@@ -95,7 +79,6 @@ export default function ProfileSetupScreen() {
 
       // Track profile setup completion
       trackEvent('profile_completed', {
-        hasHeadline: sanitizedHeadline.length > 0,
         hasBio: sanitizedBio.length > 0,
       });
 
@@ -115,17 +98,6 @@ export default function ProfileSetupScreen() {
       <Text style={styles.subtitle}>Tell people about yourself</Text>
 
       <View style={styles.form}>
-        <Text style={styles.label}>Headline</Text>
-        <TextInput
-          style={styles.input}
-          placeholder="A short, catchy headline"
-          placeholderTextColor={BRAND_COLORS.text[600]}
-          value={headline}
-          onChangeText={setHeadline}
-          maxLength={100}
-          editable={!loading}
-        />
-
         <Text style={styles.label}>Bio</Text>
         <TextInput
           style={[styles.input, styles.textArea]}
@@ -145,7 +117,7 @@ export default function ProfileSetupScreen() {
           disabled={loading}
         >
           {loading ? (
-            <ActivityIndicator color="#fff" />
+            <ActivityIndicator color={BRAND_COLORS.onPrimary} />
           ) : (
             <Text style={styles.buttonText}>Continue</Text>
           )}
@@ -166,12 +138,13 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 32,
-    fontWeight: 'bold',
+    fontFamily: TYPOGRAPHY.fontFamily.serifBold,
     color: BRAND_COLORS.text[900],
     marginBottom: 8,
   },
   subtitle: {
     fontSize: 16,
+    fontFamily: TYPOGRAPHY.fontFamily.regular,
     color: BRAND_COLORS.text[600],
     marginBottom: 32,
   },
@@ -180,7 +153,7 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: 16,
-    fontWeight: '600',
+    fontFamily: TYPOGRAPHY.fontFamily.semibold,
     color: BRAND_COLORS.text[900],
     marginBottom: 8,
   },
@@ -190,7 +163,9 @@ const styles = StyleSheet.create({
     borderRadius: GOLDEN_HOUR.radius.lg,
     padding: 16,
     fontSize: 16,
+    fontFamily: TYPOGRAPHY.fontFamily.regular,
     backgroundColor: GOLDEN_HOUR.inputBg,
+    color: BRAND_COLORS.text[900],
   },
   textArea: {
     height: 120,
@@ -208,8 +183,8 @@ const styles = StyleSheet.create({
     opacity: 0.6,
   },
   buttonText: {
-    color: '#fff',
+    color: BRAND_COLORS.onPrimary,
     fontSize: 18,
-    fontWeight: '600',
+    fontFamily: TYPOGRAPHY.fontFamily.semibold,
   },
 });

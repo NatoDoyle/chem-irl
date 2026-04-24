@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, Alert, ActivityIndicator } from 'react-native';
+import { BRAND_COLORS } from '../../config/brand';
 import { PETS_OPTIONS } from '../../config/profileOptions';
 import { onboardingStyles as styles } from './onboardingStyles';
 import { useOnboardingSave } from './useOnboardingSave';
@@ -50,7 +51,7 @@ export default function PetsScreen() {
           disabled={!selectedPet || loading}
         >
           {loading ? (
-            <ActivityIndicator color="#fff" />
+            <ActivityIndicator color={BRAND_COLORS.onPrimary} />
           ) : (
             <Text style={styles.buttonText}>Continue</Text>
           )}

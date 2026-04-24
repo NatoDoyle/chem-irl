@@ -1,19 +1,14 @@
 import { useState } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  TextInput,
-  TouchableOpacity,
-  ActivityIndicator,
-  Alert,
-} from 'react-native';
+import { View, StyleSheet, TextInput, Alert } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import Animated, { FadeInDown } from 'react-native-reanimated';
 import { AuthStackParamList } from '../../navigation/AuthNavigator';
 import { sendEmailOTP } from '../../lib/auth';
 import { getErrorAlert } from '../../lib/errors';
-import { BRAND_COLORS, GOLDEN_HOUR } from '../../config/brand';
+import { BRAND_COLORS, GOLDEN_HOUR, REFINED_WARMTH, TYPOGRAPHY, SPACING } from '../../config/brand';
+import GHScreen from '../../components/ui/GHScreen';
+import GHButton from '../../components/ui/GHButton';
 
 type LoginEmailScreenNavigationProp = NativeStackNavigationProp<AuthStackParamList, 'LoginEmail'>;
 
@@ -34,7 +29,6 @@ export default function LoginEmailScreen() {
       return;
     }
 
-    // Basic email validation
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(emailTrimmed)) {
       const { title, message } = getErrorAlert(
@@ -71,82 +65,74 @@ export default function LoginEmailScreen() {
   };
 
   return (
-    <View style={styles.container}>
+    <GHScreen gradient>
       <View style={styles.content}>
-        <Text style={styles.title}>Log in</Text>
-        <Text style={styles.subtitle}>Enter your email to receive a verification code</Text>
-
-        <TextInput
-          style={styles.input}
-          placeholder="Email address"
-          placeholderTextColor={BRAND_COLORS.text[600]}
-          value={email}
-          onChangeText={setEmail}
-          keyboardType="email-address"
-          autoCapitalize="none"
-          autoComplete="email"
-          editable={!loading}
-        />
-
-        <TouchableOpacity
-          style={[styles.button, loading && styles.buttonDisabled]}
-          onPress={handleContinue}
-          disabled={loading}
+        <Animated.Text
+          entering={FadeInDown.duration(REFINED_WARMTH.animation.duration.entrance)}
+          style={styles.title}
         >
-          {loading ? (
-            <ActivityIndicator color="#fff" />
-          ) : (
-            <Text style={styles.buttonText}>Continue</Text>
-          )}
-        </TouchableOpacity>
+          Log in
+        </Animated.Text>
+        <Animated.Text
+          entering={FadeInDown.duration(REFINED_WARMTH.animation.duration.entrance).delay(100)}
+          style={styles.subtitle}
+        >
+          Enter your email to receive a verification code
+        </Animated.Text>
+
+        <Animated.View
+          entering={FadeInDown.duration(REFINED_WARMTH.animation.duration.entrance).delay(200)}
+        >
+          <TextInput
+            style={styles.input}
+            placeholder="Email address"
+            placeholderTextColor={BRAND_COLORS.text[500]}
+            value={email}
+            onChangeText={setEmail}
+            keyboardType="email-address"
+            autoCapitalize="none"
+            autoComplete="email"
+            editable={!loading}
+          />
+
+          <GHButton
+            title="Continue"
+            onPress={handleContinue}
+            loading={loading}
+            disabled={loading}
+          />
+        </Animated.View>
       </View>
-    </View>
+    </GHScreen>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: GOLDEN_HOUR.bg,
-    padding: 24,
-    paddingTop: 80,
-  },
   content: {
     flex: 1,
+    paddingTop: SPACING['2xl'],
   },
   title: {
-    fontSize: 28,
-    fontWeight: 'bold',
+    fontSize: TYPOGRAPHY.fontSize['2xl'],
+    fontFamily: TYPOGRAPHY.fontFamily.serifBold,
     color: BRAND_COLORS.text[900],
-    marginBottom: 8,
+    marginBottom: SPACING.sm,
   },
   subtitle: {
-    fontSize: 16,
+    fontSize: TYPOGRAPHY.fontSize.base,
+    fontFamily: TYPOGRAPHY.fontFamily.regular,
     color: BRAND_COLORS.text[600],
-    marginBottom: 32,
+    marginBottom: SPACING.xl,
   },
   input: {
     borderWidth: 1,
     borderColor: GOLDEN_HOUR.borderDefault,
-    borderRadius: GOLDEN_HOUR.radius.lg,
-    padding: 16,
-    fontSize: 16,
-    marginBottom: 24,
+    borderRadius: REFINED_WARMTH.radius.lg,
+    padding: SPACING.base,
+    fontSize: TYPOGRAPHY.fontSize.base,
+    fontFamily: TYPOGRAPHY.fontFamily.regular,
+    marginBottom: SPACING.lg,
     backgroundColor: GOLDEN_HOUR.inputBg,
-  },
-  button: {
-    backgroundColor: BRAND_COLORS.primary,
-    paddingVertical: 16,
-    borderRadius: GOLDEN_HOUR.radius.lg,
-    alignItems: 'center',
-    ...GOLDEN_HOUR.shadow.warm,
-  },
-  buttonDisabled: {
-    opacity: 0.6,
-  },
-  buttonText: {
-    color: '#fff',
-    fontSize: 18,
-    fontWeight: '600',
+    color: BRAND_COLORS.text[900],
   },
 });

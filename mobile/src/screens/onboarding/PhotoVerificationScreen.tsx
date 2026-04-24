@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { supabase } from '../../lib/supabase/client';
-import { BRAND_COLORS } from '../../config/brand';
+import { BRAND_COLORS, GOLDEN_HOUR, TYPOGRAPHY } from '../../config/brand';
 import { getErrorAlert } from '../../lib/errors';
 import { trackEvent } from '../../lib/analytics';
 
@@ -212,7 +212,7 @@ export default function PhotoVerificationScreen() {
             disabled={!verificationPhoto || loading}
           >
             {loading ? (
-              <ActivityIndicator color="#fff" />
+              <ActivityIndicator color={BRAND_COLORS.onPrimary} />
             ) : (
               <Text style={styles.buttonText}>Finish</Text>
             )}
@@ -226,7 +226,7 @@ export default function PhotoVerificationScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: GOLDEN_HOUR.bg,
   },
   content: {
     padding: 24,
@@ -234,7 +234,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 32,
-    fontWeight: 'bold',
+    fontFamily: TYPOGRAPHY.fontFamily.serifBold,
     color: BRAND_COLORS.text[900],
     marginBottom: 8,
   },
@@ -253,10 +253,10 @@ const styles = StyleSheet.create({
   photoPlaceholder: {
     width: '100%',
     height: 300,
-    backgroundColor: '#F8FAFC',
-    borderRadius: 16,
+    backgroundColor: GOLDEN_HOUR.inputBg,
+    borderRadius: GOLDEN_HOUR.radius.lg,
     borderWidth: 2,
-    borderColor: '#E2E8F0',
+    borderColor: GOLDEN_HOUR.borderDefault,
     borderStyle: 'dashed',
     justifyContent: 'center',
     alignItems: 'center',
@@ -268,36 +268,37 @@ const styles = StyleSheet.create({
   captureButton: {
     backgroundColor: BRAND_COLORS.primary,
     paddingVertical: 20,
-    borderRadius: 12,
+    borderRadius: GOLDEN_HOUR.radius.md,
     alignItems: 'center',
+    ...GOLDEN_HOUR.glow.primary,
   },
   captureButtonText: {
-    color: '#fff',
+    color: BRAND_COLORS.onPrimary,
     fontSize: 18,
-    fontWeight: '600',
+    fontFamily: TYPOGRAPHY.fontFamily.semibold,
   },
   retakeButton: {
     borderWidth: 2,
-    borderColor: '#E2E8F0',
+    borderColor: GOLDEN_HOUR.borderDefault,
     paddingVertical: 12,
-    borderRadius: 8,
+    borderRadius: GOLDEN_HOUR.radius.sm,
     alignItems: 'center',
   },
   retakeButtonText: {
     color: BRAND_COLORS.text[700],
     fontSize: 16,
-    fontWeight: '600',
+    fontFamily: TYPOGRAPHY.fontFamily.semibold,
   },
   infoBox: {
     padding: 16,
-    backgroundColor: '#F8FAFC',
-    borderRadius: 8,
+    backgroundColor: GOLDEN_HOUR.inputBg,
+    borderRadius: GOLDEN_HOUR.radius.sm,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: GOLDEN_HOUR.borderDefault,
   },
   infoTitle: {
     fontSize: 16,
-    fontWeight: '600',
+    fontFamily: TYPOGRAPHY.fontFamily.semibold,
     color: BRAND_COLORS.text[900],
     marginBottom: 8,
   },
@@ -314,29 +315,30 @@ const styles = StyleSheet.create({
   skipButton: {
     flex: 1,
     borderWidth: 2,
-    borderColor: '#E2E8F0',
+    borderColor: GOLDEN_HOUR.borderDefault,
     paddingVertical: 16,
-    borderRadius: 8,
+    borderRadius: GOLDEN_HOUR.radius.lg,
     alignItems: 'center',
   },
   skipButtonText: {
     color: BRAND_COLORS.text[700],
     fontSize: 18,
-    fontWeight: '600',
+    fontFamily: TYPOGRAPHY.fontFamily.semibold,
   },
   button: {
     flex: 2,
     backgroundColor: BRAND_COLORS.primary,
     paddingVertical: 16,
-    borderRadius: 8,
+    borderRadius: GOLDEN_HOUR.radius.lg,
     alignItems: 'center',
+    ...GOLDEN_HOUR.shadow.warm,
   },
   buttonDisabled: {
     opacity: 0.6,
   },
   buttonText: {
-    color: '#fff',
+    color: BRAND_COLORS.onPrimary,
     fontSize: 18,
-    fontWeight: '600',
+    fontFamily: TYPOGRAPHY.fontFamily.semibold,
   },
 });

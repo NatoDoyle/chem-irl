@@ -100,6 +100,7 @@ module.exports = function (api) {
     // React Native's Jest mocks include mixed Flow + TS syntax in .js files.
     // Preprocess to strip TS "as" casts before Flow parser runs.
     // Note: setup.js uses only Flow syntax, so it's excluded (uses babel-preset-expo).
+    plugins: ['react-native-reanimated/plugin'],
     overrides: [
       {
         // React Native files with mixed Flow + TS syntax

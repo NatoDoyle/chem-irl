@@ -12,7 +12,7 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { supabase } from '../../lib/supabase/client';
-import { BRAND_COLORS, GOLDEN_HOUR } from '../../config/brand';
+import { BRAND_COLORS, GOLDEN_HOUR, TYPOGRAPHY } from '../../config/brand';
 import { getErrorAlert } from '../../lib/errors';
 import { trackEvent } from '../../lib/analytics';
 import type { OnboardingStackParamList } from '../../navigation/OnboardingNavigator';
@@ -193,7 +193,7 @@ export default function HeightScreen() {
             disabled={loading}
           >
             {loading ? (
-              <ActivityIndicator color="#fff" />
+              <ActivityIndicator color={BRAND_COLORS.onPrimary} />
             ) : (
               <Text style={styles.buttonText}>Continue</Text>
             )}
@@ -215,12 +215,13 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 32,
-    fontWeight: 'bold',
+    fontFamily: TYPOGRAPHY.fontFamily.serifBold,
     color: BRAND_COLORS.text[900],
     marginBottom: 8,
   },
   subtitle: {
     fontSize: 16,
+    fontFamily: TYPOGRAPHY.fontFamily.regular,
     color: BRAND_COLORS.text[600],
     marginBottom: 32,
   },
@@ -233,6 +234,7 @@ const styles = StyleSheet.create({
     borderRadius: GOLDEN_HOUR.radius.lg,
     padding: 16,
     fontSize: 18,
+    fontFamily: TYPOGRAPHY.fontFamily.regular,
     backgroundColor: GOLDEN_HOUR.inputBg,
     color: BRAND_COLORS.text[900],
   },
@@ -250,16 +252,16 @@ const styles = StyleSheet.create({
   },
   optionButtonSelected: {
     borderColor: BRAND_COLORS.primary,
-    backgroundColor: BRAND_COLORS.primarySoft || '#D1FFFB',
+    backgroundColor: BRAND_COLORS.primarySoft,
   },
   optionText: {
     fontSize: 18,
     color: BRAND_COLORS.text[900],
-    fontWeight: '500',
+    fontFamily: TYPOGRAPHY.fontFamily.medium,
   },
   optionTextSelected: {
     color: BRAND_COLORS.primary,
-    fontWeight: '600',
+    fontFamily: TYPOGRAPHY.fontFamily.semibold,
   },
   buttonRow: {
     flexDirection: 'row',
@@ -277,7 +279,7 @@ const styles = StyleSheet.create({
   skipButtonText: {
     color: BRAND_COLORS.text[700],
     fontSize: 18,
-    fontWeight: '600',
+    fontFamily: TYPOGRAPHY.fontFamily.semibold,
   },
   button: {
     flex: 2,
@@ -291,8 +293,8 @@ const styles = StyleSheet.create({
     opacity: 0.6,
   },
   buttonText: {
-    color: '#fff',
+    color: BRAND_COLORS.onPrimary,
     fontSize: 18,
-    fontWeight: '600',
+    fontFamily: TYPOGRAPHY.fontFamily.semibold,
   },
 });

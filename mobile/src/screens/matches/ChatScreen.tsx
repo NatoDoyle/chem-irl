@@ -6,28 +6,30 @@ import {
   StyleSheet,
   FlatList,
   TextInput,
-  TouchableOpacity,
   KeyboardAvoidingView,
   Platform,
   Alert,
   AppState,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRoute, useFocusEffect } from '@react-navigation/native';
 import { supabase } from '../../lib/supabase/client';
 import { Message } from '../../lib/types';
-import { BRAND_COLORS, GOLDEN_HOUR } from '../../config/brand';
+import { BRAND_COLORS, MIDNIGHT, TYPOGRAPHY, SPACING } from '../../config/brand';
 import { getErrorAlert, isRecoverableError } from '../../lib/errors';
 import { enqueue, processQueue, getQueueSize, QueuedMessage } from '../../lib/offlineQueue';
 import ConnectionStatus from '../../components/ConnectionStatus';
 import { sanitizeText } from '../../lib/sanitize';
 import { addBreadcrumb } from '../../lib/sentry';
 import { trackEvent } from '../../lib/analytics';
+import AnimatedPressable from '../../components/ui/AnimatedPressable';
 
 type ChatRouteParams = {
   matchId: string;
 };
 
 export default function ChatScreen() {
+  const insets = useSafeAreaInsets();
   const route = useRoute();
   const { matchId } = route.params as ChatRouteParams;
   const flatListRef = useRef<FlatList>(null);
@@ -511,7 +513,7 @@ export default function ChatScreen() {
 
   return (
     <KeyboardAvoidingView
-      style={styles.container}
+      style={[styles.container, { paddingTop: insets.top }]}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       keyboardVerticalOffset={90}
     >
@@ -560,7 +562,7 @@ export default function ChatScreen() {
           />
           <Text style={styles.characterCount}>{newMessage.length}/500</Text>
         </View>
-        <TouchableOpacity
+        <AnimatedPressable
           style={[
             styles.sendButton,
             (!newMessage.trim() || sending || newMessage.length >= 500) &&
@@ -570,7 +572,7 @@ export default function ChatScreen() {
           disabled={!newMessage.trim() || sending || newMessage.length >= 500}
         >
           <Text style={styles.sendButtonText}>Send</Text>
-        </TouchableOpacity>
+        </AnimatedPressable>
       </View>
     </KeyboardAvoidingView>
   );
@@ -579,16 +581,16 @@ export default function ChatScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: GOLDEN_HOUR.bg,
+    backgroundColor: MIDNIGHT.bg,
   },
   messagesList: {
-    padding: 16,
+    padding: SPACING.base,
   },
   messageContainer: {
     maxWidth: '75%',
-    marginBottom: 12,
-    padding: 12,
-    borderRadius: 12,
+    marginBottom: SPACING.md,
+    padding: SPACING.md,
+    borderRadius: MIDNIGHT.radius.lg,
   },
   ownMessage: {
     alignSelf: 'flex-end',
@@ -596,14 +598,16 @@ const styles = StyleSheet.create({
   },
   otherMessage: {
     alignSelf: 'flex-start',
-    backgroundColor: '#F1F5F9',
+    ...MIDNIGHT.glassCard,
+    borderRadius: MIDNIGHT.radius.lg,
   },
   messageText: {
-    fontSize: 16,
-    marginBottom: 4,
+    fontSize: TYPOGRAPHY.fontSize.base,
+    fontFamily: TYPOGRAPHY.fontFamily.regular,
+    marginBottom: SPACING.xs,
   },
   ownMessageText: {
-    color: '#fff',
+    color: BRAND_COLORS.onPrimary,
   },
   otherMessageText: {
     color: BRAND_COLORS.text[900],
@@ -611,106 +615,116 @@ const styles = StyleSheet.create({
   messageFooter: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    marginTop: 4,
+    gap: SPACING.sm,
+    marginTop: SPACING.xs,
   },
   messageTime: {
-    fontSize: 12,
+    fontSize: TYPOGRAPHY.fontSize.xs,
+    fontFamily: TYPOGRAPHY.fontFamily.regular,
     opacity: 0.7,
-    color: BRAND_COLORS.text[600],
+    color: BRAND_COLORS.text[500],
   },
   readReceipt: {
-    fontSize: 11,
+    fontSize: TYPOGRAPHY.fontSize.xs - 1,
+    fontFamily: TYPOGRAPHY.fontFamily.regular,
     opacity: 0.6,
-    color: BRAND_COLORS.text[600],
+    color: BRAND_COLORS.text[500],
     fontStyle: 'italic',
   },
   inputContainer: {
     flexDirection: 'row',
-    padding: 16,
+    padding: SPACING.base,
     borderTopWidth: 1,
-    borderTopColor: GOLDEN_HOUR.borderDefault,
-    backgroundColor: GOLDEN_HOUR.surface,
+    borderTopColor: MIDNIGHT.borderDefault,
+    backgroundColor: MIDNIGHT.surface,
     alignItems: 'flex-end',
   },
   inputWrapper: {
     flex: 1,
-    marginRight: 8,
+    marginRight: SPACING.sm,
     position: 'relative',
   },
   input: {
     borderWidth: 1,
-    borderColor: GOLDEN_HOUR.borderDefault,
-    borderRadius: 20,
-    paddingHorizontal: 16,
+    borderColor: MIDNIGHT.borderDefault,
+    borderRadius: MIDNIGHT.radius.full,
+    paddingHorizontal: SPACING.base,
     paddingVertical: 10,
     paddingRight: 60,
-    fontSize: 16,
+    fontSize: TYPOGRAPHY.fontSize.base,
+    fontFamily: TYPOGRAPHY.fontFamily.regular,
+    backgroundColor: MIDNIGHT.inputBg,
+    color: BRAND_COLORS.text[900],
     maxHeight: 100,
   },
   characterCount: {
     position: 'absolute',
-    bottom: 8,
-    right: 16,
-    fontSize: 12,
-    color: BRAND_COLORS.text[600],
+    bottom: SPACING.sm,
+    right: SPACING.base,
+    fontSize: TYPOGRAPHY.fontSize.xs,
+    fontFamily: TYPOGRAPHY.fontFamily.regular,
+    color: BRAND_COLORS.text[500],
   },
   sendButton: {
     backgroundColor: BRAND_COLORS.primary,
     paddingVertical: 10,
-    paddingHorizontal: 20,
-    borderRadius: 20,
+    paddingHorizontal: SPACING.xl / 2,
+    borderRadius: MIDNIGHT.radius.full,
     justifyContent: 'center',
+    ...MIDNIGHT.glow.primary,
   },
   sendButtonDisabled: {
     opacity: 0.5,
   },
   sendButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
+    color: BRAND_COLORS.onPrimary,
+    fontSize: TYPOGRAPHY.fontSize.base,
+    fontFamily: TYPOGRAPHY.fontFamily.semibold,
   },
   emptyContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 40,
+    padding: SPACING['2xl'],
   },
   emptyText: {
-    fontSize: 18,
-    fontWeight: '600',
+    fontSize: TYPOGRAPHY.fontSize.lg,
+    fontFamily: TYPOGRAPHY.fontFamily.serifBold,
     color: BRAND_COLORS.text[900],
-    marginBottom: 8,
+    marginBottom: SPACING.sm,
   },
   emptySubtext: {
-    fontSize: 14,
+    fontSize: TYPOGRAPHY.fontSize.sm,
+    fontFamily: TYPOGRAPHY.fontFamily.regular,
     color: BRAND_COLORS.text[600],
   },
   queueBanner: {
     backgroundColor: BRAND_COLORS.warning + '20',
-    padding: 12,
+    padding: SPACING.md,
     borderTopWidth: 1,
     borderTopColor: BRAND_COLORS.warning,
   },
   queueText: {
-    fontSize: 12,
+    fontSize: TYPOGRAPHY.fontSize.xs,
+    fontFamily: TYPOGRAPHY.fontFamily.regular,
     color: BRAND_COLORS.text[600],
     textAlign: 'center',
   },
   queuedIndicator: {
-    fontSize: 10,
+    fontSize: TYPOGRAPHY.fontSize.xs - 2,
+    fontFamily: TYPOGRAPHY.fontFamily.regular,
     fontStyle: 'italic',
-    color: BRAND_COLORS.text[600],
-    marginTop: 4,
+    color: BRAND_COLORS.text[500],
+    marginTop: SPACING.xs,
   },
   typingIndicator: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    backgroundColor: BRAND_COLORS.background[50],
+    paddingHorizontal: SPACING.base,
+    paddingVertical: SPACING.sm,
+    backgroundColor: MIDNIGHT.bg,
   },
   typingText: {
-    fontSize: 14,
-    fontStyle: 'italic',
+    fontSize: TYPOGRAPHY.fontSize.sm,
+    fontFamily: TYPOGRAPHY.fontFamily.serifItalic,
     color: BRAND_COLORS.text[600],
   },
 });

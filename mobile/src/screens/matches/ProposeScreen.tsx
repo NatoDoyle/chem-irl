@@ -1,22 +1,14 @@
 import { useState, useRef, useMemo, useEffect } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-  TextInput,
-  Alert,
-  ActivityIndicator,
-  Platform,
-  Dimensions,
-} from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TextInput, Alert, Platform } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import { Image } from 'expo-image';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { supabase } from '../../lib/supabase/client';
-import { BRAND_COLORS, GOLDEN_HOUR } from '../../config/brand';
+import { BRAND_COLORS, MIDNIGHT, GOLD, TYPOGRAPHY, SPACING } from '../../config/brand';
+import AnimatedPressable from '../../components/ui/AnimatedPressable';
 import { getErrorAlert, isRecoverableError } from '../../lib/errors';
 import { enqueue, processQueue, QueuedProposal } from '../../lib/offlineQueue';
 import { createThrottle } from '../../lib/throttle';
@@ -26,6 +18,7 @@ import { trackEvent } from '../../lib/analytics';
 import {
   localDateToUTC,
   isWithinSevenDays,
+  isValidTimeWindow,
   formatProposalDate,
   formatProposalTimeOnly,
 } from '../../lib/timezone';
@@ -34,25 +27,14 @@ import type { WeeklySlot } from '../../lib/types';
 
 type ProposeRouteParams = {
   matchId: string;
-  responseTo?: string;
+  responseTo?: string; // proposal_id if responding to "none suits"
 };
 
 type ProposeNavigationProp = NativeStackNavigationProp<any, 'Propose'>;
 
 const DATE_TYPES = ['Coffee', 'Drinks', 'Dinner', 'Walk', 'Activity', 'Other'];
 
-const TIME_BLOCKS = [
-  { label: 'Morning', hint: '9 - 11a', start: '09:00', end: '11:00' },
-  { label: 'Lunch', hint: '12 - 1:30p', start: '12:00', end: '13:30' },
-  { label: 'Afternoon', hint: '2 - 4p', start: '14:00', end: '16:00' },
-  { label: 'Evening', hint: '6 - 8p', start: '18:00', end: '20:00' },
-  { label: 'Night', hint: '8 - 10p', start: '20:00', end: '22:00' },
-] as const;
-
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
-const SECTION_PADDING = 20;
-const BLOCK_GAP = 8;
-const BLOCK_WIDTH = (SCREEN_WIDTH - SECTION_PADDING * 2 - BLOCK_GAP) / 2;
+type PickerMode = 'date' | 'start-time' | 'end-time' | null;
 
 function hasWindowOverlap(
   existingWindows: { start: string; end: string }[],
@@ -71,132 +53,31 @@ function hasWindowOverlap(
   });
 }
 
-function isBlockPassed(day: Date, block: (typeof TIME_BLOCKS)[number]): boolean {
-  const now = new Date();
-  const [endHour, endMinute] = block.end.split(':').map(Number);
-  const blockEnd = new Date(day);
-  blockEnd.setHours(endHour, endMinute, 0, 0);
-  return blockEnd <= now;
-}
-
-function isBlockAlreadyAdded(
-  day: Date,
-  block: (typeof TIME_BLOCKS)[number],
-  windows: { start: string; end: string }[]
-): boolean {
-  const [startH, startM] = block.start.split(':').map(Number);
-  const [endH, endM] = block.end.split(':').map(Number);
-  const blockStart = new Date(day);
-  blockStart.setHours(startH, startM, 0, 0);
-  const blockEnd = new Date(day);
-  blockEnd.setHours(endH, endM, 0, 0);
-  const startUTC = localDateToUTC(blockStart);
-  const endUTC = localDateToUTC(blockEnd);
-  return windows.some((w) => w.start === startUTC && w.end === endUTC);
-}
-
-function isSameDay(a: Date, b: Date): boolean {
-  return (
-    a.getFullYear() === b.getFullYear() &&
-    a.getMonth() === b.getMonth() &&
-    a.getDate() === b.getDate()
-  );
-}
-
-function formatTimeDisplay(date: Date): string {
-  return date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
-}
-
 export default function ProposeScreen() {
+  const insets = useSafeAreaInsets();
   const route = useRoute();
   const navigation = useNavigation<ProposeNavigationProp>();
   const { matchId } = route.params as ProposeRouteParams;
 
-  // Match context
-  const [otherUserName, setOtherUserName] = useState('');
-  const [otherUserPhoto, setOtherUserPhoto] = useState<string | null>(null);
-
-  // Time windows
   const [selectedWindows, setSelectedWindows] = useState<{ start: string; end: string }[]>([]);
-  const [selectedDay, setSelectedDay] = useState<Date | null>(null);
-  const [selectedBlock, setSelectedBlock] = useState<(typeof TIME_BLOCKS)[number] | null>(null);
-  const [isPrefilled, setIsPrefilled] = useState(false);
-
-  // Custom time picker
-  const [customPickerOpen, setCustomPickerOpen] = useState(false);
-  const [customStartTime, setCustomStartTime] = useState<Date>(() => {
-    const d = new Date();
-    d.setHours(18, 0, 0, 0);
-    return d;
-  });
-  const [customEndTime, setCustomEndTime] = useState<Date>(() => {
-    const d = new Date();
-    d.setHours(20, 0, 0, 0);
-    return d;
-  });
-  // Android: which time modal is currently open
-  const [androidPickerField, setAndroidPickerField] = useState<'start' | 'end' | null>(null);
-
-  // Date types & note
   const [selectedDateTypes, setSelectedDateTypes] = useState<string[]>([]);
   const [note, setNote] = useState('');
-
-  // Submission
   const [loading, setLoading] = useState(false);
+  const [pickerMode, setPickerMode] = useState<PickerMode>(null);
+  const [isPrefilled, setIsPrefilled] = useState(false);
+  // Throttle proposal submission to prevent spam (min 2 seconds between proposals)
   const submitThrottleRef = useRef(createThrottle(() => {}, 2000));
+  const [tempWindow, setTempWindow] = useState<{
+    date: Date;
+    startTime: Date;
+    endTime: Date;
+  } | null>(null);
 
-  // Inline validation
-  const [errors, setErrors] = useState<{ windows?: string; dateTypes?: string }>({});
-
-  const next7Days = useMemo(() => {
-    const days: Date[] = [];
-    const now = new Date();
-    for (let i = 0; i < 7; i++) {
-      const d = new Date(now);
-      d.setDate(d.getDate() + i);
-      d.setHours(0, 0, 0, 0);
-      days.push(d);
-    }
-    return days;
+  const maximumDate = useMemo(() => {
+    const max = new Date();
+    max.setDate(max.getDate() + 7);
+    return max;
   }, []);
-
-  // Fetch match context (other user's name + photo)
-  useEffect(() => {
-    const fetchMatchContext = async () => {
-      try {
-        const {
-          data: { user },
-        } = await supabase.auth.getUser();
-        if (!user) return;
-
-        const { data: matchData } = await supabase
-          .from('matches')
-          .select('user_a, user_b')
-          .eq('match_id', matchId)
-          .single();
-
-        if (!matchData) return;
-
-        const otherUserId = matchData.user_a === user.id ? matchData.user_b : matchData.user_a;
-
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('full_name, photos')
-          .eq('id', otherUserId)
-          .maybeSingle();
-
-        if (profile) {
-          setOtherUserName((profile.full_name as string) || '');
-          const photos = (profile.photos as string[]) || [];
-          setOtherUserPhoto(photos[0] || null);
-        }
-      } catch {
-        // Non-critical: header shows without name/photo
-      }
-    };
-
-    fetchMatchContext();
-  }, [matchId]);
 
   // Pre-fill time windows from saved weekly availability
   useEffect(() => {
@@ -231,126 +112,190 @@ export default function ProposeScreen() {
     prefillFromAvailability();
   }, []);
 
-  const handleDaySelect = (day: Date) => {
-    if (selectedDay && isSameDay(selectedDay, day)) {
-      // Deselect same day — clear everything
-      setSelectedDay(null);
-      setSelectedBlock(null);
-      setCustomPickerOpen(false);
-      setAndroidPickerField(null);
-    } else {
-      setSelectedDay(day);
-      setCustomPickerOpen(false);
-      setAndroidPickerField(null);
-      // Keep selectedBlock — user might want same time slot on a different day
-    }
-  };
-
-  // Highlight a block (does NOT add the window yet)
-  const handleBlockTap = (block: (typeof TIME_BLOCKS)[number]) => {
-    if (selectedBlock?.label === block.label) {
-      setSelectedBlock(null); // toggle off
-    } else {
-      setSelectedBlock(block);
-    }
-    setCustomPickerOpen(false);
-    setAndroidPickerField(null);
-    setErrors((prev) => ({ ...prev, windows: undefined }));
-  };
-
-  const handleCustomTap = () => {
-    if (!selectedDay) return;
-
-    const defaultStart = new Date(selectedDay);
-    defaultStart.setHours(18, 0, 0, 0);
-    const defaultEnd = new Date(selectedDay);
-    defaultEnd.setHours(20, 0, 0, 0);
-
-    setCustomStartTime(defaultStart);
-    setCustomEndTime(defaultEnd);
-    setCustomPickerOpen(true);
-    setSelectedBlock(null);
-    setAndroidPickerField(null);
-    setErrors((prev) => ({ ...prev, windows: undefined }));
-  };
-
-  // iOS: inline spinner update. Android: native modal result.
-  const handleCustomTimeChange = (field: 'start' | 'end') => (event: any, selected?: Date) => {
-    if (Platform.OS === 'android') {
-      setAndroidPickerField(null); // close modal
-      if (event.type === 'dismissed' || !selected || !selectedDay) return;
-    }
-    if (!selected || !selectedDay) return;
-
-    const anchored = new Date(selectedDay);
-    anchored.setHours(selected.getHours(), selected.getMinutes(), 0, 0);
-
-    if (field === 'start') {
-      setCustomStartTime(anchored);
-    } else {
-      setCustomEndTime(anchored);
-    }
-  };
-
-  // Single confirm handler for both preset blocks and custom times
-  const confirmTimeSelection = () => {
-    if (!selectedDay) return;
+  const addTimeWindow = () => {
+    setIsPrefilled(false);
     if (selectedWindows.length >= 3) {
-      setErrors((prev) => ({ ...prev, windows: 'Maximum 3 time windows' }));
+      Alert.alert('Limit', 'You can only propose 2-3 time windows');
       return;
     }
 
-    let startUTC: string;
-    let endUTC: string;
+    const now = new Date();
+    const defaultDate = new Date(now);
+    defaultDate.setDate(defaultDate.getDate() + 1);
+    defaultDate.setHours(0, 0, 0, 0);
 
-    if (selectedBlock) {
-      // Preset block
-      const [startH, startM] = selectedBlock.start.split(':').map(Number);
-      const [endH, endM] = selectedBlock.end.split(':').map(Number);
+    const defaultStartTime = new Date(defaultDate);
+    defaultStartTime.setHours(18, 0, 0);
 
-      const startDate = new Date(selectedDay);
-      startDate.setHours(startH, startM, 0, 0);
-      const endDate = new Date(selectedDay);
-      endDate.setHours(endH, endM, 0, 0);
+    const defaultEndTime = new Date(defaultDate);
+    defaultEndTime.setHours(20, 0, 0);
 
-      startUTC = localDateToUTC(startDate);
-      endUTC = localDateToUTC(endDate);
-    } else if (customPickerOpen) {
-      // Custom times
-      if (customStartTime >= customEndTime) {
-        setErrors((prev) => ({ ...prev, windows: 'End time must be after start time' }));
-        return;
+    setTempWindow({
+      date: defaultDate,
+      startTime: defaultStartTime,
+      endTime: defaultEndTime,
+    });
+    setPickerMode('date');
+  };
+
+  const handleDateChange = (event: any, selectedDate?: Date) => {
+    if (Platform.OS === 'android') {
+      setPickerMode(null);
+    }
+
+    if (event.type === 'set' && selectedDate && tempWindow) {
+      const newDate = new Date(selectedDate);
+      newDate.setHours(0, 0, 0, 0);
+
+      const updatedStartTime = new Date(tempWindow.startTime);
+      updatedStartTime.setFullYear(newDate.getFullYear());
+      updatedStartTime.setMonth(newDate.getMonth());
+      updatedStartTime.setDate(newDate.getDate());
+
+      const updatedEndTime = new Date(tempWindow.endTime);
+      updatedEndTime.setFullYear(newDate.getFullYear());
+      updatedEndTime.setMonth(newDate.getMonth());
+      updatedEndTime.setDate(newDate.getDate());
+
+      setTempWindow({
+        date: newDate,
+        startTime: updatedStartTime,
+        endTime: updatedEndTime,
+      });
+
+      if (Platform.OS === 'ios') {
+        setPickerMode('start-time');
+      } else {
+        // Android: continue to start time
+        setTimeout(() => setPickerMode('start-time'), 100);
       }
-      startUTC = localDateToUTC(customStartTime);
-      endUTC = localDateToUTC(customEndTime);
-    } else {
+    } else if (event.type === 'dismissed') {
+      setPickerMode(null);
+      setTempWindow(null);
+    }
+  };
+
+  const handleTimeChange = (event: any, selectedTime?: Date, type: 'start' | 'end' = 'start') => {
+    if (Platform.OS === 'android') {
+      setPickerMode(null);
+    }
+
+    if (event.type === 'set' && selectedTime && tempWindow) {
+      if (type === 'start') {
+        const updatedStartTime = new Date(selectedTime);
+        updatedStartTime.setFullYear(tempWindow.date.getFullYear());
+        updatedStartTime.setMonth(tempWindow.date.getMonth());
+        updatedStartTime.setDate(tempWindow.date.getDate());
+
+        setTempWindow({
+          ...tempWindow,
+          startTime: updatedStartTime,
+        });
+
+        if (Platform.OS === 'ios') {
+          setPickerMode('end-time');
+        } else {
+          setTimeout(() => setPickerMode('end-time'), 100);
+        }
+      } else {
+        const updatedEndTime = new Date(selectedTime);
+        updatedEndTime.setFullYear(tempWindow.date.getFullYear());
+        updatedEndTime.setMonth(tempWindow.date.getMonth());
+        updatedEndTime.setDate(tempWindow.date.getDate());
+
+        const finalStartTime = tempWindow.startTime;
+        const finalEndTime = updatedEndTime;
+
+        // Validate: start < end
+        if (finalStartTime >= finalEndTime) {
+          Alert.alert('Error', 'End time must be after start time');
+          setPickerMode(null);
+          setTempWindow(null);
+          return;
+        }
+
+        // Validate: within 7 days
+        const now = new Date();
+        const sevenDaysFromNow = new Date(now);
+        sevenDaysFromNow.setDate(sevenDaysFromNow.getDate() + 7);
+
+        if (finalStartTime > sevenDaysFromNow || finalStartTime < now) {
+          Alert.alert('Error', 'All time windows must be within the next 7 days');
+          setPickerMode(null);
+          setTempWindow(null);
+          return;
+        }
+
+        // Check for overlapping windows
+        const newWindow = {
+          start: finalStartTime.toISOString(),
+          end: finalEndTime.toISOString(),
+        };
+
+        if (hasWindowOverlap(selectedWindows, newWindow)) {
+          Alert.alert('Error', 'Time windows cannot overlap');
+          setPickerMode(null);
+          setTempWindow(null);
+          return;
+        }
+
+        setSelectedWindows([...selectedWindows, newWindow]);
+        setPickerMode(null);
+        setTempWindow(null);
+      }
+    } else if (event.type === 'dismissed') {
+      setPickerMode(null);
+      setTempWindow(null);
+    }
+  };
+
+  const confirmTimeWindow = () => {
+    if (!tempWindow) return;
+
+    const finalStartTime = tempWindow.startTime;
+    const finalEndTime = tempWindow.endTime;
+
+    // Convert to UTC ISO strings for storage
+    const startUTC = localDateToUTC(finalStartTime);
+    const endUTC = localDateToUTC(finalEndTime);
+
+    // Validate: start < end (using timezone-aware validation)
+    if (!isValidTimeWindow(startUTC, endUTC)) {
+      Alert.alert('Error', 'End time must be after start time');
+      setPickerMode(null);
+      setTempWindow(null);
       return;
     }
 
+    // Validate: within 7 days (using timezone-aware validation)
     if (!isWithinSevenDays(startUTC)) {
-      setErrors((prev) => ({ ...prev, windows: 'Must be within the next 7 days' }));
+      Alert.alert('Error', 'All time windows must be within the next 7 days');
+      setPickerMode(null);
+      setTempWindow(null);
       return;
     }
 
-    const newWindow = { start: startUTC, end: endUTC };
+    // Check for overlapping windows
+    const newWindow = {
+      start: startUTC,
+      end: endUTC,
+    };
 
     if (hasWindowOverlap(selectedWindows, newWindow)) {
-      setErrors((prev) => ({ ...prev, windows: 'This overlaps with an existing window' }));
+      Alert.alert('Error', 'Time windows cannot overlap');
+      setPickerMode(null);
+      setTempWindow(null);
       return;
     }
 
-    setErrors((prev) => ({ ...prev, windows: undefined }));
-    setIsPrefilled(false);
-    setSelectedWindows((prev) => [...prev, newWindow]);
-    setSelectedBlock(null);
-    setCustomPickerOpen(false);
-    setAndroidPickerField(null);
+    setSelectedWindows([...selectedWindows, newWindow]);
+    setPickerMode(null);
+    setTempWindow(null);
   };
 
   const removeTimeWindow = (index: number) => {
     setIsPrefilled(false);
     setSelectedWindows(selectedWindows.filter((_, i) => i !== index));
-    setErrors((prev) => ({ ...prev, windows: undefined }));
   };
 
   const toggleDateType = (type: string) => {
@@ -358,35 +303,38 @@ export default function ProposeScreen() {
       setSelectedDateTypes(selectedDateTypes.filter((t) => t !== type));
     } else {
       if (selectedDateTypes.length >= 3) {
-        setErrors((prev) => ({ ...prev, dateTypes: 'Maximum 3 date types' }));
+        Alert.alert('Limit', 'Select 1-3 date types');
         return;
       }
       setSelectedDateTypes([...selectedDateTypes, type]);
     }
-    setErrors((prev) => ({ ...prev, dateTypes: undefined }));
   };
 
   const handleSubmit = async () => {
     if (selectedWindows.length < 2 || selectedWindows.length > 3) {
-      setErrors((prev) => ({ ...prev, windows: 'Pick 2-3 time windows' }));
+      Alert.alert('Error', 'Please select exactly 2-3 time windows');
       return;
     }
 
+    // Prevent rapid successive proposal submissions (rate limiting)
     if (submitThrottleRef.current.isThrottled()) {
       Alert.alert('Please wait', 'You can only submit proposals every 2 seconds');
       return;
     }
 
+    // Update throttle to prevent next call for 2 seconds
     submitThrottleRef.current.execute();
 
+    // Validate all windows are within 7 days (using timezone-aware validation)
     const invalidWindow = selectedWindows.find((window) => !isWithinSevenDays(window.start));
+
     if (invalidWindow) {
-      setErrors((prev) => ({ ...prev, windows: 'All times must be within the next 7 days' }));
+      Alert.alert('Error', 'All time windows must be within the next 7 days');
       return;
     }
 
     if (selectedDateTypes.length < 1 || selectedDateTypes.length > 3) {
-      setErrors((prev) => ({ ...prev, dateTypes: 'Pick 1-3 date types' }));
+      Alert.alert('Error', 'Please select 1-3 date types');
       return;
     }
 
@@ -397,10 +345,12 @@ export default function ProposeScreen() {
       } = await supabase.auth.getUser();
       if (!user) return;
 
+      // Calculate expiry (72 hours from now) and convert to UTC
       const expiresAt = new Date();
       expiresAt.setHours(expiresAt.getHours() + 72);
       const expiresAtUTC = localDateToUTC(expiresAt);
 
+      // Sanitize note before storing
       const sanitizedNote = note.trim() ? sanitizeMultilineText(note) : null;
 
       addBreadcrumb('Creating proposal', 'proposal', 'info', {
@@ -418,7 +368,7 @@ export default function ProposeScreen() {
       const { error } = await supabase.from('proposals').insert({
         match_id: matchId,
         sender_id: user.id,
-        windows: selectedWindows,
+        windows: selectedWindows, // Already in UTC format
         date_types: selectedDateTypes,
         note: sanitizedNote,
         expires_at: expiresAtUTC,
@@ -426,13 +376,15 @@ export default function ProposeScreen() {
       });
 
       if (error) {
+        // Check if it's a recoverable (network) error
         if (isRecoverableError(error)) {
+          // Queue proposal for retry
           const queuedProposal: QueuedProposal = {
             id: `${Date.now()}-${Math.random()}`,
             type: 'proposal',
             match_id: matchId,
             sender_id: user.id,
-            windows: selectedWindows,
+            windows: selectedWindows, // Already in UTC format
             date_types: selectedDateTypes,
             note: note.trim() || null,
             expires_at: expiresAtUTC,
@@ -444,6 +396,7 @@ export default function ProposeScreen() {
           setLoading(false);
           return;
         } else {
+          // Non-recoverable error
           const { title, message } = getErrorAlert(error, 'Failed to send proposal');
           Alert.alert(title, message);
           setLoading(false);
@@ -451,11 +404,14 @@ export default function ProposeScreen() {
         }
       }
 
+      // Success - process any queued operations
       await processQueue();
-      Alert.alert('Sent!', 'Your date proposal is on the way.');
+      Alert.alert('Success', 'Proposal sent!');
       navigation.goBack();
     } catch (error: any) {
+      // Check if it's a recoverable (network) error
       if (isRecoverableError(error)) {
+        // Queue proposal for retry
         const {
           data: { user },
         } = await supabase.auth.getUser();
@@ -469,7 +425,7 @@ export default function ProposeScreen() {
             type: 'proposal',
             match_id: matchId,
             sender_id: user.id,
-            windows: selectedWindows,
+            windows: selectedWindows, // Already in UTC format
             date_types: selectedDateTypes,
             note: note.trim() || null,
             expires_at: expiresAtUTC,
@@ -490,240 +446,45 @@ export default function ProposeScreen() {
     }
   };
 
-  const isReady = selectedWindows.length >= 2 && selectedDateTypes.length >= 1;
-  const canAddTime = selectedDay && (selectedBlock || customPickerOpen);
+  const NOTE_MAX_LENGTH = 140;
 
   return (
     <View style={styles.container}>
-      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
-        {/* Match context header */}
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={{ paddingTop: insets.top, paddingBottom: 200 }}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Header App Bar */}
         <View style={styles.header}>
-          {otherUserPhoto ? (
-            <Image
-              source={{ uri: otherUserPhoto }}
-              style={styles.headerPhoto}
-              contentFit="cover"
-              cachePolicy="memory-disk"
-            />
-          ) : (
-            <View style={[styles.headerPhoto, styles.headerPhotoPlaceholder]} />
-          )}
-          <Text style={styles.headerText}>
-            {otherUserName ? `Plan a date with ${otherUserName}` : 'Plan a date'}
-          </Text>
+          <AnimatedPressable
+            style={styles.headerBackButton}
+            onPress={() => navigation.goBack()}
+            haptic={false}
+          >
+            <Ionicons name="arrow-back" size={24} color={BRAND_COLORS.primary} />
+          </AnimatedPressable>
+          <Text style={styles.headerTitle}>Propose a Time</Text>
+          <View style={styles.headerSpacer} />
         </View>
 
-        {/* Time selection section */}
+        {/* Date Types Section */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>When works for you?</Text>
-          <Text style={styles.sectionHint}>pick 2-3</Text>
-
-          {isPrefilled && selectedWindows.length > 0 && (
-            <Text style={styles.prefillHint}>Pre-filled from your usual availability</Text>
-          )}
-
-          {/* Day strip */}
+          <View style={styles.sectionHeaderRow}>
+            <Text style={styles.sectionTitle}>What's the vibe?</Text>
+            <Text style={styles.sectionHeaderRight}>SELECT ONE</Text>
+          </View>
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.dayStripContent}
-            style={styles.dayStrip}
+            contentContainerStyle={styles.dateTypesScroll}
           >
-            {next7Days.map((day, i) => {
-              const isSelected = selectedDay !== null && isSameDay(selectedDay, day);
-              return (
-                <TouchableOpacity
-                  key={i}
-                  style={[styles.dayCard, isSelected && styles.dayCardSelected]}
-                  onPress={() => handleDaySelect(day)}
-                >
-                  <Text style={[styles.dayName, isSelected && styles.dayTextSelected]}>
-                    {i === 0 ? 'Today' : day.toLocaleDateString('en-US', { weekday: 'short' })}
-                  </Text>
-                  <Text style={[styles.dayNumber, isSelected && styles.dayTextSelected]}>
-                    {day.getDate()}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
-          </ScrollView>
-
-          {/* Time blocks */}
-          {selectedDay && (
-            <View style={styles.timeBlockGrid}>
-              {TIME_BLOCKS.map((block) => {
-                const passed = isBlockPassed(selectedDay, block);
-                const alreadyAdded = isBlockAlreadyAdded(selectedDay, block, selectedWindows);
-                const highlighted = !customPickerOpen && selectedBlock?.label === block.label;
-                const disabled = passed || alreadyAdded || selectedWindows.length >= 3;
-                return (
-                  <TouchableOpacity
-                    key={block.label}
-                    style={[
-                      styles.timeBlock,
-                      alreadyAdded && styles.timeBlockAdded,
-                      highlighted && styles.timeBlockHighlighted,
-                      disabled && !alreadyAdded && styles.timeBlockDisabled,
-                    ]}
-                    onPress={() => handleBlockTap(block)}
-                    disabled={disabled}
-                  >
-                    <Text
-                      style={[
-                        styles.timeBlockLabel,
-                        alreadyAdded && styles.timeBlockAddedText,
-                        highlighted && styles.timeBlockHighlightedText,
-                        disabled && !alreadyAdded && styles.timeBlockLabelDisabled,
-                      ]}
-                    >
-                      {block.label}
-                    </Text>
-                    <Text
-                      style={[
-                        styles.timeBlockHint,
-                        alreadyAdded && styles.timeBlockAddedText,
-                        highlighted && styles.timeBlockHighlightedText,
-                        disabled && !alreadyAdded && styles.timeBlockLabelDisabled,
-                      ]}
-                    >
-                      {alreadyAdded ? 'Added' : block.hint}
-                    </Text>
-                  </TouchableOpacity>
-                );
-              })}
-
-              {/* Custom block */}
-              <TouchableOpacity
-                style={[
-                  styles.timeBlock,
-                  styles.timeBlockCustom,
-                  customPickerOpen && styles.timeBlockHighlighted,
-                  selectedWindows.length >= 3 && styles.timeBlockDisabled,
-                ]}
-                onPress={handleCustomTap}
-                disabled={selectedWindows.length >= 3}
-              >
-                <Text
-                  style={[
-                    styles.timeBlockLabel,
-                    customPickerOpen && styles.timeBlockHighlightedText,
-                    selectedWindows.length >= 3 && styles.timeBlockLabelDisabled,
-                  ]}
-                >
-                  Custom
-                </Text>
-                <Text
-                  style={[
-                    styles.timeBlockHint,
-                    customPickerOpen && styles.timeBlockHighlightedText,
-                    selectedWindows.length >= 3 && styles.timeBlockLabelDisabled,
-                  ]}
-                >
-                  pick times
-                </Text>
-              </TouchableOpacity>
-            </View>
-          )}
-
-          {/* Custom picker — both start and end visible at once */}
-          {customPickerOpen && selectedDay && (
-            <View style={styles.customPickerContainer}>
-              {Platform.OS === 'ios' ? (
-                <>
-                  <Text style={styles.customPickerLabel}>Start time</Text>
-                  <DateTimePicker
-                    value={customStartTime}
-                    mode="time"
-                    display="spinner"
-                    onChange={handleCustomTimeChange('start')}
-                    minuteInterval={15}
-                  />
-                  <Text style={[styles.customPickerLabel, { marginTop: 12 }]}>End time</Text>
-                  <DateTimePicker
-                    value={customEndTime}
-                    mode="time"
-                    display="spinner"
-                    onChange={handleCustomTimeChange('end')}
-                    minuteInterval={15}
-                  />
-                </>
-              ) : (
-                <>
-                  <TouchableOpacity
-                    style={styles.androidTimeRow}
-                    onPress={() => setAndroidPickerField('start')}
-                  >
-                    <Text style={styles.androidTimeLabel}>Start time</Text>
-                    <Text style={styles.androidTimeValue}>
-                      {formatTimeDisplay(customStartTime)}
-                    </Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={styles.androidTimeRow}
-                    onPress={() => setAndroidPickerField('end')}
-                  >
-                    <Text style={styles.androidTimeLabel}>End time</Text>
-                    <Text style={styles.androidTimeValue}>{formatTimeDisplay(customEndTime)}</Text>
-                  </TouchableOpacity>
-                  {androidPickerField && (
-                    <DateTimePicker
-                      value={androidPickerField === 'start' ? customStartTime : customEndTime}
-                      mode="time"
-                      display="default"
-                      onChange={handleCustomTimeChange(androidPickerField)}
-                      minuteInterval={15}
-                    />
-                  )}
-                </>
-              )}
-            </View>
-          )}
-
-          {/* "Add this time" button — one button to confirm the selection */}
-          {canAddTime && selectedWindows.length < 3 && (
-            <TouchableOpacity style={styles.addTimeButton} onPress={confirmTimeSelection}>
-              <Text style={styles.addTimeButtonText}>Add this time</Text>
-            </TouchableOpacity>
-          )}
-
-          {errors.windows && <Text style={styles.errorText}>{errors.windows}</Text>}
-        </View>
-
-        {/* Selected windows */}
-        {selectedWindows.length > 0 && (
-          <View style={styles.section}>
-            {selectedWindows.map((window, index) => (
-              <View key={index} style={styles.windowCard}>
-                <View style={styles.windowCardContent}>
-                  <Text style={styles.windowCardDate}>{formatProposalDate(window.start)}</Text>
-                  <Text style={styles.windowCardTime}>
-                    {formatProposalTimeOnly(window.start)} - {formatProposalTimeOnly(window.end)}
-                  </Text>
-                </View>
-                <TouchableOpacity
-                  style={styles.windowRemove}
-                  onPress={() => removeTimeWindow(index)}
-                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                >
-                  <Text style={styles.windowRemoveText}>{'\u00D7'}</Text>
-                </TouchableOpacity>
-              </View>
-            ))}
-            <Text style={styles.windowCounter}>{selectedWindows.length} of 2-3</Text>
-          </View>
-        )}
-
-        {/* Date types section */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>What kind of date?</Text>
-          <Text style={styles.sectionHint}>pick 1-3</Text>
-          <View style={styles.dateTypesGrid}>
             {DATE_TYPES.map((type) => (
-              <TouchableOpacity
+              <AnimatedPressable
                 key={type}
                 style={[
-                  styles.dateTypeChip,
-                  selectedDateTypes.includes(type) && styles.dateTypeChipSelected,
+                  styles.dateTypeButton,
+                  selectedDateTypes.includes(type) && styles.dateTypeButtonSelected,
                 ]}
                 onPress={() => toggleDateType(type)}
               >
@@ -735,47 +496,191 @@ export default function ProposeScreen() {
                 >
                   {type}
                 </Text>
-              </TouchableOpacity>
+              </AnimatedPressable>
             ))}
-          </View>
-          {errors.dateTypes && <Text style={styles.errorText}>{errors.dateTypes}</Text>}
+          </ScrollView>
         </View>
 
-        {/* Note section */}
+        {/* Time Windows Section */}
         <View style={styles.section}>
-          <View style={styles.noteHeader}>
-            <Text style={styles.sectionTitle}>Add a note</Text>
-            <Text style={styles.charCounter}>{note.length}/200</Text>
+          <View style={styles.sectionHeaderRow}>
+            <Text style={styles.sectionTitle}>Suggested Times</Text>
+            <Text style={styles.sectionHeaderRight}>MAX 3 OPTIONS</Text>
           </View>
-          <TextInput
-            style={styles.noteInput}
-            placeholder="Anything they should know..."
-            placeholderTextColor={BRAND_COLORS.text[600]}
-            value={note}
-            onChangeText={setNote}
-            multiline
-            numberOfLines={3}
-            maxLength={200}
-          />
+
+          {isPrefilled && selectedWindows.length > 0 && (
+            <Text style={styles.prefillHint}>
+              Pre-filled from your usual availability. Edit or remove as needed.
+            </Text>
+          )}
+
+          {selectedWindows.map((window, index) => (
+            <View key={index} style={styles.windowCard}>
+              {/* Date Row */}
+              <View style={styles.windowRow}>
+                <View style={styles.windowIconBox}>
+                  <Ionicons name="calendar-outline" size={20} color={BRAND_COLORS.text[600]} />
+                </View>
+                <View style={styles.windowInfo}>
+                  <Text style={styles.windowLabel}>DATE</Text>
+                  <Text style={styles.windowValue}>{formatProposalDate(window.start)}</Text>
+                </View>
+                <AnimatedPressable
+                  onPress={() => removeTimeWindow(index)}
+                  haptic={false}
+                  style={styles.windowAction}
+                >
+                  <Ionicons name="create-outline" size={20} color={BRAND_COLORS.text[500]} />
+                </AnimatedPressable>
+              </View>
+              {/* Divider */}
+              <View style={styles.windowDivider} />
+              {/* Time Row */}
+              <View style={styles.windowRow}>
+                <View style={styles.windowIconBox}>
+                  <Ionicons name="time-outline" size={20} color={BRAND_COLORS.text[600]} />
+                </View>
+                <View style={styles.windowInfo}>
+                  <Text style={styles.windowLabel}>WINDOW</Text>
+                  <Text style={styles.windowValue}>
+                    {formatProposalTimeOnly(window.start)} - {formatProposalTimeOnly(window.end)}
+                  </Text>
+                </View>
+                <View style={styles.windowAction}>
+                  <Ionicons name="chevron-down" size={20} color={BRAND_COLORS.text[500]} />
+                </View>
+              </View>
+            </View>
+          ))}
+
+          {selectedWindows.length < 3 && (
+            <AnimatedPressable style={styles.addButton} onPress={addTimeWindow}>
+              <Ionicons name="add-circle-outline" size={30} color={BRAND_COLORS.text[500]} />
+              <Text style={styles.addButtonText}>Add another option</Text>
+            </AnimatedPressable>
+          )}
+
+          {pickerMode && tempWindow && (
+            <View style={styles.pickerContainer}>
+              {pickerMode === 'date' && (
+                <DateTimePicker
+                  value={tempWindow.date}
+                  mode="date"
+                  display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                  themeVariant="dark"
+                  minimumDate={new Date()}
+                  maximumDate={maximumDate}
+                  onChange={handleDateChange}
+                />
+              )}
+              {pickerMode === 'start-time' && (
+                <View>
+                  <DateTimePicker
+                    value={tempWindow.startTime}
+                    mode="time"
+                    display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                    themeVariant="dark"
+                    onChange={(e, d) => handleTimeChange(e, d, 'start')}
+                  />
+                  {Platform.OS === 'ios' && (
+                    <AnimatedPressable
+                      style={styles.pickerButton}
+                      onPress={() => setPickerMode('end-time')}
+                    >
+                      <Text style={styles.pickerButtonText}>Next: End Time</Text>
+                    </AnimatedPressable>
+                  )}
+                </View>
+              )}
+              {pickerMode === 'end-time' && (
+                <View>
+                  <DateTimePicker
+                    value={tempWindow.endTime}
+                    mode="time"
+                    display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                    themeVariant="dark"
+                    onChange={(e, d) => handleTimeChange(e, d, 'end')}
+                  />
+                  {Platform.OS === 'ios' && (
+                    <View style={styles.pickerButtonsRow}>
+                      <AnimatedPressable
+                        style={[styles.pickerButton, styles.pickerButtonSecondary]}
+                        onPress={() => {
+                          setPickerMode(null);
+                          setTempWindow(null);
+                        }}
+                      >
+                        <Text style={styles.pickerButtonSecondaryText}>Cancel</Text>
+                      </AnimatedPressable>
+                      <AnimatedPressable style={styles.pickerButton} onPress={confirmTimeWindow}>
+                        <Text style={styles.pickerButtonText}>Confirm</Text>
+                      </AnimatedPressable>
+                    </View>
+                  )}
+                </View>
+              )}
+            </View>
+          )}
         </View>
 
-        <View style={styles.ctaSpacer} />
+        {/* Note Section */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Add a note (optional)</Text>
+          <View style={styles.noteWrapper}>
+            <TextInput
+              style={styles.noteInput}
+              placeholder="Add a note..."
+              placeholderTextColor={BRAND_COLORS.text[600]}
+              value={note}
+              onChangeText={setNote}
+              multiline
+              numberOfLines={3}
+              maxLength={NOTE_MAX_LENGTH}
+            />
+            <Text style={styles.noteCounter}>
+              {note.length} / {NOTE_MAX_LENGTH}
+            </Text>
+          </View>
+        </View>
+
+        {/* Recipient Card */}
+        <View style={styles.section}>
+          <View style={styles.recipientCard}>
+            <View style={styles.recipientAvatar} />
+            <View style={styles.recipientInfo}>
+              <Text style={styles.recipientLabel}>Proposing to</Text>
+              <Text style={styles.recipientName}>Your Match</Text>
+            </View>
+            <View style={styles.recipientHeart}>
+              <Ionicons name="heart" size={20} color={BRAND_COLORS.primary} />
+            </View>
+          </View>
+        </View>
       </ScrollView>
 
-      {/* Sticky submit button */}
-      <View style={styles.stickyCTA}>
-        <TouchableOpacity
-          style={[styles.submitButton, (!isReady || loading) && styles.submitButtonDisabled]}
+      {/* Fixed Footer */}
+      <LinearGradient
+        colors={['transparent', MIDNIGHT.bg, MIDNIGHT.bg]}
+        style={[styles.footer, { paddingBottom: Math.max(insets.bottom, 20) + 20 }]}
+        pointerEvents="box-none"
+      >
+        <AnimatedPressable
+          style={[styles.goldButton, loading && styles.goldButtonDisabled]}
           onPress={handleSubmit}
           disabled={loading}
         >
-          {loading ? (
-            <ActivityIndicator color="#fff" />
-          ) : (
-            <Text style={styles.submitButtonText}>Send Proposal</Text>
+          <Text style={styles.goldButtonText}>{loading ? 'Sending...' : 'Send Proposal'}</Text>
+          {!loading && (
+            <Ionicons
+              name="send"
+              size={18}
+              color={BRAND_COLORS.onPrimary}
+              style={styles.sendIcon}
+            />
           )}
-        </TouchableOpacity>
-      </View>
+        </AnimatedPressable>
+        <Text style={styles.expiryNote}>PROPOSALS EXPIRE IN 72 HOURS</Text>
+      </LinearGradient>
     </View>
   );
 }
@@ -783,7 +688,7 @@ export default function ProposeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: GOLDEN_HOUR.bg,
+    backgroundColor: MIDNIGHT.bg,
   },
   scrollView: {
     flex: 1,
@@ -793,316 +698,290 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: SECTION_PADDING,
-    paddingTop: 20,
-    paddingBottom: 8,
-    gap: 12,
+    height: 56,
+    paddingHorizontal: SPACING.base,
   },
-  headerPhoto: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+  headerBackButton: {
+    width: 40,
+    height: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  headerPhotoPlaceholder: {
-    backgroundColor: GOLDEN_HOUR.borderDefault,
-  },
-  headerText: {
-    fontSize: 20,
-    fontWeight: '600',
-    color: BRAND_COLORS.text[900],
+  headerTitle: {
     flex: 1,
+    textAlign: 'center',
+    fontSize: TYPOGRAPHY.fontSize.xl,
+    fontFamily: TYPOGRAPHY.fontFamily.serifBold,
+    color: BRAND_COLORS.text[900],
+  },
+  headerSpacer: {
+    width: 40,
   },
 
   // Sections
   section: {
-    paddingHorizontal: SECTION_PADDING,
-    paddingTop: 20,
-    paddingBottom: 4,
+    paddingHorizontal: SPACING.lg,
+    paddingVertical: SPACING.base,
   },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: BRAND_COLORS.text[900],
-  },
-  sectionHint: {
-    fontSize: 14,
-    color: BRAND_COLORS.text[600],
-    marginTop: 2,
-    marginBottom: 12,
-  },
-  prefillHint: {
-    fontSize: 13,
-    color: BRAND_COLORS.info,
-    fontStyle: 'italic',
-    marginBottom: 8,
-  },
-
-  // Day strip
-  dayStrip: {
-    marginBottom: 12,
-  },
-  dayStripContent: {
-    gap: 8,
-  },
-  dayCard: {
-    width: 64,
-    alignItems: 'center',
-    paddingVertical: 12,
-    borderRadius: GOLDEN_HOUR.radius.md,
-    backgroundColor: GOLDEN_HOUR.surface,
-    borderWidth: 1.5,
-    borderColor: GOLDEN_HOUR.borderDefault,
-  },
-  dayCardSelected: {
-    backgroundColor: BRAND_COLORS.primary,
-    borderColor: BRAND_COLORS.primary,
-  },
-  dayName: {
-    fontSize: 13,
-    fontWeight: '500',
-    color: BRAND_COLORS.text[600],
-  },
-  dayNumber: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: BRAND_COLORS.text[900],
-    marginTop: 2,
-  },
-  dayTextSelected: {
-    color: '#fff',
-  },
-
-  // Time blocks
-  timeBlockGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: BLOCK_GAP,
-  },
-  timeBlock: {
-    width: BLOCK_WIDTH,
-    paddingVertical: 14,
-    paddingHorizontal: 12,
-    borderRadius: GOLDEN_HOUR.radius.md,
-    backgroundColor: GOLDEN_HOUR.surface,
-    borderWidth: 1.5,
-    borderColor: GOLDEN_HOUR.borderDefault,
-    alignItems: 'center',
-  },
-  timeBlockAdded: {
-    backgroundColor: BRAND_COLORS.primarySoft,
-    borderColor: BRAND_COLORS.primary,
-  },
-  timeBlockHighlighted: {
-    backgroundColor: BRAND_COLORS.aqua[50],
-    borderColor: BRAND_COLORS.primary,
-    borderWidth: 2,
-  },
-  timeBlockDisabled: {
-    opacity: 0.35,
-  },
-  timeBlockCustom: {
-    borderStyle: 'dashed' as const,
-  },
-  timeBlockLabel: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: BRAND_COLORS.text[900],
-  },
-  timeBlockAddedText: {
-    color: BRAND_COLORS.primary,
-  },
-  timeBlockHighlightedText: {
-    color: BRAND_COLORS.primary,
-    fontWeight: '700',
-  },
-  timeBlockHint: {
-    fontSize: 13,
-    color: BRAND_COLORS.text[600],
-    marginTop: 2,
-  },
-  timeBlockLabelDisabled: {
-    color: BRAND_COLORS.text[600],
-  },
-
-  // Custom picker
-  customPickerContainer: {
-    marginTop: 12,
-    padding: 16,
-    backgroundColor: GOLDEN_HOUR.inputBg,
-    borderRadius: GOLDEN_HOUR.radius.md,
-    borderWidth: 1,
-    borderColor: GOLDEN_HOUR.borderDefault,
-  },
-  customPickerLabel: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: BRAND_COLORS.text[700],
-    marginBottom: 4,
-  },
-
-  // Android time rows
-  androidTimeRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 14,
-    borderBottomWidth: 1,
-    borderBottomColor: GOLDEN_HOUR.borderDefault,
-  },
-  androidTimeLabel: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: BRAND_COLORS.text[700],
-  },
-  androidTimeValue: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: BRAND_COLORS.primary,
-  },
-
-  // Add time button
-  addTimeButton: {
-    marginTop: 12,
-    backgroundColor: BRAND_COLORS.primary,
-    paddingVertical: 14,
-    borderRadius: GOLDEN_HOUR.radius.md,
-    alignItems: 'center',
-    ...GOLDEN_HOUR.shadow.warm,
-  },
-  addTimeButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-
-  // Selected window cards
-  windowCard: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    backgroundColor: GOLDEN_HOUR.inputBg,
-    padding: 14,
-    borderRadius: GOLDEN_HOUR.radius.md,
-    marginBottom: 8,
-    borderWidth: 1,
-    borderColor: GOLDEN_HOUR.borderDefault,
-  },
-  windowCardContent: {
-    flex: 1,
-  },
-  windowCardDate: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: BRAND_COLORS.text[900],
-  },
-  windowCardTime: {
-    fontSize: 14,
-    color: BRAND_COLORS.text[600],
-    marginTop: 2,
-  },
-  windowRemove: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: GOLDEN_HOUR.borderDefault,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginLeft: 12,
-  },
-  windowRemoveText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: BRAND_COLORS.text[600],
-  },
-  windowCounter: {
-    fontSize: 13,
-    color: BRAND_COLORS.text[600],
-    marginTop: 4,
-  },
-
-  // Date types
-  dateTypesGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  dateTypeChip: {
-    paddingVertical: 10,
-    paddingHorizontal: 18,
-    borderRadius: GOLDEN_HOUR.radius.full,
-    backgroundColor: GOLDEN_HOUR.surface,
-    borderWidth: 1.5,
-    borderColor: GOLDEN_HOUR.borderDefault,
-  },
-  dateTypeChipSelected: {
-    backgroundColor: BRAND_COLORS.primary,
-    borderColor: BRAND_COLORS.primary,
-  },
-  dateTypeText: {
-    fontSize: 14,
-    color: BRAND_COLORS.text[900],
-    fontWeight: '500',
-  },
-  dateTypeTextSelected: {
-    color: '#fff',
-    fontWeight: '600',
-  },
-
-  // Note
-  noteHeader: {
+  sectionHeaderRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'baseline',
+    marginBottom: SPACING.md,
   },
-  charCounter: {
-    fontSize: 13,
+  sectionTitle: {
+    fontSize: TYPOGRAPHY.fontSize.lg,
+    fontFamily: TYPOGRAPHY.fontFamily.serifBold,
+    color: BRAND_COLORS.text[900],
+  },
+  sectionHeaderRight: {
+    fontSize: TYPOGRAPHY.fontSize.xs,
+    fontFamily: TYPOGRAPHY.fontFamily.medium,
+    color: BRAND_COLORS.text[500],
+    textTransform: 'uppercase',
+    letterSpacing: TYPOGRAPHY.letterSpacing.wide,
+  },
+  prefillHint: {
+    fontSize: TYPOGRAPHY.fontSize.xs + 1,
+    fontFamily: TYPOGRAPHY.fontFamily.regular,
+    color: BRAND_COLORS.primary,
+    fontStyle: 'italic',
+    marginBottom: SPACING.sm,
+  },
+
+  // Date Types
+  dateTypesScroll: {
+    paddingRight: SPACING.lg,
+  },
+  dateTypeButton: {
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 9999,
+    marginRight: 12,
+    backgroundColor: MIDNIGHT.surface,
+    borderWidth: 1,
+    borderColor: '#1a1f2e',
+  },
+  dateTypeButtonSelected: {
+    backgroundColor: BRAND_COLORS.primary,
+    borderColor: 'rgba(10,127,116,0.2)',
+    ...MIDNIGHT.glow.selected,
+  },
+  dateTypeText: {
+    fontSize: TYPOGRAPHY.fontSize.sm,
+    fontFamily: TYPOGRAPHY.fontFamily.medium,
     color: BRAND_COLORS.text[600],
+  },
+  dateTypeTextSelected: {
+    color: BRAND_COLORS.onPrimary,
+    fontFamily: TYPOGRAPHY.fontFamily.semibold,
+  },
+
+  // Time Window Cards
+  windowCard: {
+    padding: 20,
+    borderRadius: 24,
+    backgroundColor: MIDNIGHT.surface,
+    borderWidth: 1,
+    borderColor: '#1a1f2e',
+    marginBottom: SPACING.md,
+  },
+  windowRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  windowIconBox: {
+    width: 40,
+    height: 40,
+    borderRadius: MIDNIGHT.radius.sm,
+    backgroundColor: MIDNIGHT.bg,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: SPACING.md,
+  },
+  windowInfo: {
+    flex: 1,
+  },
+  windowLabel: {
+    fontSize: TYPOGRAPHY.fontSize.xs,
+    fontFamily: TYPOGRAPHY.fontFamily.medium,
+    color: BRAND_COLORS.text[500],
+    textTransform: 'uppercase',
+    letterSpacing: TYPOGRAPHY.letterSpacing.wide,
+    marginBottom: 2,
+  },
+  windowValue: {
+    fontSize: TYPOGRAPHY.fontSize.base,
+    fontFamily: TYPOGRAPHY.fontFamily.medium,
+    color: BRAND_COLORS.text[900],
+  },
+  windowAction: {
+    width: 32,
+    height: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  windowDivider: {
+    height: 1,
+    backgroundColor: 'rgba(26,31,46,0.5)',
+    marginVertical: SPACING.md,
+  },
+
+  // Add Button
+  addButton: {
+    padding: 24,
+    borderRadius: 24,
+    borderWidth: 1,
+    borderStyle: 'dashed',
+    borderColor: '#1a1f2e',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  addButtonText: {
+    color: BRAND_COLORS.text[500],
+    fontSize: TYPOGRAPHY.fontSize.sm,
+    fontFamily: TYPOGRAPHY.fontFamily.medium,
+    marginTop: SPACING.xs,
+  },
+
+  // Picker
+  pickerContainer: {
+    marginTop: SPACING.base,
+    padding: SPACING.base,
+    ...MIDNIGHT.glassCard,
+  },
+  pickerButtonsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: SPACING.base,
+    gap: SPACING.md,
+  },
+  pickerButton: {
+    flex: 1,
+    backgroundColor: BRAND_COLORS.primary,
+    paddingVertical: SPACING.md,
+    borderRadius: MIDNIGHT.radius.md,
+    alignItems: 'center',
+  },
+  pickerButtonSecondary: {
+    backgroundColor: 'transparent',
+    borderWidth: 2,
+    borderColor: BRAND_COLORS.primary,
+  },
+  pickerButtonText: {
+    color: BRAND_COLORS.onPrimary,
+    fontSize: TYPOGRAPHY.fontSize.base,
+    fontFamily: TYPOGRAPHY.fontFamily.semibold,
+  },
+  pickerButtonSecondaryText: {
+    color: BRAND_COLORS.primary,
+    fontSize: TYPOGRAPHY.fontSize.base,
+    fontFamily: TYPOGRAPHY.fontFamily.semibold,
+  },
+
+  // Note
+  noteWrapper: {
+    position: 'relative',
+    marginTop: SPACING.sm,
   },
   noteInput: {
     borderWidth: 1,
-    borderColor: GOLDEN_HOUR.borderDefault,
-    backgroundColor: GOLDEN_HOUR.inputBg,
-    borderRadius: GOLDEN_HOUR.radius.md,
-    padding: 14,
-    fontSize: 14,
+    borderColor: MIDNIGHT.borderDefault,
+    borderRadius: MIDNIGHT.radius.lg,
+    padding: SPACING.md,
+    paddingBottom: SPACING.lg,
+    fontSize: TYPOGRAPHY.fontSize.sm,
+    fontFamily: TYPOGRAPHY.fontFamily.regular,
+    backgroundColor: MIDNIGHT.inputBg,
+    color: BRAND_COLORS.text[900],
     minHeight: 80,
     textAlignVertical: 'top',
-    marginTop: 8,
+  },
+  noteCounter: {
+    position: 'absolute',
+    bottom: 12,
+    right: 12,
+    fontSize: 10,
+    fontFamily: TYPOGRAPHY.fontFamily.medium,
+    color: BRAND_COLORS.text[500],
+    textTransform: 'uppercase',
+  },
+
+  // Recipient Card
+  recipientCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: SPACING.base,
+    borderRadius: MIDNIGHT.radius.lg,
+    backgroundColor: MIDNIGHT.surface,
+    borderWidth: 1,
+    borderColor: '#1a1f2e',
+  },
+  recipientAvatar: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#1a1f2e',
+    marginRight: SPACING.md,
+  },
+  recipientInfo: {
+    flex: 1,
+  },
+  recipientLabel: {
+    fontSize: TYPOGRAPHY.fontSize.sm,
+    fontFamily: TYPOGRAPHY.fontFamily.regular,
+    color: BRAND_COLORS.text[500],
+    marginBottom: 2,
+  },
+  recipientName: {
+    fontSize: TYPOGRAPHY.fontSize.base,
+    fontFamily: TYPOGRAPHY.fontFamily.serifBold,
     color: BRAND_COLORS.text[900],
   },
-
-  // Inline errors
-  errorText: {
-    fontSize: 13,
-    color: BRAND_COLORS.danger,
-    marginTop: 8,
-  },
-
-  // Sticky CTA
-  stickyCTA: {
-    paddingHorizontal: SECTION_PADDING,
-    paddingVertical: 16,
-    paddingBottom: 32,
-    backgroundColor: GOLDEN_HOUR.bg,
-    borderTopWidth: 1,
-    borderTopColor: GOLDEN_HOUR.borderDefault,
-  },
-  ctaSpacer: {
-    height: 100,
-  },
-  submitButton: {
-    backgroundColor: BRAND_COLORS.primary,
-    paddingVertical: 16,
-    borderRadius: GOLDEN_HOUR.radius.lg,
+  recipientHeart: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(10, 127, 116, 0.2)',
     alignItems: 'center',
-    ...GOLDEN_HOUR.shadow.warm,
+    justifyContent: 'center',
   },
-  submitButtonDisabled: {
-    opacity: 0.4,
+
+  // Footer
+  footer: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    paddingHorizontal: 24,
+    paddingTop: 48,
   },
-  submitButtonText: {
-    color: '#fff',
-    fontSize: 18,
-    fontWeight: '600',
+  goldButton: {
+    backgroundColor: GOLD[600],
+    paddingVertical: 16,
+    borderRadius: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexDirection: 'row',
+    ...MIDNIGHT.glow.gold,
+  },
+  goldButtonDisabled: {
+    opacity: 0.6,
+  },
+  goldButtonText: {
+    color: BRAND_COLORS.onPrimary,
+    fontSize: TYPOGRAPHY.fontSize.lg,
+    fontFamily: TYPOGRAPHY.fontFamily.bold,
+  },
+  sendIcon: {
+    marginLeft: SPACING.sm,
+  },
+  expiryNote: {
+    textAlign: 'center',
+    fontSize: TYPOGRAPHY.fontSize.xs,
+    fontFamily: TYPOGRAPHY.fontFamily.medium,
+    color: 'rgba(202, 138, 4, 0.6)',
+    letterSpacing: TYPOGRAPHY.letterSpacing.wide * 2,
+    marginTop: SPACING.md,
   },
 });

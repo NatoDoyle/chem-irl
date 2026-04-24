@@ -1,15 +1,19 @@
 import { useState, useEffect, useCallback, useRef, MutableRefObject } from 'react';
-import { View, Text, StyleSheet, ActivityIndicator, Alert, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, Alert } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../../lib/supabase/client';
 import { FeedItem } from '../../lib/types';
 import DiscoveryCardStack from '../../components/DiscoveryCardStack';
 import MatchModal from '../../components/MatchModal';
-import { BRAND_COLORS, GOLDEN_HOUR } from '../../config/brand';
+import { BRAND_COLORS, MIDNIGHT, TYPOGRAPHY, SPACING } from '../../config/brand';
 import { getErrorAlert } from '../../lib/errors';
 import ConnectionStatus from '../../components/ConnectionStatus';
 import { createThrottle } from '../../lib/throttle';
 import { addBreadcrumb } from '../../lib/sentry';
 import { trackEvent } from '../../lib/analytics';
+import AnimatedPressable from '../../components/ui/AnimatedPressable';
+import { SkeletonCard } from '../../components/ui/Skeleton';
 
 type FeedItemWithPhotos = FeedItem & { photos: string[] };
 
@@ -17,6 +21,7 @@ const FEED_PAGE_SIZE = 20;
 const LOAD_MORE_THRESHOLD = 5; // Load more when 5 cards remaining
 
 export default function DiscoverScreen() {
+  const insets = useSafeAreaInsets();
   const [feed, setFeed] = useState<FeedItemWithPhotos[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -59,7 +64,7 @@ export default function DiscoverScreen() {
       const requestLimit = currentFeedSize + FEED_PAGE_SIZE;
       const currentSeenIds = reset ? new Set<string>() : seenIdsRef.current;
 
-      const { data, error: rpcError } = await supabase.rpc('get_discovery_feed_v2', {
+      const { data, error: rpcError } = await supabase.rpc('get_discovery_feed_v3', {
         p_viewer: user.id,
         p_limit: requestLimit,
       });
@@ -204,10 +209,28 @@ export default function DiscoverScreen() {
     setFeed((prev) => prev.filter((item) => item.user_id !== userId));
   };
 
+  const headerContent = (
+    <View style={[styles.header, { paddingTop: insets.top + SPACING.sm }]}>
+      <Text style={styles.headerTitle}>Chem IRL</Text>
+      <AnimatedPressable
+        onPress={() => {}}
+        style={styles.filterButton}
+        accessibilityLabel="Filter settings"
+      >
+        <Ionicons name="options-outline" size={22} color={BRAND_COLORS.text[600]} />
+      </AnimatedPressable>
+    </View>
+  );
+
   if (loading) {
     return (
       <View style={styles.container}>
-        <ActivityIndicator size="large" color={BRAND_COLORS.primary} />
+        {headerContent}
+        <View style={styles.skeletonContainer}>
+          <SkeletonCard style={styles.skeletonItem} />
+          <SkeletonCard style={styles.skeletonItem} />
+          <SkeletonCard style={styles.skeletonItem} />
+        </View>
       </View>
     );
   }
@@ -215,11 +238,14 @@ export default function DiscoverScreen() {
   if (error) {
     return (
       <View style={styles.container}>
-        <Text style={styles.errorText}>Failed to load discovery feed</Text>
-        <Text style={styles.errorSubtext}>{error}</Text>
-        <TouchableOpacity style={styles.retryButton} onPress={() => loadFeed(true)}>
-          <Text style={styles.retryButtonText}>Retry</Text>
-        </TouchableOpacity>
+        {headerContent}
+        <View style={styles.centeredContent}>
+          <Text style={styles.errorText}>Failed to load discovery feed</Text>
+          <Text style={styles.errorSubtext}>{error}</Text>
+          <AnimatedPressable style={styles.retryButton} onPress={() => loadFeed(true)}>
+            <Text style={styles.retryButtonText}>Retry</Text>
+          </AnimatedPressable>
+        </View>
       </View>
     );
   }
@@ -227,11 +253,14 @@ export default function DiscoverScreen() {
   if (feed.length === 0 && !loading) {
     return (
       <View style={styles.container}>
-        <Text style={styles.emptyText}>No more profiles to discover</Text>
-        <Text style={styles.emptySubtext}>Check back later for new matches</Text>
-        <TouchableOpacity style={styles.refreshButton} onPress={() => loadFeed(true)}>
-          <Text style={styles.refreshButtonText}>Refresh</Text>
-        </TouchableOpacity>
+        {headerContent}
+        <View style={styles.centeredContent}>
+          <Text style={styles.emptyText}>No more profiles to discover</Text>
+          <Text style={styles.emptySubtext}>Check back later for new matches</Text>
+          <AnimatedPressable style={styles.refreshButton} onPress={() => loadFeed(true)}>
+            <Text style={styles.refreshButtonText}>Refresh</Text>
+          </AnimatedPressable>
+        </View>
       </View>
     );
   }
@@ -244,17 +273,23 @@ export default function DiscoverScreen() {
 
   return (
     <View style={styles.container}>
+      {headerContent}
       <ConnectionStatus />
-      <DiscoveryCardStack
-        feed={feed}
-        onLike={handleLike}
-        onPass={handlePass}
-        onRefresh={() => loadFeed(true)}
-        onLoadMore={handleLoadMore}
-        loadingMore={loadingMore}
-        hasMore={hasMore}
-        loadMoreThreshold={LOAD_MORE_THRESHOLD}
-      />
+      <View style={styles.cardArea}>
+        <DiscoveryCardStack
+          feed={feed}
+          onLike={handleLike}
+          onPass={handlePass}
+          onRefresh={() => loadFeed(true)}
+          onLoadMore={handleLoadMore}
+          loadingMore={loadingMore}
+          hasMore={hasMore}
+          loadMoreThreshold={LOAD_MORE_THRESHOLD}
+        />
+      </View>
+      <View style={[styles.footer, { paddingBottom: insets.bottom + SPACING.sm }]}>
+        <Text style={styles.footerText}>SWIPE FOR MORE REACTIONS</Text>
+      </View>
       <MatchModal
         visible={matchModalVisible}
         matchId={newMatchId}
@@ -270,59 +305,107 @@ export default function DiscoverScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: GOLDEN_HOUR.bg,
+    backgroundColor: MIDNIGHT.bg,
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: SPACING.lg,
+    paddingBottom: SPACING.md,
+  },
+  headerTitle: {
+    fontSize: TYPOGRAPHY.fontSize['2xl'],
+    fontFamily: TYPOGRAPHY.fontFamily.serifItalic,
+    color: BRAND_COLORS.primary,
+  },
+  filterButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255,255,255,0.06)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  cardArea: {
+    flex: 1,
+  },
+  footer: {
+    alignItems: 'center',
+    paddingTop: SPACING.md,
+  },
+  footerText: {
+    fontSize: TYPOGRAPHY.fontSize.xs,
+    fontFamily: TYPOGRAPHY.fontFamily.medium,
+    color: BRAND_COLORS.text[500],
+    textTransform: 'uppercase',
+    letterSpacing: TYPOGRAPHY.letterSpacing.wide,
+  },
+  skeletonContainer: {
+    flex: 1,
+    padding: SPACING.base,
+  },
+  skeletonItem: {
+    marginBottom: SPACING.md,
+  },
+  centeredContent: {
+    flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    paddingHorizontal: SPACING.xl,
   },
   emptyText: {
-    fontSize: 20,
-    fontWeight: '600',
+    fontSize: TYPOGRAPHY.fontSize.xl,
+    fontFamily: TYPOGRAPHY.fontFamily.serifBold,
     color: BRAND_COLORS.text[900],
-    marginBottom: 8,
+    marginBottom: SPACING.sm,
+    textAlign: 'center',
   },
   emptySubtext: {
-    fontSize: 16,
+    fontSize: TYPOGRAPHY.fontSize.base,
+    fontFamily: TYPOGRAPHY.fontFamily.regular,
     color: BRAND_COLORS.text[600],
-    marginBottom: 16,
+    marginBottom: SPACING.base,
+    textAlign: 'center',
   },
   refreshButton: {
     backgroundColor: BRAND_COLORS.primary,
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-    borderRadius: GOLDEN_HOUR.radius.lg,
-    marginTop: 8,
-    ...GOLDEN_HOUR.shadow.warm,
+    paddingVertical: SPACING.md,
+    paddingHorizontal: SPACING.lg,
+    borderRadius: MIDNIGHT.radius.full,
+    marginTop: SPACING.sm,
+    ...MIDNIGHT.shadow.warm,
   },
   refreshButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
+    color: BRAND_COLORS.onPrimary,
+    fontSize: TYPOGRAPHY.fontSize.base,
+    fontFamily: TYPOGRAPHY.fontFamily.semibold,
   },
   errorText: {
-    fontSize: 20,
-    fontWeight: '600',
+    fontSize: TYPOGRAPHY.fontSize.xl,
+    fontFamily: TYPOGRAPHY.fontFamily.serifBold,
     color: BRAND_COLORS.danger,
-    marginBottom: 8,
+    marginBottom: SPACING.sm,
     textAlign: 'center',
   },
   errorSubtext: {
-    fontSize: 16,
+    fontSize: TYPOGRAPHY.fontSize.base,
+    fontFamily: TYPOGRAPHY.fontFamily.regular,
     color: BRAND_COLORS.text[600],
-    marginBottom: 16,
+    marginBottom: SPACING.base,
     textAlign: 'center',
-    paddingHorizontal: 32,
   },
   retryButton: {
     backgroundColor: BRAND_COLORS.primary,
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-    borderRadius: GOLDEN_HOUR.radius.lg,
-    marginTop: 8,
-    ...GOLDEN_HOUR.shadow.warm,
+    paddingVertical: SPACING.md,
+    paddingHorizontal: SPACING.lg,
+    borderRadius: MIDNIGHT.radius.full,
+    marginTop: SPACING.sm,
+    ...MIDNIGHT.shadow.warm,
   },
   retryButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
+    color: BRAND_COLORS.onPrimary,
+    fontSize: TYPOGRAPHY.fontSize.base,
+    fontFamily: TYPOGRAPHY.fontFamily.semibold,
   },
 });

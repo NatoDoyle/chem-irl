@@ -7,7 +7,7 @@ import {
   ScrollView,
   ActivityIndicator,
 } from 'react-native';
-import { BRAND_COLORS, GOLDEN_HOUR } from '../../config/brand';
+import { BRAND_COLORS, GOLDEN_HOUR, TYPOGRAPHY } from '../../config/brand';
 import { ASTROLOGY_SIGNS } from '../../config/profileOptions';
 import { onboardingStyles as sharedStyles } from './onboardingStyles';
 import { useOnboardingSave } from './useOnboardingSave';
@@ -69,7 +69,7 @@ export default function AstrologyScreen() {
             disabled={loading}
           >
             {loading ? (
-              <ActivityIndicator color="#fff" />
+              <ActivityIndicator color={BRAND_COLORS.onPrimary} />
             ) : (
               <Text style={sharedStyles.buttonText}>Continue</Text>
             )}
@@ -101,16 +101,16 @@ const styles = StyleSheet.create({
   },
   signChipSelected: {
     borderColor: BRAND_COLORS.primary,
-    backgroundColor: BRAND_COLORS.primarySoft || '#D1FFFB',
+    backgroundColor: BRAND_COLORS.primarySoft,
   },
   signText: {
     fontSize: 16,
     color: BRAND_COLORS.text[900],
-    fontWeight: '500',
+    fontFamily: TYPOGRAPHY.fontFamily.medium,
   },
   signTextSelected: {
     color: BRAND_COLORS.primary,
-    fontWeight: '600',
+    fontFamily: TYPOGRAPHY.fontFamily.semibold,
   },
   continueButton: {
     flex: 2,
