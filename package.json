@@ -6,6 +6,9 @@
     "docs:check": "tsx scripts/check-markdown-links.ts"
   },
   "devDependencies": {
+    "opentype.js": "^1.3.4",
+    "png-to-ico": "^3.0.1",
+    "sharp": "^0.34.5",
     "tsx": "^4.21.0",
     "typescript": "^5.9.3"
   }
