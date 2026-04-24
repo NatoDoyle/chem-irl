@@ -1,35 +1,45 @@
 import { ReactNode } from 'react';
 import { View, ScrollView, StyleSheet, ViewStyle } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { GOLDEN_HOUR } from '../../config/brand';
+import { LinearGradient } from 'expo-linear-gradient';
+import { GOLDEN_HOUR, REFINED_WARMTH } from '../../config/brand';
 
 type GHScreenProps = {
   children: ReactNode;
   scroll?: boolean;
+  gradient?: boolean;
   style?: ViewStyle;
   contentStyle?: ViewStyle;
 };
 
-export default function GHScreen({ children, scroll, style, contentStyle }: GHScreenProps) {
-  if (scroll) {
+export default function GHScreen({
+  children,
+  scroll,
+  gradient,
+  style,
+  contentStyle,
+}: GHScreenProps) {
+  const inner = scroll ? (
+    <ScrollView
+      style={styles.scroll}
+      contentContainerStyle={[styles.content, contentStyle]}
+      keyboardShouldPersistTaps="handled"
+    >
+      {children}
+    </ScrollView>
+  ) : (
+    <View style={[styles.content, contentStyle]}>{children}</View>
+  );
+
+  if (gradient) {
     return (
-      <SafeAreaView style={[styles.safe, style]}>
-        <ScrollView
-          style={styles.scroll}
-          contentContainerStyle={[styles.content, contentStyle]}
-          keyboardShouldPersistTaps="handled"
-        >
-          {children}
-        </ScrollView>
-      </SafeAreaView>
+      <LinearGradient colors={REFINED_WARMTH.gradient.warmSurface} style={[styles.safe, style]}>
+        <SafeAreaView style={styles.safe}>{inner}</SafeAreaView>
+      </LinearGradient>
     );
   }
 
-  return (
-    <SafeAreaView style={[styles.safe, style]}>
-      <View style={[styles.content, contentStyle]}>{children}</View>
-    </SafeAreaView>
-  );
+  return <SafeAreaView style={[styles.safe, style]}>{inner}</SafeAreaView>;
 }
 
 const styles = StyleSheet.create({
