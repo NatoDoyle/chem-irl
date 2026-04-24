@@ -1,35 +1,22 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-  ActivityIndicator,
-  Dimensions,
-  NativeScrollEvent,
-  NativeSyntheticEvent,
-} from 'react-native';
+import { View, Text, StyleSheet, ScrollView, ActivityIndicator, FlatList } from 'react-native';
 import { Image } from 'expo-image';
+import { Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { supabase } from '../../lib/supabase/client';
 import { Match, Proposal, Confirm } from '../../lib/types';
-import { BRAND_COLORS, GOLDEN_HOUR } from '../../config/brand';
+import { BRAND_COLORS, MIDNIGHT, GOLD, TYPOGRAPHY, SPACING } from '../../config/brand';
 import { getErrorAlert } from '../../lib/errors';
 import ProposalCard from '../../components/ProposalCard';
-import {
-  INTENT_OPTIONS,
-  FAMILY_PLANS_OPTIONS,
-  PETS_OPTIONS,
-  ACTIVITY_OPTIONS,
-  FREQUENCY_OPTIONS,
-  LOVE_LANGUAGE_OPTIONS,
-} from '../../config/profileOptions';
+import AnimatedPressable from '../../components/ui/AnimatedPressable';
+import GHButton from '../../components/ui/GHButton';
+
+const PHOTO_WIDTH = 200;
+const PHOTO_HEIGHT = 260;
 
 const PLACEHOLDER_IMAGE = require('../../../assets/icon.png');
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
-const PHOTO_HEIGHT = SCREEN_WIDTH * 1.1;
 
 type MatchDetailRouteParams = {
   matchId: string;
@@ -37,15 +24,8 @@ type MatchDetailRouteParams = {
 
 type MatchDetailNavigationProp = NativeStackNavigationProp<any, 'MatchDetail'>;
 
-function lookupLabel(
-  options: { value: string; label: string }[],
-  value: string | undefined
-): string | null {
-  if (!value) return null;
-  return options.find((o) => o.value === value)?.label ?? value;
-}
-
 export default function MatchDetailScreen() {
+  const insets = useSafeAreaInsets();
   const route = useRoute();
   const navigation = useNavigation<MatchDetailNavigationProp>();
   const { matchId } = route.params as MatchDetailRouteParams;
@@ -53,16 +33,14 @@ export default function MatchDetailScreen() {
   const [match, setMatch] = useState<Match | null>(null);
   const [otherUserPhotos, setOtherUserPhotos] = useState<string[]>([]);
   const [otherUserName, setOtherUserName] = useState<string>('');
-  const [otherUserHeadline, setOtherUserHeadline] = useState<string>('');
   const [otherUserBio, setOtherUserBio] = useState<string>('');
-  const [demographics, setDemographics] = useState<Record<string, any>>({});
-  const [preferences, setPreferences] = useState<Record<string, any>>({});
+  const [otherUserInfoPills, setOtherUserInfoPills] = useState<string[]>([]);
+  const [activePhotoIndex, setActivePhotoIndex] = useState(0);
   const [proposals, setProposals] = useState<Proposal[]>([]);
   const [confirms, setConfirms] = useState<Confirm[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [hasActiveProposal, setHasActiveProposal] = useState(false);
-  const [activePhotoIndex, setActivePhotoIndex] = useState(0);
 
   const loadMatchData = useCallback(async () => {
     setError(null);
@@ -97,7 +75,7 @@ export default function MatchDetailScreen() {
       setMatch(matchData as Match);
       const otherUserId = matchData.user_a === user.id ? matchData.user_b : matchData.user_a;
 
-      // Load other user's profile
+      // Load other user's profile (id = otherUserId; maybeSingle for missing profile)
       const { data: profile, error: profileError } = await supabase
         .from('profiles')
         .select('full_name, photos, prompts')
@@ -111,11 +89,28 @@ export default function MatchDetailScreen() {
         const photos = (profile.photos as string[]) || [];
         const prompts = (profile.prompts as Record<string, any>) || {};
         setOtherUserPhotos(photos);
-        setOtherUserName((profile.full_name as string) || prompts.headline || 'No name');
-        setOtherUserHeadline(prompts.headline || '');
+        setOtherUserName(profile.full_name || 'No name');
         setOtherUserBio(prompts.bio || '');
-        setDemographics(prompts.demographics || {});
-        setPreferences(prompts.preferences || {});
+
+        // Extract info pills from demographics and preferences
+        const pills: string[] = [];
+        const demographics = prompts.demographics as Record<string, any> | undefined;
+        const preferences = prompts.preferences as Record<string, any> | undefined;
+        if (demographics) {
+          Object.entries(demographics).forEach(([, value]) => {
+            if (typeof value === 'string' && value) pills.push(value);
+            if (Array.isArray(value))
+              value.forEach((v) => typeof v === 'string' && v && pills.push(v));
+          });
+        }
+        if (preferences) {
+          Object.entries(preferences).forEach(([, value]) => {
+            if (typeof value === 'string' && value) pills.push(value);
+            if (Array.isArray(value))
+              value.forEach((v) => typeof v === 'string' && v && pills.push(v));
+          });
+        }
+        setOtherUserInfoPills(pills);
       }
 
       // Load proposals
@@ -157,6 +152,8 @@ export default function MatchDetailScreen() {
   }, [loadMatchData]);
 
   // Auto-update proposal expiry status every minute
+  // This ensures that if a proposal expires while user is viewing the screen,
+  // the UI updates to show the expired state
   const proposalsRef = useRef(proposals);
   proposalsRef.current = proposals;
 
@@ -170,10 +167,12 @@ export default function MatchDetailScreen() {
       const now = new Date();
       let hasChanges = false;
       const updatedProposals = currentProposals.map((proposal) => {
+        // Only check active proposals
         if (proposal.status === 'active') {
           const expiresAt = new Date(proposal.expires_at);
           if (expiresAt < now) {
             hasChanges = true;
+            // Update status locally (DB update will happen on next load or via server-side trigger)
             return { ...proposal, status: 'expired' as const };
           }
         }
@@ -182,17 +181,22 @@ export default function MatchDetailScreen() {
 
       if (hasChanges) {
         setProposals(updatedProposals);
+        // Update hasActiveProposal state
         const activeProposal = updatedProposals.find((p) => p.status === 'active');
         setHasActiveProposal(!!activeProposal);
       }
     };
 
+    // Check immediately
     checkExpiry();
-    const interval = setInterval(checkExpiry, 60000);
+
+    // Set up interval to check every minute
+    const interval = setInterval(checkExpiry, 60000); // 60 seconds = 1 minute
+
     return () => {
       clearInterval(interval);
     };
-  }, []);
+  }, []); // Empty deps - only run once on mount
 
   const handlePropose = () => {
     navigation.navigate('Propose', { matchId });
@@ -202,14 +206,9 @@ export default function MatchDetailScreen() {
     navigation.navigate('Chat', { matchId });
   };
 
-  const onPhotoScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
-    const index = Math.round(event.nativeEvent.contentOffset.x / SCREEN_WIDTH);
-    setActivePhotoIndex(index);
-  };
-
   if (loading) {
     return (
-      <View style={styles.centered}>
+      <View style={[styles.container, styles.centeredContainer, { paddingTop: insets.top }]}>
         <ActivityIndicator size="large" color={BRAND_COLORS.primary} />
       </View>
     );
@@ -217,12 +216,12 @@ export default function MatchDetailScreen() {
 
   if (error || !match) {
     return (
-      <View style={styles.centered}>
+      <View style={[styles.container, styles.centeredContainer, { paddingTop: insets.top }]}>
         <Text style={styles.errorText}>{error || 'Match not found'}</Text>
         {error && (
-          <TouchableOpacity style={styles.retryButton} onPress={() => loadMatchData()}>
+          <AnimatedPressable style={styles.retryButton} onPress={() => loadMatchData()}>
             <Text style={styles.retryButtonText}>Retry</Text>
-          </TouchableOpacity>
+          </AnimatedPressable>
         )}
       </View>
     );
@@ -231,461 +230,281 @@ export default function MatchDetailScreen() {
   const hasConfirmedDate = confirms.length > 0;
   const latestProposal = proposals[0];
 
-  // Build profile detail items
-  const heightDisplay = demographics.height_cm != null ? `${demographics.height_cm} cm` : null;
-  const intentDisplay = lookupLabel(INTENT_OPTIONS, demographics.relationship_intent);
-  const familyDisplay = lookupLabel(FAMILY_PLANS_OPTIONS, demographics.family_plans);
-  const petsDisplay = lookupLabel(PETS_OPTIONS, demographics.pets);
-  const activityDisplay = lookupLabel(ACTIVITY_OPTIONS, demographics.activity_level);
-  const drinkingDisplay = lookupLabel(FREQUENCY_OPTIONS, demographics.drinking);
-  const smokingDisplay = lookupLabel(FREQUENCY_OPTIONS, demographics.smoking);
-  const loveLanguageDisplay = lookupLabel(LOVE_LANGUAGE_OPTIONS, preferences.love_language);
-  const languagesArr = demographics.languages as string[] | undefined;
-  const interestsArr = preferences.interests as string[] | undefined;
-
-  const showBasics = heightDisplay || (languagesArr && languagesArr.length > 0);
-  const showRelationship = intentDisplay || familyDisplay;
-  const showLifestyle = activityDisplay || drinkingDisplay || smokingDisplay || petsDisplay;
-  const showPersonality =
-    loveLanguageDisplay || preferences.personality_type || preferences.astrology_sign;
-  const showWorkEdu = preferences.job_title || preferences.education;
-  const showInterests = interestsArr && interestsArr.length > 0;
-
-  // Determine sticky CTA state
-  const showProposeCTA = !hasActiveProposal && !hasConfirmedDate;
-  const showChatCTA = hasConfirmedDate;
-
   return (
-    <View style={styles.container}>
-      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+    <ScrollView style={styles.container} contentContainerStyle={{ paddingTop: insets.top }}>
+      {/* Back button */}
+      <View style={styles.backButtonRow}>
+        <AnimatedPressable
+          style={styles.backButton}
+          onPress={() => navigation.goBack()}
+          haptic={false}
+        >
+          <Ionicons name="arrow-back" size={24} color={BRAND_COLORS.primary} />
+        </AnimatedPressable>
+      </View>
+
+      {/* Profile section */}
+      <View style={styles.header}>
         {/* Photo gallery */}
         {otherUserPhotos.length > 0 ? (
           <View>
-            <ScrollView
+            <FlatList
+              data={otherUserPhotos}
               horizontal
-              pagingEnabled
+              pagingEnabled={false}
               showsHorizontalScrollIndicator={false}
-              onMomentumScrollEnd={onPhotoScroll}
+              snapToInterval={PHOTO_WIDTH + SPACING.sm}
               decelerationRate="fast"
-            >
-              {otherUserPhotos.map((photo, index) => (
+              contentContainerStyle={styles.photoGallery}
+              keyExtractor={(item, index) => `${index}-${item}`}
+              onMomentumScrollEnd={(e) => {
+                const index = Math.round(
+                  e.nativeEvent.contentOffset.x / (PHOTO_WIDTH + SPACING.sm)
+                );
+                setActivePhotoIndex(Math.min(index, otherUserPhotos.length - 1));
+              }}
+              renderItem={({ item }) => (
                 <Image
-                  key={index}
-                  source={{ uri: photo }}
-                  style={styles.photo}
+                  source={{ uri: item }}
+                  style={styles.galleryPhoto}
                   contentFit="cover"
                   cachePolicy="memory-disk"
                 />
-              ))}
-            </ScrollView>
+              )}
+            />
             {otherUserPhotos.length > 1 && (
-              <View style={styles.paginationDots}>
+              <View style={styles.pageDots}>
                 {otherUserPhotos.map((_, index) => (
                   <View
                     key={index}
-                    style={[styles.dot, index === activePhotoIndex && styles.dotActive]}
+                    style={[styles.pageDot, index === activePhotoIndex && styles.pageDotActive]}
                   />
                 ))}
               </View>
             )}
           </View>
         ) : (
-          <View style={styles.placeholderPhoto}>
-            <Image
-              source={PLACEHOLDER_IMAGE}
-              style={styles.placeholderImage}
-              contentFit="contain"
-            />
-          </View>
+          <Image
+            source={PLACEHOLDER_IMAGE}
+            style={styles.avatar}
+            contentFit="cover"
+            cachePolicy="memory-disk"
+          />
         )}
 
-        {/* Name + headline */}
-        <View style={styles.nameSection}>
-          <Text style={styles.name}>{otherUserName}</Text>
-          {otherUserHeadline && otherUserName !== otherUserHeadline ? (
-            <Text style={styles.headline}>{otherUserHeadline}</Text>
-          ) : null}
-        </View>
+        {/* Name */}
+        <Text style={styles.name}>{otherUserName}</Text>
 
         {/* Bio */}
-        {otherUserBio ? (
-          <View style={styles.section}>
-            <Text style={styles.bioText}>{otherUserBio}</Text>
-          </View>
-        ) : null}
+        {otherUserBio ? <Text style={styles.bio}>{otherUserBio}</Text> : null}
 
-        {/* Profile details */}
-        {showBasics && (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Basics</Text>
-            <View style={styles.chipRow}>
-              {heightDisplay && (
-                <View style={styles.chip}>
-                  <Text style={styles.chipText}>{heightDisplay}</Text>
-                </View>
-              )}
-              {languagesArr?.map((lang) => (
-                <View key={lang} style={styles.chip}>
-                  <Text style={styles.chipText}>{lang}</Text>
-                </View>
-              ))}
-            </View>
-          </View>
-        )}
-
-        {showRelationship && (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Relationship</Text>
-            <View style={styles.chipRow}>
-              {intentDisplay && (
-                <View style={styles.chip}>
-                  <Text style={styles.chipText}>{intentDisplay}</Text>
-                </View>
-              )}
-              {familyDisplay && (
-                <View style={styles.chip}>
-                  <Text style={styles.chipText}>{familyDisplay}</Text>
-                </View>
-              )}
-            </View>
-          </View>
-        )}
-
-        {showLifestyle && (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Lifestyle</Text>
-            <View style={styles.chipRow}>
-              {activityDisplay && (
-                <View style={styles.chip}>
-                  <Text style={styles.chipText}>{activityDisplay}</Text>
-                </View>
-              )}
-              {drinkingDisplay && (
-                <View style={styles.chip}>
-                  <Text style={styles.chipText}>Drinks: {drinkingDisplay}</Text>
-                </View>
-              )}
-              {smokingDisplay && (
-                <View style={styles.chip}>
-                  <Text style={styles.chipText}>Smokes: {smokingDisplay}</Text>
-                </View>
-              )}
-              {petsDisplay && (
-                <View style={styles.chip}>
-                  <Text style={styles.chipText}>{petsDisplay}</Text>
-                </View>
-              )}
-            </View>
-          </View>
-        )}
-
-        {showPersonality && (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Personality</Text>
-            <View style={styles.chipRow}>
-              {loveLanguageDisplay && (
-                <View style={styles.chip}>
-                  <Text style={styles.chipText}>{loveLanguageDisplay}</Text>
-                </View>
-              )}
-              {preferences.personality_type && (
-                <View style={styles.chip}>
-                  <Text style={styles.chipText}>{preferences.personality_type}</Text>
-                </View>
-              )}
-              {preferences.astrology_sign && (
-                <View style={styles.chip}>
-                  <Text style={styles.chipText}>{preferences.astrology_sign}</Text>
-                </View>
-              )}
-            </View>
-          </View>
-        )}
-
-        {showWorkEdu && (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Work & Education</Text>
-            <View style={styles.chipRow}>
-              {preferences.job_title && (
-                <View style={styles.chip}>
-                  <Text style={styles.chipText}>{preferences.job_title}</Text>
-                </View>
-              )}
-              {preferences.education && (
-                <View style={styles.chip}>
-                  <Text style={styles.chipText}>{preferences.education}</Text>
-                </View>
-              )}
-            </View>
-          </View>
-        )}
-
-        {showInterests && (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Interests</Text>
-            <View style={styles.chipRow}>
-              {interestsArr!.map((interest) => (
-                <View key={interest} style={[styles.chip, styles.chipAccent]}>
-                  <Text style={[styles.chipText, styles.chipTextAccent]}>{interest}</Text>
-                </View>
-              ))}
-            </View>
-          </View>
-        )}
-
-        {/* Proposals section */}
-        {hasConfirmedDate && (
-          <View style={styles.confirmedBanner}>
-            <Text style={styles.confirmedText}>Date Confirmed</Text>
-          </View>
-        )}
-
-        {latestProposal && (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>
-              {latestProposal.status === 'active' ? 'Current Proposal' : 'Latest Proposal'}
-            </Text>
-            <ProposalCard
-              proposal={latestProposal}
-              matchId={matchId}
-              onConfirm={() => loadMatchData()}
-              onNoneSuits={() =>
-                navigation.navigate('Propose', { matchId, responseTo: latestProposal.proposal_id })
-              }
-              existingConfirms={confirms}
-            />
-          </View>
-        )}
-
-        {proposals.length > 1 && (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Previous Proposals</Text>
-            {proposals.slice(1).map((proposal) => (
-              <ProposalCard
-                key={proposal.proposal_id}
-                proposal={proposal}
-                matchId={matchId}
-                onConfirm={() => loadMatchData()}
-                onNoneSuits={() => loadMatchData()}
-              />
+        {/* Info pills */}
+        {otherUserInfoPills.length > 0 && (
+          <View style={styles.pillsContainer}>
+            {otherUserInfoPills.map((pill, index) => (
+              <View key={`${pill}-${index}`} style={styles.pill}>
+                <Text style={styles.pillText}>{pill}</Text>
+              </View>
             ))}
           </View>
         )}
+      </View>
 
-        {/* Bottom spacer for sticky CTA */}
-        {(showProposeCTA || showChatCTA) && <View style={styles.ctaSpacer} />}
-      </ScrollView>
-
-      {/* Sticky bottom CTA */}
-      {showProposeCTA && (
-        <View style={styles.stickyCTA}>
-          <TouchableOpacity style={styles.proposeButton} onPress={handlePropose}>
-            <Text style={styles.proposeButtonText}>Propose 2-3 Times</Text>
-          </TouchableOpacity>
+      {hasConfirmedDate && (
+        <View style={styles.confirmedBanner}>
+          <Text style={styles.confirmedText}>✓ Date Confirmed</Text>
+          <GHButton title="Open Chat" onPress={handleChat} style={styles.chatButton} />
         </View>
       )}
-      {showChatCTA && (
-        <View style={styles.stickyCTA}>
-          <TouchableOpacity style={styles.chatButton} onPress={handleChat}>
-            <Text style={styles.chatButtonText}>Open Chat</Text>
-          </TouchableOpacity>
+
+      {latestProposal && (
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Current Proposal</Text>
+          <ProposalCard
+            proposal={latestProposal}
+            matchId={matchId}
+            onConfirm={() => loadMatchData()}
+            onNoneSuits={() =>
+              navigation.navigate('Propose', { matchId, responseTo: latestProposal.proposal_id })
+            }
+            existingConfirms={confirms}
+          />
         </View>
       )}
-    </View>
+
+      {!hasActiveProposal && !hasConfirmedDate && (
+        <View style={styles.section}>
+          <GHButton title="Propose 2-3 Times" onPress={handlePropose} />
+        </View>
+      )}
+
+      {proposals.length > 1 && (
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Previous Proposals</Text>
+          {proposals.slice(1).map((proposal) => (
+            <ProposalCard
+              key={proposal.proposal_id}
+              proposal={proposal}
+              matchId={matchId}
+              onConfirm={() => loadMatchData()}
+              onNoneSuits={() => loadMatchData()}
+            />
+          ))}
+        </View>
+      )}
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: GOLDEN_HOUR.bg,
+    backgroundColor: MIDNIGHT.bg,
   },
-  scrollView: {
-    flex: 1,
-  },
-  centered: {
-    flex: 1,
+  centeredContainer: {
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: GOLDEN_HOUR.bg,
   },
-
-  // Photo gallery
-  photo: {
-    width: SCREEN_WIDTH,
+  backButtonRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: SPACING.base,
+    height: 48,
+  },
+  backButton: {
+    width: 40,
+    height: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  header: {
+    alignItems: 'center',
+    paddingHorizontal: SPACING.lg,
+    paddingBottom: SPACING.lg,
+    borderBottomWidth: 1,
+    borderBottomColor: MIDNIGHT.borderDefault,
+  },
+  photoGallery: {
+    paddingHorizontal: SPACING.sm,
+    gap: SPACING.sm,
+  },
+  galleryPhoto: {
+    width: PHOTO_WIDTH,
     height: PHOTO_HEIGHT,
+    borderRadius: MIDNIGHT.radius.md,
+    backgroundColor: MIDNIGHT.borderDefault,
   },
-  placeholderPhoto: {
-    width: SCREEN_WIDTH,
-    height: PHOTO_HEIGHT * 0.6,
-    backgroundColor: '#E2E8F0',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  placeholderImage: {
-    width: 80,
-    height: 80,
-    opacity: 0.4,
-  },
-  paginationDots: {
+  pageDots: {
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    paddingVertical: 12,
-    gap: 6,
+    marginTop: SPACING.md,
+    gap: SPACING.xs,
   },
-  dot: {
+  pageDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: BRAND_COLORS.text[500],
+  },
+  pageDotActive: {
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: GOLDEN_HOUR.borderDefault,
-  },
-  dotActive: {
     backgroundColor: BRAND_COLORS.primary,
-    width: 10,
-    height: 10,
-    borderRadius: 5,
   },
-
-  // Name + headline
-  nameSection: {
-    paddingHorizontal: 20,
-    paddingTop: 20,
-    paddingBottom: 8,
+  avatar: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: MIDNIGHT.borderDefault,
+    marginBottom: SPACING.md,
+    borderWidth: 3,
+    borderColor: BRAND_COLORS.primary,
   },
   name: {
-    fontSize: 28,
-    fontWeight: 'bold',
+    fontSize: TYPOGRAPHY.fontSize['2xl'],
+    fontFamily: TYPOGRAPHY.fontFamily.serifBold,
     color: BRAND_COLORS.text[900],
+    marginTop: SPACING.md,
   },
-  headline: {
-    fontSize: 16,
+  bio: {
+    fontSize: TYPOGRAPHY.fontSize.base,
+    fontFamily: TYPOGRAPHY.fontFamily.regular,
     color: BRAND_COLORS.text[600],
-    marginTop: 4,
-    fontStyle: 'italic',
+    marginTop: SPACING.sm,
+    textAlign: 'center',
+    lineHeight: TYPOGRAPHY.fontSize.base * TYPOGRAPHY.lineHeight.relaxed,
+    paddingHorizontal: SPACING.base,
   },
-
-  // Bio
-  bioText: {
-    fontSize: 16,
-    color: BRAND_COLORS.text[700],
-    lineHeight: 24,
-  },
-
-  // Sections
-  section: {
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-  },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: BRAND_COLORS.text[900],
-    marginBottom: 10,
-  },
-
-  // Chips
-  chipRow: {
+  pillsContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 8,
+    justifyContent: 'center',
+    marginTop: SPACING.md,
+    gap: SPACING.sm,
+    paddingHorizontal: SPACING.base,
   },
-  chip: {
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 20,
-    borderWidth: 1.5,
-    borderColor: GOLDEN_HOUR.borderDefault,
-    backgroundColor: GOLDEN_HOUR.surface,
+  pill: {
+    backgroundColor: 'rgba(17, 19, 24, 0.8)',
+    borderWidth: 1,
+    borderColor: '#1a1f2e',
+    borderRadius: 14,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.xs,
   },
-  chipText: {
-    fontSize: 14,
+  pillText: {
+    fontSize: TYPOGRAPHY.fontSize.sm,
+    fontFamily: TYPOGRAPHY.fontFamily.medium,
     color: BRAND_COLORS.text[700],
-    fontWeight: '500',
   },
-  chipAccent: {
-    borderColor: BRAND_COLORS.primary,
-    backgroundColor: '#D1FFFB',
-  },
-  chipTextAccent: {
-    color: BRAND_COLORS.primary,
-    fontWeight: '600',
-  },
-
-  // Confirmed banner
   confirmedBanner: {
-    backgroundColor: BRAND_COLORS.success + '20',
-    padding: 16,
-    marginHorizontal: 20,
-    marginTop: 12,
-    borderRadius: GOLDEN_HOUR.radius.lg,
+    ...MIDNIGHT.glassCard,
+    borderColor: GOLD[600],
+    padding: SPACING.base,
+    margin: SPACING.base,
     alignItems: 'center',
+    ...MIDNIGHT.glow.gold,
   },
   confirmedText: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: BRAND_COLORS.success,
-  },
-
-  // Sticky CTA
-  stickyCTA: {
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    paddingBottom: 32,
-    backgroundColor: GOLDEN_HOUR.bg,
-    borderTopWidth: 1,
-    borderTopColor: GOLDEN_HOUR.borderDefault,
-  },
-  ctaSpacer: {
-    height: 100,
-  },
-  proposeButton: {
-    backgroundColor: BRAND_COLORS.primary,
-    paddingVertical: 16,
-    borderRadius: GOLDEN_HOUR.radius.lg,
-    alignItems: 'center',
-    ...GOLDEN_HOUR.shadow.warm,
-  },
-  proposeButtonText: {
-    color: '#fff',
-    fontSize: 18,
-    fontWeight: '600',
+    fontSize: TYPOGRAPHY.fontSize.lg,
+    fontFamily: TYPOGRAPHY.fontFamily.serifBold,
+    color: GOLD[600],
+    marginBottom: SPACING.md,
   },
   chatButton: {
-    backgroundColor: BRAND_COLORS.primary,
-    paddingVertical: 16,
-    borderRadius: GOLDEN_HOUR.radius.lg,
-    alignItems: 'center',
-    ...GOLDEN_HOUR.shadow.warm,
+    alignSelf: 'stretch',
   },
-  chatButtonText: {
-    color: '#fff',
-    fontSize: 18,
-    fontWeight: '600',
+  section: {
+    padding: SPACING.base,
   },
-
-  // Error/retry
+  sectionTitle: {
+    fontSize: TYPOGRAPHY.fontSize.xl,
+    fontFamily: TYPOGRAPHY.fontFamily.serifBold,
+    color: BRAND_COLORS.text[900],
+    marginBottom: SPACING.md,
+  },
   errorText: {
-    fontSize: 18,
-    fontWeight: '600',
+    fontSize: TYPOGRAPHY.fontSize.lg,
+    fontFamily: TYPOGRAPHY.fontFamily.serifBold,
     color: BRAND_COLORS.danger,
     textAlign: 'center',
-    marginTop: 40,
-    marginBottom: 16,
-    paddingHorizontal: 32,
+    marginTop: SPACING['2xl'],
+    marginBottom: SPACING.base,
+    paddingHorizontal: SPACING.xl,
   },
   retryButton: {
     backgroundColor: BRAND_COLORS.primary,
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-    borderRadius: GOLDEN_HOUR.radius.lg,
+    paddingVertical: SPACING.md,
+    paddingHorizontal: SPACING.lg,
+    borderRadius: MIDNIGHT.radius.lg,
     alignSelf: 'center',
-    marginTop: 8,
-    ...GOLDEN_HOUR.shadow.warm,
+    marginTop: SPACING.sm,
+    ...MIDNIGHT.glow.primary,
   },
   retryButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
+    color: BRAND_COLORS.onPrimary,
+    fontSize: TYPOGRAPHY.fontSize.base,
+    fontFamily: TYPOGRAPHY.fontFamily.semibold,
   },
 });
