@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 import { FeedItem } from '../lib/types';
 import DiscoveryCard from './DiscoveryCard';
-import { BRAND_COLORS } from '../config/brand';
+import { BRAND_COLORS, MIDNIGHT } from '../config/brand';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const SWIPE_THRESHOLD = 120;
@@ -198,7 +198,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    backgroundColor: 'rgba(17, 19, 24, 0.85)',
+    borderWidth: 1,
+    borderColor: MIDNIGHT.borderDefault,
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 20,
@@ -211,7 +213,9 @@ const styles = StyleSheet.create({
     position: 'absolute',
     bottom: 60,
     alignSelf: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    backgroundColor: 'rgba(17, 19, 24, 0.85)',
+    borderWidth: 1,
+    borderColor: MIDNIGHT.borderDefault,
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 20,
