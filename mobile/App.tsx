@@ -24,7 +24,8 @@ import { isSessionExpiredError, getErrorAlert, isRecoverableError } from './src/
 import { resolveProfileState } from './src/lib/profile';
 import { addBreadcrumb, setUserContext, clearUserContext } from './src/lib/sentry';
 import { identifyUser, resetUser } from './src/lib/analytics';
-import { BRAND_COLORS, GOLDEN_HOUR } from './src/config/brand';
+import { BRAND_COLORS, MIDNIGHT, TYPOGRAPHY } from './src/config/brand';
+import { useFontsReady } from './src/lib/fonts';
 import {
   registerDeviceToken,
   unregisterDeviceToken,
@@ -35,13 +36,15 @@ import ProfileRefreshContext from './src/contexts/ProfileRefreshContext';
 
 const Stack = createNativeStackNavigator();
 
-const GoldenHourTheme = {
+const MidnightTheme = {
   ...DefaultTheme,
+  dark: true,
   colors: {
     ...DefaultTheme.colors,
-    background: GOLDEN_HOUR.bg,
-    card: GOLDEN_HOUR.bg,
-    border: GOLDEN_HOUR.borderDefault,
+    background: MIDNIGHT.bg,
+    card: MIDNIGHT.surface,
+    border: MIDNIGHT.borderDefault,
+    text: BRAND_COLORS.text[900],
   },
 };
 
@@ -61,6 +64,7 @@ const MAX_RETRY_ATTEMPTS = 3;
 const INITIAL_RETRY_DELAY = 1000; // 1 second
 
 export default function App() {
+  const fontsReady = useFontsReady();
   const [session, setSession] = useState<Session | null>(null);
   const [profileComplete, setProfileComplete] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -303,7 +307,7 @@ export default function App() {
     );
   }
 
-  if (loading) {
+  if (loading || !fontsReady) {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color={BRAND_COLORS.primary} />
@@ -318,7 +322,7 @@ export default function App() {
 
   return (
     <ProfileRefreshContext.Provider value={refreshProfile}>
-      <NavigationContainer ref={navigationRef} theme={GoldenHourTheme}>
+      <NavigationContainer ref={navigationRef} theme={MidnightTheme}>
         <Stack.Navigator screenOptions={screenOptions}>
           <Stack.Screen name="Root">
             {() => {
@@ -339,18 +343,19 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     padding: 24,
-    backgroundColor: GOLDEN_HOUR.bg,
+    backgroundColor: MIDNIGHT.bg,
   },
   expiredTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#0F172A',
+    fontSize: TYPOGRAPHY.fontSize['2xl'],
+    fontFamily: TYPOGRAPHY.fontFamily.bold,
+    color: BRAND_COLORS.text[900],
     marginBottom: 16,
     textAlign: 'center',
   },
   expiredMessage: {
-    fontSize: 16,
-    color: '#475569',
+    fontSize: TYPOGRAPHY.fontSize.base,
+    fontFamily: TYPOGRAPHY.fontFamily.regular,
+    color: BRAND_COLORS.text[600],
     textAlign: 'center',
     marginBottom: 32,
     lineHeight: 24,
@@ -359,40 +364,42 @@ const styles = StyleSheet.create({
     backgroundColor: BRAND_COLORS.primary,
     paddingVertical: 14,
     paddingHorizontal: 32,
-    borderRadius: GOLDEN_HOUR.radius.lg,
+    borderRadius: MIDNIGHT.radius.lg,
     minWidth: 200,
     alignItems: 'center',
-    ...GOLDEN_HOUR.shadow.warm,
+    ...MIDNIGHT.shadow.warm,
   },
   signInButtonText: {
-    color: '#fff',
-    fontSize: 18,
-    fontWeight: '600',
+    color: BRAND_COLORS.onPrimary,
+    fontSize: TYPOGRAPHY.fontSize.lg,
+    fontFamily: TYPOGRAPHY.fontFamily.semibold,
   },
   errorContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
     padding: 24,
-    backgroundColor: GOLDEN_HOUR.bg,
+    backgroundColor: MIDNIGHT.bg,
   },
   errorTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#0F172A',
+    fontSize: TYPOGRAPHY.fontSize['2xl'],
+    fontFamily: TYPOGRAPHY.fontFamily.bold,
+    color: BRAND_COLORS.text[900],
     marginBottom: 16,
     textAlign: 'center',
   },
   errorMessage: {
-    fontSize: 16,
-    color: '#475569',
+    fontSize: TYPOGRAPHY.fontSize.base,
+    fontFamily: TYPOGRAPHY.fontFamily.regular,
+    color: BRAND_COLORS.text[600],
     textAlign: 'center',
     marginBottom: 16,
     lineHeight: 24,
   },
   retryInfo: {
-    fontSize: 14,
-    color: '#64748B',
+    fontSize: TYPOGRAPHY.fontSize.sm,
+    fontFamily: TYPOGRAPHY.fontFamily.regular,
+    color: BRAND_COLORS.text[500],
     textAlign: 'center',
     marginBottom: 32,
   },
@@ -400,25 +407,27 @@ const styles = StyleSheet.create({
     backgroundColor: BRAND_COLORS.primary,
     paddingVertical: 14,
     paddingHorizontal: 32,
-    borderRadius: GOLDEN_HOUR.radius.lg,
+    borderRadius: MIDNIGHT.radius.lg,
     minWidth: 200,
     alignItems: 'center',
-    ...GOLDEN_HOUR.shadow.warm,
+    ...MIDNIGHT.shadow.warm,
   },
   retryButtonText: {
-    color: '#fff',
-    fontSize: 18,
-    fontWeight: '600',
+    color: BRAND_COLORS.onPrimary,
+    fontSize: TYPOGRAPHY.fontSize.lg,
+    fontFamily: TYPOGRAPHY.fontFamily.semibold,
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
     gap: 16,
+    backgroundColor: MIDNIGHT.bg,
   },
   retryLoadingText: {
-    fontSize: 14,
-    color: '#64748B',
+    fontSize: TYPOGRAPHY.fontSize.sm,
+    fontFamily: TYPOGRAPHY.fontFamily.regular,
+    color: BRAND_COLORS.text[500],
     marginTop: 8,
   },
 });

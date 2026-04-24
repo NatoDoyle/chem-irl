@@ -54,7 +54,7 @@ export default function Home() {
   return (
     <>
       {/* Hero Section — split layout */}
-      <section className="pt-28 pb-20 px-4 overflow-hidden">
+      <section className="pt-28 pb-20 px-4 overflow-hidden bg-gradient-to-br from-warm-bg to-[#FFF5EB]">
         <div className="max-w-7xl mx-auto flex flex-col lg:flex-row items-center gap-12 lg:gap-8">
           {/* Left 55% */}
           <motion.div
@@ -63,7 +63,7 @@ export default function Home() {
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.6 }}
           >
-            <span className="inline-block bg-aqua-50 text-aqua-700 text-sm font-medium px-4 py-1.5 rounded-full mb-6">
+            <span className="inline-block bg-gold-50 text-gold-700 border border-gold-200 text-sm font-medium px-4 py-1.5 rounded-full mb-6">
               Dating, but make it happen
             </span>
 
@@ -152,7 +152,7 @@ export default function Home() {
 
             {/* Floating UI cards */}
             <motion.div
-              className="absolute -right-2 md:-right-12 top-16 bg-white rounded-brand p-3 shadow-warm z-10"
+              className="absolute -right-2 md:-right-12 top-16 bg-white rounded-brand p-3 shadow-subtle z-10"
               initial={{ opacity: 0, scale: 0.8 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ type: 'spring', delay: 0.8 }}
@@ -164,7 +164,7 @@ export default function Home() {
             </motion.div>
 
             <motion.div
-              className="absolute -left-2 md:-left-16 bottom-28 bg-white rounded-brand p-3 shadow-warm z-10"
+              className="absolute -left-2 md:-left-16 bottom-28 bg-white rounded-brand p-3 shadow-subtle z-10"
               initial={{ opacity: 0, scale: 0.8 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ type: 'spring', delay: 1.0 }}
@@ -178,7 +178,7 @@ export default function Home() {
             </motion.div>
 
             <motion.div
-              className="absolute left-0 md:-left-8 top-36 bg-aqua-50 rounded-brand px-3 py-2 shadow-warm z-10"
+              className="absolute left-0 md:-left-8 top-36 bg-aqua-50 rounded-brand px-3 py-2 shadow-subtle z-10"
               initial={{ opacity: 0, scale: 0.8 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ type: 'spring', delay: 1.2 }}
@@ -261,7 +261,7 @@ export default function Home() {
                 <div
                   className={`group bg-white rounded-brand p-8 shadow-warm hover:shadow-warm-lg transition-all duration-300 ${i === 1 ? 'md:-mt-5' : ''}`}
                 >
-                  <div className="h-1 bg-gradient-to-r from-aqua-400 to-aqua-600 rounded-full mb-6 group-hover:h-1.5 transition-all" />
+                  <div className="h-1 bg-gradient-to-r from-coral to-gold-600 rounded-full mb-6 group-hover:h-1.5 transition-all" />
                   <h3 className="text-xl font-bold text-ink-900 mb-3">
                     {feature.title}
                   </h3>
