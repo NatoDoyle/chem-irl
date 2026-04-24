@@ -55,9 +55,4 @@ If `main` and `origin/main` have diverged:
 - Before starting new work:
   - `git fetch origin --prune`
   - `git branch -vv`
-  - If branch count > 3, clean up before proceeding:
-    - Merged branches: `git branch -d <name>`
-    - Squash-merged branches (content in main, different SHA): `git branch -D <name>`
-    - Abandoned/superseded branches: `git tag archive/<name> <name> && git branch -D <name>`
-    - Remote-gone branches: `git branch -D <name>` (already deleted on remote)
 - Never delete a branch unless it is confirmed merged or explicitly archived/tagged first.

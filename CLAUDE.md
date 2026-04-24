@@ -142,8 +142,6 @@ Mobile app uses `EXPO_PUBLIC_*` env vars loaded via Expo. See `mobile/.env.examp
 
 ## Git workflow
 
-**STOP. Before ANY file edit, verify you are NOT on `main`.** Run `git rev-parse --abbrev-ref HEAD` and confirm the branch name starts with `fix/`, `feat/`, `chore/`, or `wip/`.
-
 - Never work directly on `main`. Create a branch per task: `fix/<desc>`, `feat/<desc>`, `chore/<desc>`.
 - Before starting work: `git fetch origin --prune`, checkout main, `git pull --ff-only origin main`, ensure `git status --porcelain` is clean.
 - Commit prefixes: `fix:`, `feat:`, `chore:`, `test:`, `docs:`
@@ -152,16 +150,6 @@ Mobile app uses `EXPO_PUBLIC_*` env vars loaded via Expo. See `mobile/.env.examp
 - If `main` diverges from `origin/main`, stop and ask before resolving.
 - Keep at most 3 active WIP branches. Merged branches should be deleted; abandoned branches should be tagged (`archive/<branch>`) then deleted.
 - Read `agent_docs/git_workflow.md` for full details.
-
-### Automated enforcement
-
-Claude Code hooks in `.claude/settings.json` enforce critical git rules:
-- **Blocked:** Editing files while on `main`
-- **Blocked:** `git push` while on `main`
-- **Blocked:** Creating a new branch with a dirty worktree
-- **Warning:** Creating a new branch when more than 5 local branches exist
-
-If a hook blocks your action, follow its instructions. Do not attempt to bypass hooks.
 
 ## How to work
 
