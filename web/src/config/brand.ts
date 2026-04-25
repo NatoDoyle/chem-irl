@@ -51,6 +51,29 @@ export const BRAND_COLORS = {
   // Warm tokens (web Golden Hour direction)
   accentWarm: '#F97316',
   backgroundWarm: '#FFFBF7',
+  // Gold scale (Refined Warmth tertiary)
+  gold: {
+    50: '#FFFBEB',
+    100: '#FEF3C7',
+    200: '#FDE68A',
+    300: '#FCD34D',
+    400: '#FBBF24',
+    500: '#EAB308',
+    600: '#CA8A04', // PRIMARY GOLD
+    700: '#A16207',
+    800: '#854D0E',
+    900: '#713F12',
+  },
+  goldAccent: '#CA8A04',
+} as const;
+
+export const BRAND_GRADIENTS = {
+  // Warm surface background (#FFFBF7 → #FFF5EB)
+  warmSurface: 'linear-gradient(135deg, #FFFBF7 0%, #FFF5EB 100%)',
+  // Premium aquamarine
+  aquaPremium: 'linear-gradient(135deg, #0A7F74 0%, #0B9A8D 100%)',
+  // Celebration coral-to-gold
+  coralGold: 'linear-gradient(135deg, #F97316 0%, #CA8A04 100%)',
 } as const;
 
 export const BRAND_MESSAGES = {

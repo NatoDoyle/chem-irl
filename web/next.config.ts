@@ -9,6 +9,10 @@ const nextConfig: NextConfig = {
   turbopack: {
     root: __dirname,
   },
+
+  // Allow LAN IPs to hit the dev server (e.g. phone on the same Wi-Fi
+  // testing the mobile dropdown). Dev-only; ignored in production builds.
+  allowedDevOrigins: ['172.20.10.13'],
   
   // Image optimization (unoptimized for static export)
   images: {

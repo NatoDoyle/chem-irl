@@ -7,6 +7,7 @@ import {
   ScrollView,
   ActivityIndicator,
 } from 'react-native';
+import { BRAND_COLORS } from '../../config/brand';
 import { LOVE_LANGUAGE_OPTIONS } from '../../config/profileOptions';
 import { onboardingStyles as sharedStyles } from './onboardingStyles';
 import { useOnboardingSave } from './useOnboardingSave';
@@ -74,7 +75,7 @@ export default function LoveLanguageScreen() {
             disabled={loading}
           >
             {loading ? (
-              <ActivityIndicator color="#fff" />
+              <ActivityIndicator color={BRAND_COLORS.onPrimary} />
             ) : (
               <Text style={sharedStyles.buttonText}>Continue</Text>
             )}

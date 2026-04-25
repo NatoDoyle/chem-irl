@@ -36,14 +36,27 @@
   --color-dark-bg: #0B1220;
   --color-surface: #FFFFFF;
 
+  /* Gold scale */
+  --color-gold-50: #FFFBEB;
+  --color-gold-100: #FEF3C7;
+  --color-gold-200: #FDE68A;
+  --color-gold-300: #FCD34D;
+  --color-gold-400: #FBBF24;
+  --color-gold-500: #EAB308;
+  --color-gold-600: #CA8A04;
+  --color-gold-700: #A16207;
+  --color-gold-800: #854D0E;
+  --color-gold-900: #713F12;
+
   /* Fonts */
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-dm-sans);
 
   /* Shadows */
   --shadow-warm: 0 8px 24px rgba(0, 0, 0, 0.06);
   --shadow-warm-lg: 0 12px 32px rgba(0, 0, 0, 0.1);
   --shadow-nav: 0 1px 3px rgba(0, 0, 0, 0.08);
+  --shadow-subtle: 0 2px 8px rgba(0, 0, 0, 0.04);
+  --shadow-elevated: 0 16px 40px rgba(0, 0, 0, 0.12);
 
   /* Brand radius */
   --radius-brand: 20px;

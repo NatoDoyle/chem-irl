@@ -11,7 +11,7 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { supabase } from '../../lib/supabase/client';
-import { BRAND_COLORS, GOLDEN_HOUR } from '../../config/brand';
+import { BRAND_COLORS, GOLDEN_HOUR, TYPOGRAPHY } from '../../config/brand';
 import { getErrorAlert } from '../../lib/errors';
 import { trackEvent } from '../../lib/analytics';
 import { LANGUAGE_OPTIONS } from '../../config/profileOptions';
@@ -127,7 +127,7 @@ export default function LanguagesScreen() {
           disabled={selectedLanguages.length === 0 || loading}
         >
           {loading ? (
-            <ActivityIndicator color="#fff" />
+            <ActivityIndicator color={BRAND_COLORS.onPrimary} />
           ) : (
             <Text style={styles.buttonText}>Continue</Text>
           )}
@@ -148,12 +148,13 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 32,
-    fontWeight: 'bold',
+    fontFamily: TYPOGRAPHY.fontFamily.serifBold,
     color: BRAND_COLORS.text[900],
     marginBottom: 8,
   },
   subtitle: {
     fontSize: 16,
+    fontFamily: TYPOGRAPHY.fontFamily.regular,
     color: BRAND_COLORS.text[600],
     marginBottom: 32,
   },
@@ -172,21 +173,21 @@ const styles = StyleSheet.create({
   },
   optionButtonSelected: {
     borderColor: BRAND_COLORS.primary,
-    backgroundColor: BRAND_COLORS.primarySoft || '#D1FFFB',
+    backgroundColor: BRAND_COLORS.primarySoft,
   },
   optionText: {
     fontSize: 18,
     color: BRAND_COLORS.text[900],
-    fontWeight: '500',
+    fontFamily: TYPOGRAPHY.fontFamily.medium,
   },
   optionTextSelected: {
     color: BRAND_COLORS.primary,
-    fontWeight: '600',
+    fontFamily: TYPOGRAPHY.fontFamily.semibold,
   },
   checkmark: {
     fontSize: 18,
     color: BRAND_COLORS.primary,
-    fontWeight: 'bold',
+    fontFamily: TYPOGRAPHY.fontFamily.bold,
   },
   button: {
     marginTop: 8,
@@ -200,8 +201,8 @@ const styles = StyleSheet.create({
     opacity: 0.6,
   },
   buttonText: {
-    color: '#fff',
+    color: BRAND_COLORS.onPrimary,
     fontSize: 18,
-    fontWeight: '600',
+    fontFamily: TYPOGRAPHY.fontFamily.semibold,
   },
 });

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Platform } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import { BRAND_COLORS, GOLDEN_HOUR } from '../config/brand';
+import { BRAND_COLORS, MIDNIGHT, TYPOGRAPHY, SPACING } from '../config/brand';
 import { DAY_OF_WEEK_OPTIONS } from '../config/profileOptions';
 import type { WeeklySlot, DayOfWeek } from '../lib/types';
 
@@ -138,6 +138,7 @@ export default function AvailabilitySlotPicker({ onAdd, disabled }: Availability
             display={Platform.OS === 'ios' ? 'spinner' : 'default'}
             onChange={handleStartTimeChange}
             minuteInterval={15}
+            themeVariant="dark"
           />
           {Platform.OS === 'ios' && (
             <View style={styles.buttonRow}>
@@ -161,6 +162,7 @@ export default function AvailabilitySlotPicker({ onAdd, disabled }: Availability
             display={Platform.OS === 'ios' ? 'spinner' : 'default'}
             onChange={handleEndTimeChange}
             minuteInterval={15}
+            themeVariant="dark"
           />
           {Platform.OS === 'ios' && (
             <View style={styles.buttonRow}>
@@ -180,93 +182,99 @@ export default function AvailabilitySlotPicker({ onAdd, disabled }: Availability
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: GOLDEN_HOUR.inputBg,
-    borderRadius: 12,
-    padding: 16,
+    backgroundColor: MIDNIGHT.surface,
+    borderRadius: MIDNIGHT.radius.md,
+    padding: SPACING.base,
+    borderWidth: 1,
+    borderColor: MIDNIGHT.borderDefault,
+    overflow: 'hidden',
   },
   addButton: {
     borderWidth: 2,
     borderColor: BRAND_COLORS.primary,
     borderStyle: 'dashed',
-    padding: 12,
-    borderRadius: 8,
+    padding: SPACING.md,
+    borderRadius: MIDNIGHT.radius.sm,
     alignItems: 'center',
   },
   addButtonText: {
     color: BRAND_COLORS.primary,
-    fontSize: 14,
-    fontWeight: '600',
+    fontSize: TYPOGRAPHY.fontSize.sm,
+    fontFamily: TYPOGRAPHY.fontFamily.semibold,
   },
   stepLabel: {
-    fontSize: 14,
-    fontWeight: '600',
+    fontSize: TYPOGRAPHY.fontSize.sm,
+    fontFamily: TYPOGRAPHY.fontFamily.semibold,
     color: BRAND_COLORS.text[700],
-    marginBottom: 8,
+    marginBottom: SPACING.sm,
   },
   dayGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 8,
+    gap: SPACING.sm,
   },
   dayChip: {
     paddingHorizontal: 14,
     paddingVertical: 8,
-    borderRadius: 20,
-    borderWidth: 1.5,
-    borderColor: GOLDEN_HOUR.borderDefault,
-    backgroundColor: GOLDEN_HOUR.inputBg,
+    borderRadius: MIDNIGHT.radius.full,
+    borderWidth: 1,
+    borderColor: MIDNIGHT.borderDefault,
+    backgroundColor: MIDNIGHT.glassCard.backgroundColor,
   },
   dayChipSelected: {
     borderColor: BRAND_COLORS.primary,
-    backgroundColor: '#D1FFFB',
+    backgroundColor: 'rgba(10, 127, 116, 0.15)',
   },
   dayChipText: {
-    fontSize: 14,
+    fontSize: TYPOGRAPHY.fontSize.sm,
     color: BRAND_COLORS.text[700],
-    fontWeight: '500',
+    fontFamily: TYPOGRAPHY.fontFamily.medium,
   },
   dayChipTextSelected: {
     color: BRAND_COLORS.primary,
-    fontWeight: '600',
+    fontFamily: TYPOGRAPHY.fontFamily.semibold,
   },
   buttonRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginTop: 16,
-    gap: 12,
+    marginTop: SPACING.base,
+    gap: SPACING.md,
   },
   primaryButton: {
     flex: 1,
     backgroundColor: BRAND_COLORS.primary,
-    paddingVertical: 12,
-    borderRadius: 8,
+    height: 48,
+    justifyContent: 'center',
+    borderRadius: MIDNIGHT.radius.md,
     alignItems: 'center',
   },
   primaryButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
+    color: BRAND_COLORS.onPrimary,
+    fontSize: TYPOGRAPHY.fontSize.sm,
+    fontFamily: TYPOGRAPHY.fontFamily.semibold,
   },
   secondaryButton: {
     flex: 1,
     backgroundColor: 'transparent',
-    borderWidth: 2,
+    borderWidth: 1,
     borderColor: BRAND_COLORS.primary,
-    paddingVertical: 12,
-    borderRadius: 8,
+    height: 48,
+    justifyContent: 'center',
+    borderRadius: MIDNIGHT.radius.md,
     alignItems: 'center',
   },
   secondaryButtonText: {
     color: BRAND_COLORS.primary,
-    fontSize: 16,
-    fontWeight: '600',
+    fontSize: TYPOGRAPHY.fontSize.base,
+    fontFamily: TYPOGRAPHY.fontFamily.semibold,
   },
   cancelButton: {
-    marginTop: 12,
+    marginTop: SPACING.md,
     alignItems: 'center',
   },
   cancelText: {
     color: BRAND_COLORS.text[600],
-    fontSize: 14,
+    fontSize: TYPOGRAPHY.fontSize.sm,
+    fontFamily: TYPOGRAPHY.fontFamily.regular,
   },
 });

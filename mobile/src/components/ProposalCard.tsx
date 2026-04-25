@@ -1,6 +1,6 @@
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
 import { Proposal } from '../lib/types';
-import { BRAND_COLORS, GOLDEN_HOUR } from '../config/brand';
+import { BRAND_COLORS, MIDNIGHT, GOLD, TYPOGRAPHY, SPACING } from '../config/brand';
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase/client';
 import { Alert } from 'react-native';
@@ -8,6 +8,7 @@ import { formatProposalTime } from '../lib/timezone';
 import { getErrorAlert } from '../lib/errors';
 import { addBreadcrumb } from '../lib/sentry';
 import { trackEvent } from '../lib/analytics';
+import AnimatedPressable from './ui/AnimatedPressable';
 
 interface ProposalCardProps {
   proposal: Proposal;
@@ -192,7 +193,7 @@ export default function ProposalCard({
 
       <View style={styles.windows}>
         {proposal.windows.map((window, index) => (
-          <TouchableOpacity
+          <AnimatedPressable
             key={index}
             style={styles.windowButton}
             onPress={() => handleConfirm(window)}
@@ -201,72 +202,80 @@ export default function ProposalCard({
             <Text style={styles.windowText}>
               {formatTime(window.start)} - {formatTime(window.end)}
             </Text>
-          </TouchableOpacity>
+          </AnimatedPressable>
         ))}
       </View>
 
-      <TouchableOpacity style={styles.noneSuitsButton} onPress={handleNoneSuits} disabled={loading}>
+      <AnimatedPressable
+        style={styles.noneSuitsButton}
+        onPress={handleNoneSuits}
+        disabled={loading}
+      >
         <Text style={styles.noneSuitsText}>None of these suit me</Text>
-      </TouchableOpacity>
+      </AnimatedPressable>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: GOLDEN_HOUR.inputBg,
-    borderRadius: GOLDEN_HOUR.radius.lg,
-    padding: 16,
-    marginBottom: 12,
+    ...MIDNIGHT.glassCard,
+    padding: SPACING.base,
+    marginBottom: SPACING.md,
   },
   confirmedCard: {
-    backgroundColor: BRAND_COLORS.success + '20',
+    borderColor: GOLD[600],
+    borderWidth: 1,
+    ...MIDNIGHT.glow.gold,
   },
   expiredCard: {
-    backgroundColor: '#F1F5F9',
-    opacity: 0.6,
+    backgroundColor: MIDNIGHT.surface,
+    opacity: 0.5,
+    borderColor: MIDNIGHT.borderDefault,
   },
   dateTypes: {
-    fontSize: 16,
-    fontWeight: '600',
+    fontSize: TYPOGRAPHY.fontSize.base,
+    fontFamily: TYPOGRAPHY.fontFamily.serifBold,
     color: BRAND_COLORS.text[900],
-    marginBottom: 8,
+    marginBottom: SPACING.sm,
   },
   note: {
-    fontSize: 14,
+    fontSize: TYPOGRAPHY.fontSize.sm,
+    fontFamily: TYPOGRAPHY.fontFamily.regular,
     color: BRAND_COLORS.text[600],
-    marginBottom: 12,
+    marginBottom: SPACING.md,
   },
   windows: {
-    gap: 8,
-    marginBottom: 12,
+    gap: SPACING.sm,
+    marginBottom: SPACING.md,
   },
   windowButton: {
     backgroundColor: BRAND_COLORS.primary,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: GOLDEN_HOUR.radius.lg,
+    paddingVertical: SPACING.md,
+    paddingHorizontal: SPACING.base,
+    borderRadius: MIDNIGHT.radius.lg,
     alignItems: 'center',
-    ...GOLDEN_HOUR.shadow.warm,
+    ...MIDNIGHT.glow.primary,
   },
   windowText: {
-    color: '#fff',
-    fontSize: 14,
-    fontWeight: '600',
+    color: BRAND_COLORS.onPrimary,
+    fontSize: TYPOGRAPHY.fontSize.sm,
+    fontFamily: TYPOGRAPHY.fontFamily.semibold,
   },
   noneSuitsButton: {
-    paddingVertical: 8,
+    paddingVertical: SPACING.sm,
     alignItems: 'center',
   },
   noneSuitsText: {
-    color: BRAND_COLORS.text[600],
-    fontSize: 14,
+    color: BRAND_COLORS.text[500],
+    fontSize: TYPOGRAPHY.fontSize.sm,
+    fontFamily: TYPOGRAPHY.fontFamily.regular,
     textDecorationLine: 'underline',
   },
   statusText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: BRAND_COLORS.success,
-    marginBottom: 8,
+    fontSize: TYPOGRAPHY.fontSize.base,
+    fontFamily: TYPOGRAPHY.fontFamily.serifBold,
+    color: GOLD[600],
+    marginBottom: SPACING.sm,
   },
 });

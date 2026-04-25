@@ -12,7 +12,7 @@ import * as Location from 'expo-location';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { supabase } from '../../lib/supabase/client';
-import { BRAND_COLORS, GOLDEN_HOUR } from '../../config/brand';
+import { BRAND_COLORS, GOLDEN_HOUR, TYPOGRAPHY } from '../../config/brand';
 import { getErrorAlert } from '../../lib/errors';
 import { trackEvent } from '../../lib/analytics';
 import type { OnboardingStackParamList } from '../../navigation/OnboardingNavigator';
@@ -191,7 +191,7 @@ export default function LocationPermissionScreen() {
           disabled={loading || requesting}
         >
           {loading || requesting ? (
-            <ActivityIndicator color="#fff" />
+            <ActivityIndicator color={BRAND_COLORS.onPrimary} />
           ) : (
             <Text style={styles.buttonText}>
               {isGranted ? 'Continue' : isDenied ? 'Open Settings' : 'Enable Location'}
@@ -214,12 +214,13 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 32,
-    fontWeight: 'bold',
+    fontFamily: TYPOGRAPHY.fontFamily.serifBold,
     color: BRAND_COLORS.text[900],
     marginBottom: 8,
   },
   subtitle: {
     fontSize: 16,
+    fontFamily: TYPOGRAPHY.fontFamily.regular,
     color: BRAND_COLORS.text[600],
     marginBottom: 32,
     lineHeight: 24,
@@ -229,27 +230,27 @@ const styles = StyleSheet.create({
   },
   successContainer: {
     padding: 16,
-    backgroundColor: '#D1FAE5',
+    backgroundColor: 'rgba(22, 163, 74, 0.15)',
     borderRadius: GOLDEN_HOUR.radius.lg,
     borderWidth: 1,
-    borderColor: '#10B981',
+    borderColor: BRAND_COLORS.success,
   },
   successText: {
     fontSize: 16,
-    color: '#065F46',
-    fontWeight: '500',
+    color: '#34D399',
+    fontFamily: TYPOGRAPHY.fontFamily.medium,
   },
   errorContainer: {
     padding: 16,
-    backgroundColor: '#FEE2E2',
+    backgroundColor: 'rgba(239, 68, 68, 0.15)',
     borderRadius: GOLDEN_HOUR.radius.lg,
     borderWidth: 1,
-    borderColor: '#EF4444',
+    borderColor: BRAND_COLORS.danger,
   },
   errorText: {
     fontSize: 16,
-    color: '#991B1B',
-    fontWeight: '500',
+    color: '#EF4444',
+    fontFamily: TYPOGRAPHY.fontFamily.medium,
   },
   button: {
     backgroundColor: BRAND_COLORS.primary,
@@ -263,8 +264,8 @@ const styles = StyleSheet.create({
     opacity: 0.6,
   },
   buttonText: {
-    color: '#fff',
+    color: BRAND_COLORS.onPrimary,
     fontSize: 18,
-    fontWeight: '600',
+    fontFamily: TYPOGRAPHY.fontFamily.semibold,
   },
 });

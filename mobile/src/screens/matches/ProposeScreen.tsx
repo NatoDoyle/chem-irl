@@ -1,20 +1,14 @@
 import { useState, useRef, useMemo, useEffect } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-  TextInput,
-  Alert,
-  ActivityIndicator,
-  Platform,
-} from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TextInput, Alert, Platform } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { supabase } from '../../lib/supabase/client';
-import { BRAND_COLORS } from '../../config/brand';
+import { BRAND_COLORS, MIDNIGHT, GOLD, TYPOGRAPHY, SPACING } from '../../config/brand';
+import AnimatedPressable from '../../components/ui/AnimatedPressable';
 import { getErrorAlert, isRecoverableError } from '../../lib/errors';
 import { enqueue, processQueue, QueuedProposal } from '../../lib/offlineQueue';
 import { createThrottle } from '../../lib/throttle';
@@ -25,7 +19,8 @@ import {
   localDateToUTC,
   isWithinSevenDays,
   isValidTimeWindow,
-  formatProposalTime,
+  formatProposalDate,
+  formatProposalTimeOnly,
 } from '../../lib/timezone';
 import { weeklySlotsToPrefillWindows } from '../../lib/availability';
 import type { WeeklySlot } from '../../lib/types';
@@ -59,6 +54,7 @@ function hasWindowOverlap(
 }
 
 export default function ProposeScreen() {
+  const insets = useSafeAreaInsets();
   const route = useRoute();
   const navigation = useNavigation<ProposeNavigationProp>();
   const { matchId } = route.params as ProposeRouteParams;
@@ -450,228 +446,421 @@ export default function ProposeScreen() {
     }
   };
 
-  // Use timezone utility for consistent timezone-aware formatting
-  const formatTime = formatProposalTime;
+  const NOTE_MAX_LENGTH = 140;
 
   return (
-    <ScrollView style={styles.container}>
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Time Windows (2-3 required)</Text>
-        <Text style={styles.sectionSubtitle}>
-          Select 2-3 different times within the next 7 days
-        </Text>
-
-        {isPrefilled && selectedWindows.length > 0 && (
-          <Text style={styles.prefillHint}>
-            Pre-filled from your usual availability. Edit or remove as needed.
-          </Text>
-        )}
-
-        {selectedWindows.map((window, index) => (
-          <View key={index} style={styles.windowItem}>
-            <Text style={styles.windowText}>
-              {formatTime(window.start)} - {formatTime(window.end)}
-            </Text>
-            <TouchableOpacity onPress={() => removeTimeWindow(index)}>
-              <Text style={styles.removeText}>Remove</Text>
-            </TouchableOpacity>
-          </View>
-        ))}
-
-        {selectedWindows.length < 3 && (
-          <TouchableOpacity style={styles.addButton} onPress={addTimeWindow}>
-            <Text style={styles.addButtonText}>+ Add Time Window</Text>
-          </TouchableOpacity>
-        )}
-
-        {pickerMode && tempWindow && (
-          <View style={styles.pickerContainer}>
-            {pickerMode === 'date' && (
-              <DateTimePicker
-                value={tempWindow.date}
-                mode="date"
-                display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-                minimumDate={new Date()}
-                maximumDate={maximumDate}
-                onChange={handleDateChange}
-              />
-            )}
-            {pickerMode === 'start-time' && (
-              <View>
-                <DateTimePicker
-                  value={tempWindow.startTime}
-                  mode="time"
-                  display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-                  onChange={(e, d) => handleTimeChange(e, d, 'start')}
-                />
-                {Platform.OS === 'ios' && (
-                  <TouchableOpacity
-                    style={styles.pickerButton}
-                    onPress={() => setPickerMode('end-time')}
-                  >
-                    <Text style={styles.pickerButtonText}>Next: End Time</Text>
-                  </TouchableOpacity>
-                )}
-              </View>
-            )}
-            {pickerMode === 'end-time' && (
-              <View>
-                <DateTimePicker
-                  value={tempWindow.endTime}
-                  mode="time"
-                  display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-                  onChange={(e, d) => handleTimeChange(e, d, 'end')}
-                />
-                {Platform.OS === 'ios' && (
-                  <View style={styles.pickerButtonsRow}>
-                    <TouchableOpacity
-                      style={[styles.pickerButton, styles.pickerButtonSecondary]}
-                      onPress={() => {
-                        setPickerMode(null);
-                        setTempWindow(null);
-                      }}
-                    >
-                      <Text style={styles.pickerButtonSecondaryText}>Cancel</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity style={styles.pickerButton} onPress={confirmTimeWindow}>
-                      <Text style={styles.pickerButtonText}>Confirm</Text>
-                    </TouchableOpacity>
-                  </View>
-                )}
-              </View>
-            )}
-          </View>
-        )}
-      </View>
-
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Date Types (1-3 required)</Text>
-        <View style={styles.dateTypesGrid}>
-          {DATE_TYPES.map((type) => (
-            <TouchableOpacity
-              key={type}
-              style={[
-                styles.dateTypeButton,
-                selectedDateTypes.includes(type) && styles.dateTypeButtonSelected,
-              ]}
-              onPress={() => toggleDateType(type)}
-            >
-              <Text
-                style={[
-                  styles.dateTypeText,
-                  selectedDateTypes.includes(type) && styles.dateTypeTextSelected,
-                ]}
-              >
-                {type}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-      </View>
-
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Note (Optional)</Text>
-        <TextInput
-          style={styles.noteInput}
-          placeholder="Add a note..."
-          placeholderTextColor={BRAND_COLORS.text[600]}
-          value={note}
-          onChangeText={setNote}
-          multiline
-          numberOfLines={3}
-          maxLength={200}
-        />
-      </View>
-
-      <TouchableOpacity
-        style={[styles.submitButton, loading && styles.submitButtonDisabled]}
-        onPress={handleSubmit}
-        disabled={loading}
+    <View style={styles.container}>
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={{ paddingTop: insets.top, paddingBottom: 200 }}
+        showsVerticalScrollIndicator={false}
       >
-        {loading ? (
-          <ActivityIndicator color="#fff" />
-        ) : (
-          <Text style={styles.submitButtonText}>Send Proposal</Text>
-        )}
-      </TouchableOpacity>
-    </ScrollView>
+        {/* Header App Bar */}
+        <View style={styles.header}>
+          <AnimatedPressable
+            style={styles.headerBackButton}
+            onPress={() => navigation.goBack()}
+            haptic={false}
+          >
+            <Ionicons name="arrow-back" size={24} color={BRAND_COLORS.primary} />
+          </AnimatedPressable>
+          <Text style={styles.headerTitle}>Propose a Time</Text>
+          <View style={styles.headerSpacer} />
+        </View>
+
+        {/* Date Types Section */}
+        <View style={styles.section}>
+          <View style={styles.sectionHeaderRow}>
+            <Text style={styles.sectionTitle}>What's the vibe?</Text>
+            <Text style={styles.sectionHeaderRight}>SELECT ONE</Text>
+          </View>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.dateTypesScroll}
+          >
+            {DATE_TYPES.map((type) => (
+              <AnimatedPressable
+                key={type}
+                style={[
+                  styles.dateTypeButton,
+                  selectedDateTypes.includes(type) && styles.dateTypeButtonSelected,
+                ]}
+                onPress={() => toggleDateType(type)}
+              >
+                <Text
+                  style={[
+                    styles.dateTypeText,
+                    selectedDateTypes.includes(type) && styles.dateTypeTextSelected,
+                  ]}
+                >
+                  {type}
+                </Text>
+              </AnimatedPressable>
+            ))}
+          </ScrollView>
+        </View>
+
+        {/* Time Windows Section */}
+        <View style={styles.section}>
+          <View style={styles.sectionHeaderRow}>
+            <Text style={styles.sectionTitle}>Suggested Times</Text>
+            <Text style={styles.sectionHeaderRight}>MAX 3 OPTIONS</Text>
+          </View>
+
+          {isPrefilled && selectedWindows.length > 0 && (
+            <Text style={styles.prefillHint}>
+              Pre-filled from your usual availability. Edit or remove as needed.
+            </Text>
+          )}
+
+          {selectedWindows.map((window, index) => (
+            <View key={index} style={styles.windowCard}>
+              {/* Date Row */}
+              <View style={styles.windowRow}>
+                <View style={styles.windowIconBox}>
+                  <Ionicons name="calendar-outline" size={20} color={BRAND_COLORS.text[600]} />
+                </View>
+                <View style={styles.windowInfo}>
+                  <Text style={styles.windowLabel}>DATE</Text>
+                  <Text style={styles.windowValue}>{formatProposalDate(window.start)}</Text>
+                </View>
+                <AnimatedPressable
+                  onPress={() => removeTimeWindow(index)}
+                  haptic={false}
+                  style={styles.windowAction}
+                >
+                  <Ionicons name="create-outline" size={20} color={BRAND_COLORS.text[500]} />
+                </AnimatedPressable>
+              </View>
+              {/* Divider */}
+              <View style={styles.windowDivider} />
+              {/* Time Row */}
+              <View style={styles.windowRow}>
+                <View style={styles.windowIconBox}>
+                  <Ionicons name="time-outline" size={20} color={BRAND_COLORS.text[600]} />
+                </View>
+                <View style={styles.windowInfo}>
+                  <Text style={styles.windowLabel}>WINDOW</Text>
+                  <Text style={styles.windowValue}>
+                    {formatProposalTimeOnly(window.start)} - {formatProposalTimeOnly(window.end)}
+                  </Text>
+                </View>
+                <View style={styles.windowAction}>
+                  <Ionicons name="chevron-down" size={20} color={BRAND_COLORS.text[500]} />
+                </View>
+              </View>
+            </View>
+          ))}
+
+          {selectedWindows.length < 3 && (
+            <AnimatedPressable style={styles.addButton} onPress={addTimeWindow}>
+              <Ionicons name="add-circle-outline" size={30} color={BRAND_COLORS.text[500]} />
+              <Text style={styles.addButtonText}>Add another option</Text>
+            </AnimatedPressable>
+          )}
+
+          {pickerMode && tempWindow && (
+            <View style={styles.pickerContainer}>
+              {pickerMode === 'date' && (
+                <DateTimePicker
+                  value={tempWindow.date}
+                  mode="date"
+                  display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                  themeVariant="dark"
+                  minimumDate={new Date()}
+                  maximumDate={maximumDate}
+                  onChange={handleDateChange}
+                />
+              )}
+              {pickerMode === 'start-time' && (
+                <View>
+                  <DateTimePicker
+                    value={tempWindow.startTime}
+                    mode="time"
+                    display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                    themeVariant="dark"
+                    onChange={(e, d) => handleTimeChange(e, d, 'start')}
+                  />
+                  {Platform.OS === 'ios' && (
+                    <AnimatedPressable
+                      style={styles.pickerButton}
+                      onPress={() => setPickerMode('end-time')}
+                    >
+                      <Text style={styles.pickerButtonText}>Next: End Time</Text>
+                    </AnimatedPressable>
+                  )}
+                </View>
+              )}
+              {pickerMode === 'end-time' && (
+                <View>
+                  <DateTimePicker
+                    value={tempWindow.endTime}
+                    mode="time"
+                    display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                    themeVariant="dark"
+                    onChange={(e, d) => handleTimeChange(e, d, 'end')}
+                  />
+                  {Platform.OS === 'ios' && (
+                    <View style={styles.pickerButtonsRow}>
+                      <AnimatedPressable
+                        style={[styles.pickerButton, styles.pickerButtonSecondary]}
+                        onPress={() => {
+                          setPickerMode(null);
+                          setTempWindow(null);
+                        }}
+                      >
+                        <Text style={styles.pickerButtonSecondaryText}>Cancel</Text>
+                      </AnimatedPressable>
+                      <AnimatedPressable style={styles.pickerButton} onPress={confirmTimeWindow}>
+                        <Text style={styles.pickerButtonText}>Confirm</Text>
+                      </AnimatedPressable>
+                    </View>
+                  )}
+                </View>
+              )}
+            </View>
+          )}
+        </View>
+
+        {/* Note Section */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Add a note (optional)</Text>
+          <View style={styles.noteWrapper}>
+            <TextInput
+              style={styles.noteInput}
+              placeholder="Add a note..."
+              placeholderTextColor={BRAND_COLORS.text[600]}
+              value={note}
+              onChangeText={setNote}
+              multiline
+              numberOfLines={3}
+              maxLength={NOTE_MAX_LENGTH}
+            />
+            <Text style={styles.noteCounter}>
+              {note.length} / {NOTE_MAX_LENGTH}
+            </Text>
+          </View>
+        </View>
+
+        {/* Recipient Card */}
+        <View style={styles.section}>
+          <View style={styles.recipientCard}>
+            <View style={styles.recipientAvatar} />
+            <View style={styles.recipientInfo}>
+              <Text style={styles.recipientLabel}>Proposing to</Text>
+              <Text style={styles.recipientName}>Your Match</Text>
+            </View>
+            <View style={styles.recipientHeart}>
+              <Ionicons name="heart" size={20} color={BRAND_COLORS.primary} />
+            </View>
+          </View>
+        </View>
+      </ScrollView>
+
+      {/* Fixed Footer */}
+      <LinearGradient
+        colors={['transparent', MIDNIGHT.bg, MIDNIGHT.bg]}
+        style={[styles.footer, { paddingBottom: Math.max(insets.bottom, 20) + 20 }]}
+        pointerEvents="box-none"
+      >
+        <AnimatedPressable
+          style={[styles.goldButton, loading && styles.goldButtonDisabled]}
+          onPress={handleSubmit}
+          disabled={loading}
+        >
+          <Text style={styles.goldButtonText}>{loading ? 'Sending...' : 'Send Proposal'}</Text>
+          {!loading && (
+            <Ionicons
+              name="send"
+              size={18}
+              color={BRAND_COLORS.onPrimary}
+              style={styles.sendIcon}
+            />
+          )}
+        </AnimatedPressable>
+        <Text style={styles.expiryNote}>PROPOSALS EXPIRE IN 72 HOURS</Text>
+      </LinearGradient>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: MIDNIGHT.bg,
   },
-  section: {
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E2E8F0',
+  scrollView: {
+    flex: 1,
   },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '600',
+
+  // Header
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    height: 56,
+    paddingHorizontal: SPACING.base,
+  },
+  headerBackButton: {
+    width: 40,
+    height: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  headerTitle: {
+    flex: 1,
+    textAlign: 'center',
+    fontSize: TYPOGRAPHY.fontSize.xl,
+    fontFamily: TYPOGRAPHY.fontFamily.serifBold,
     color: BRAND_COLORS.text[900],
-    marginBottom: 4,
   },
-  sectionSubtitle: {
-    fontSize: 14,
-    color: BRAND_COLORS.text[600],
-    marginBottom: 12,
+  headerSpacer: {
+    width: 40,
   },
-  prefillHint: {
-    fontSize: 13,
-    color: BRAND_COLORS.info,
-    fontStyle: 'italic',
-    marginBottom: 8,
+
+  // Sections
+  section: {
+    paddingHorizontal: SPACING.lg,
+    paddingVertical: SPACING.base,
   },
-  windowItem: {
+  sectionHeaderRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
-    backgroundColor: '#F8FAFC',
-    padding: 12,
-    borderRadius: 8,
-    marginBottom: 8,
+    alignItems: 'baseline',
+    marginBottom: SPACING.md,
   },
-  windowText: {
-    fontSize: 14,
+  sectionTitle: {
+    fontSize: TYPOGRAPHY.fontSize.lg,
+    fontFamily: TYPOGRAPHY.fontFamily.serifBold,
     color: BRAND_COLORS.text[900],
   },
-  removeText: {
-    fontSize: 14,
-    color: BRAND_COLORS.danger,
+  sectionHeaderRight: {
+    fontSize: TYPOGRAPHY.fontSize.xs,
+    fontFamily: TYPOGRAPHY.fontFamily.medium,
+    color: BRAND_COLORS.text[500],
+    textTransform: 'uppercase',
+    letterSpacing: TYPOGRAPHY.letterSpacing.wide,
   },
-  addButton: {
-    borderWidth: 2,
-    borderColor: BRAND_COLORS.primary,
-    borderStyle: 'dashed',
-    padding: 12,
-    borderRadius: 8,
+  prefillHint: {
+    fontSize: TYPOGRAPHY.fontSize.xs + 1,
+    fontFamily: TYPOGRAPHY.fontFamily.regular,
+    color: BRAND_COLORS.primary,
+    fontStyle: 'italic',
+    marginBottom: SPACING.sm,
+  },
+
+  // Date Types
+  dateTypesScroll: {
+    paddingRight: SPACING.lg,
+  },
+  dateTypeButton: {
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 9999,
+    marginRight: 12,
+    backgroundColor: MIDNIGHT.surface,
+    borderWidth: 1,
+    borderColor: '#1a1f2e',
+  },
+  dateTypeButtonSelected: {
+    backgroundColor: BRAND_COLORS.primary,
+    borderColor: 'rgba(10,127,116,0.2)',
+    ...MIDNIGHT.glow.selected,
+  },
+  dateTypeText: {
+    fontSize: TYPOGRAPHY.fontSize.sm,
+    fontFamily: TYPOGRAPHY.fontFamily.medium,
+    color: BRAND_COLORS.text[600],
+  },
+  dateTypeTextSelected: {
+    color: BRAND_COLORS.onPrimary,
+    fontFamily: TYPOGRAPHY.fontFamily.semibold,
+  },
+
+  // Time Window Cards
+  windowCard: {
+    padding: 20,
+    borderRadius: 24,
+    backgroundColor: MIDNIGHT.surface,
+    borderWidth: 1,
+    borderColor: '#1a1f2e',
+    marginBottom: SPACING.md,
+  },
+  windowRow: {
+    flexDirection: 'row',
     alignItems: 'center',
   },
-  addButtonText: {
-    color: BRAND_COLORS.primary,
-    fontSize: 14,
-    fontWeight: '600',
+  windowIconBox: {
+    width: 40,
+    height: 40,
+    borderRadius: MIDNIGHT.radius.sm,
+    backgroundColor: MIDNIGHT.bg,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: SPACING.md,
   },
+  windowInfo: {
+    flex: 1,
+  },
+  windowLabel: {
+    fontSize: TYPOGRAPHY.fontSize.xs,
+    fontFamily: TYPOGRAPHY.fontFamily.medium,
+    color: BRAND_COLORS.text[500],
+    textTransform: 'uppercase',
+    letterSpacing: TYPOGRAPHY.letterSpacing.wide,
+    marginBottom: 2,
+  },
+  windowValue: {
+    fontSize: TYPOGRAPHY.fontSize.base,
+    fontFamily: TYPOGRAPHY.fontFamily.medium,
+    color: BRAND_COLORS.text[900],
+  },
+  windowAction: {
+    width: 32,
+    height: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  windowDivider: {
+    height: 1,
+    backgroundColor: 'rgba(26,31,46,0.5)',
+    marginVertical: SPACING.md,
+  },
+
+  // Add Button
+  addButton: {
+    padding: 24,
+    borderRadius: 24,
+    borderWidth: 1,
+    borderStyle: 'dashed',
+    borderColor: '#1a1f2e',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  addButtonText: {
+    color: BRAND_COLORS.text[500],
+    fontSize: TYPOGRAPHY.fontSize.sm,
+    fontFamily: TYPOGRAPHY.fontFamily.medium,
+    marginTop: SPACING.xs,
+  },
+
+  // Picker
   pickerContainer: {
-    marginTop: 16,
-    padding: 16,
-    backgroundColor: '#F8FAFC',
-    borderRadius: 8,
+    marginTop: SPACING.base,
+    padding: SPACING.base,
+    ...MIDNIGHT.glassCard,
   },
   pickerButtonsRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginTop: 16,
-    gap: 12,
+    marginTop: SPACING.base,
+    gap: SPACING.md,
   },
   pickerButton: {
     flex: 1,
     backgroundColor: BRAND_COLORS.primary,
-    paddingVertical: 12,
-    borderRadius: 8,
+    paddingVertical: SPACING.md,
+    borderRadius: MIDNIGHT.radius.md,
     alignItems: 'center',
   },
   pickerButtonSecondary: {
@@ -680,64 +869,119 @@ const styles = StyleSheet.create({
     borderColor: BRAND_COLORS.primary,
   },
   pickerButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
+    color: BRAND_COLORS.onPrimary,
+    fontSize: TYPOGRAPHY.fontSize.base,
+    fontFamily: TYPOGRAPHY.fontFamily.semibold,
   },
   pickerButtonSecondaryText: {
     color: BRAND_COLORS.primary,
-    fontSize: 16,
-    fontWeight: '600',
+    fontSize: TYPOGRAPHY.fontSize.base,
+    fontFamily: TYPOGRAPHY.fontFamily.semibold,
   },
-  dateTypesGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-    marginTop: 8,
-  },
-  dateTypeButton: {
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    borderRadius: 20,
-    backgroundColor: '#F8FAFC',
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-  },
-  dateTypeButtonSelected: {
-    backgroundColor: BRAND_COLORS.primary,
-    borderColor: BRAND_COLORS.primary,
-  },
-  dateTypeText: {
-    fontSize: 14,
-    color: BRAND_COLORS.text[900],
-  },
-  dateTypeTextSelected: {
-    color: '#fff',
-    fontWeight: '600',
+
+  // Note
+  noteWrapper: {
+    position: 'relative',
+    marginTop: SPACING.sm,
   },
   noteInput: {
     borderWidth: 1,
-    borderColor: '#E2E8F0',
-    borderRadius: 8,
-    padding: 12,
-    fontSize: 14,
+    borderColor: MIDNIGHT.borderDefault,
+    borderRadius: MIDNIGHT.radius.lg,
+    padding: SPACING.md,
+    paddingBottom: SPACING.lg,
+    fontSize: TYPOGRAPHY.fontSize.sm,
+    fontFamily: TYPOGRAPHY.fontFamily.regular,
+    backgroundColor: MIDNIGHT.inputBg,
+    color: BRAND_COLORS.text[900],
     minHeight: 80,
     textAlignVertical: 'top',
-    marginTop: 8,
   },
-  submitButton: {
-    backgroundColor: BRAND_COLORS.primary,
-    paddingVertical: 16,
-    margin: 16,
-    borderRadius: 8,
+  noteCounter: {
+    position: 'absolute',
+    bottom: 12,
+    right: 12,
+    fontSize: 10,
+    fontFamily: TYPOGRAPHY.fontFamily.medium,
+    color: BRAND_COLORS.text[500],
+    textTransform: 'uppercase',
+  },
+
+  // Recipient Card
+  recipientCard: {
+    flexDirection: 'row',
     alignItems: 'center',
+    padding: SPACING.base,
+    borderRadius: MIDNIGHT.radius.lg,
+    backgroundColor: MIDNIGHT.surface,
+    borderWidth: 1,
+    borderColor: '#1a1f2e',
   },
-  submitButtonDisabled: {
+  recipientAvatar: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#1a1f2e',
+    marginRight: SPACING.md,
+  },
+  recipientInfo: {
+    flex: 1,
+  },
+  recipientLabel: {
+    fontSize: TYPOGRAPHY.fontSize.sm,
+    fontFamily: TYPOGRAPHY.fontFamily.regular,
+    color: BRAND_COLORS.text[500],
+    marginBottom: 2,
+  },
+  recipientName: {
+    fontSize: TYPOGRAPHY.fontSize.base,
+    fontFamily: TYPOGRAPHY.fontFamily.serifBold,
+    color: BRAND_COLORS.text[900],
+  },
+  recipientHeart: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(10, 127, 116, 0.2)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  // Footer
+  footer: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    paddingHorizontal: 24,
+    paddingTop: 48,
+  },
+  goldButton: {
+    backgroundColor: GOLD[600],
+    paddingVertical: 16,
+    borderRadius: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexDirection: 'row',
+    ...MIDNIGHT.glow.gold,
+  },
+  goldButtonDisabled: {
     opacity: 0.6,
   },
-  submitButtonText: {
-    color: '#fff',
-    fontSize: 18,
-    fontWeight: '600',
+  goldButtonText: {
+    color: BRAND_COLORS.onPrimary,
+    fontSize: TYPOGRAPHY.fontSize.lg,
+    fontFamily: TYPOGRAPHY.fontFamily.bold,
+  },
+  sendIcon: {
+    marginLeft: SPACING.sm,
+  },
+  expiryNote: {
+    textAlign: 'center',
+    fontSize: TYPOGRAPHY.fontSize.xs,
+    fontFamily: TYPOGRAPHY.fontFamily.medium,
+    color: 'rgba(202, 138, 4, 0.6)',
+    letterSpacing: TYPOGRAPHY.letterSpacing.wide * 2,
+    marginTop: SPACING.md,
   },
 });

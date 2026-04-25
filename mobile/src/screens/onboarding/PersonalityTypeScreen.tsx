@@ -8,7 +8,7 @@ import {
   ActivityIndicator,
   TextInput,
 } from 'react-native';
-import { BRAND_COLORS, GOLDEN_HOUR } from '../../config/brand';
+import { BRAND_COLORS, GOLDEN_HOUR, TYPOGRAPHY } from '../../config/brand';
 import { MBTI_OPTIONS } from '../../config/profileOptions';
 import { onboardingStyles as sharedStyles } from './onboardingStyles';
 import { useOnboardingSave } from './useOnboardingSave';
@@ -90,7 +90,7 @@ export default function PersonalityTypeScreen() {
             disabled={loading}
           >
             {loading ? (
-              <ActivityIndicator color="#fff" />
+              <ActivityIndicator color={BRAND_COLORS.onPrimary} />
             ) : (
               <Text style={sharedStyles.buttonText}>Continue</Text>
             )}
@@ -107,7 +107,7 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: 16,
-    fontWeight: '600',
+    fontFamily: TYPOGRAPHY.fontFamily.semibold,
     color: BRAND_COLORS.text[900],
     marginBottom: 8,
   },
@@ -126,16 +126,16 @@ const styles = StyleSheet.create({
   },
   typeChipSelected: {
     borderColor: BRAND_COLORS.primary,
-    backgroundColor: BRAND_COLORS.primarySoft || '#D1FFFB',
+    backgroundColor: BRAND_COLORS.primarySoft,
   },
   typeText: {
     fontSize: 16,
     color: BRAND_COLORS.text[900],
-    fontWeight: '500',
+    fontFamily: TYPOGRAPHY.fontFamily.medium,
   },
   typeTextSelected: {
     color: BRAND_COLORS.primary,
-    fontWeight: '600',
+    fontFamily: TYPOGRAPHY.fontFamily.semibold,
   },
   input: {
     borderWidth: 1,
@@ -143,6 +143,7 @@ const styles = StyleSheet.create({
     borderRadius: GOLDEN_HOUR.radius.lg,
     padding: 16,
     fontSize: 16,
+    fontFamily: TYPOGRAPHY.fontFamily.regular,
     backgroundColor: GOLDEN_HOUR.inputBg,
     color: BRAND_COLORS.text[900],
   },
