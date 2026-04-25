@@ -3,21 +3,25 @@ import {
   View,
   Text,
   StyleSheet,
-  FlatList,
-  TouchableOpacity,
-  ActivityIndicator,
+  SectionList,
   RefreshControl,
   AppState,
+  Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { Image } from 'expo-image';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { supabase } from '../../lib/supabase/client';
 import { Match } from '../../lib/types';
-import { BRAND_COLORS, GOLDEN_HOUR } from '../../config/brand';
+import { BRAND_COLORS, MIDNIGHT, GOLD, TYPOGRAPHY, SPACING } from '../../config/brand';
 import { getErrorAlert } from '../../lib/errors';
 import { createDebounce } from '../../lib/debounce';
 import type { RealtimeChannel } from '@supabase/supabase-js';
+import AnimatedPressable from '../../components/ui/AnimatedPressable';
+import GHButton from '../../components/ui/GHButton';
+import { SkeletonCard } from '../../components/ui/Skeleton';
 
 const REFRESH_THROTTLE_MS = 10000; // 10 seconds - minimum time between auto-refreshes
 const REALTIME_DEBOUNCE_MS = 750; // 750ms debounce for realtime subscription callbacks
@@ -35,30 +39,187 @@ interface MatchWithProfile extends Match {
   otherUserId: string;
   otherUserPhoto?: string;
   otherUserName?: string;
+  lastMessage?: string;
+  lastMessageIsOwn?: boolean;
 }
 
-// Memoized match item component for better FlatList performance
+type MatchSection = {
+  title: string;
+  data: MatchWithProfile[];
+  type: 'active' | 'expired';
+};
+
+/** Format remaining time as "Xh Ym left" */
+function formatTimeLeft(expiresAt: string): { text: string; urgent: boolean } {
+  const now = Date.now();
+  const expiry = new Date(expiresAt).getTime();
+  const diffMs = expiry - now;
+
+  if (diffMs <= 0) {
+    return { text: 'Expired', urgent: true };
+  }
+
+  const totalMinutes = Math.floor(diffMs / 60000);
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+  const urgent = hours < 12;
+
+  if (hours > 0) {
+    return { text: `${hours}h ${minutes}m left`, urgent };
+  }
+  return { text: `${minutes}m left`, urgent };
+}
+
+/** Format how long ago the match was created */
+function formatDaysAgo(createdAt: string): string {
+  const now = Date.now();
+  const created = new Date(createdAt).getTime();
+  const diffDays = Math.floor((now - created) / (1000 * 60 * 60 * 24));
+
+  if (diffDays === 0) return 'Matched today';
+  if (diffDays === 1) return 'Matched 1 day ago';
+  return `Matched ${diffDays} days ago`;
+}
+
+// Memoized match item component for active matches
 const MatchItem = memo(
-  ({ item, onPress }: { item: MatchWithProfile; onPress: (matchId: string) => void }) => (
-    <TouchableOpacity style={styles.matchCard} onPress={() => onPress(item.match_id)}>
-      <Image
-        source={item.otherUserPhoto ? { uri: item.otherUserPhoto } : PLACEHOLDER_IMAGE}
-        style={styles.avatar}
-        contentFit="cover"
-        cachePolicy="memory-disk"
-      />
-      <View style={styles.matchInfo}>
-        <Text style={styles.matchName}>{item.otherUserName}</Text>
-        <Text style={styles.matchStatus}>{item.status === 'open' ? 'Open' : item.status}</Text>
-      </View>
-      <Text style={styles.chevron}>›</Text>
-    </TouchableOpacity>
-  )
+  ({ item, onPress }: { item: MatchWithProfile; onPress: (matchId: string) => void }) => {
+    const [timeLeft, setTimeLeft] = useState(() => formatTimeLeft(item.expires_at));
+
+    // Tick timer every 60 seconds
+    useEffect(() => {
+      const interval = setInterval(() => {
+        setTimeLeft(formatTimeLeft(item.expires_at));
+      }, 60000);
+      return () => clearInterval(interval);
+    }, [item.expires_at]);
+
+    const messagePreview = item.lastMessage
+      ? item.lastMessageIsOwn
+        ? `You: ${item.lastMessage}`
+        : item.lastMessage
+      : 'No messages yet';
+
+    return (
+      <AnimatedPressable style={styles.matchCard} onPress={() => onPress(item.match_id)}>
+        <View style={styles.cardRow}>
+          <View style={styles.avatarContainer}>
+            <Image
+              source={item.otherUserPhoto ? { uri: item.otherUserPhoto } : PLACEHOLDER_IMAGE}
+              style={styles.avatar}
+              contentFit="cover"
+              cachePolicy="memory-disk"
+            />
+            <View style={styles.onlineDot} />
+          </View>
+          <View style={styles.matchInfo}>
+            <View style={styles.topRow}>
+              <Text style={styles.matchName} numberOfLines={1}>
+                {item.otherUserName}
+              </Text>
+              <Text
+                style={[styles.timerText, timeLeft.urgent && styles.timerTextUrgent]}
+                numberOfLines={1}
+              >
+                {timeLeft.text}
+              </Text>
+            </View>
+            <View style={styles.bottomRow}>
+              <Text style={styles.messagePreview} numberOfLines={1}>
+                {messagePreview}
+              </Text>
+              <Text style={styles.chevron}>›</Text>
+            </View>
+          </View>
+        </View>
+      </AnimatedPressable>
+    );
+  }
 );
 
 MatchItem.displayName = 'MatchItem';
 
+// Memoized match item component for expired matches
+const ExpiredMatchItem = memo(
+  ({
+    item,
+    onPress,
+    onReactivate,
+  }: {
+    item: MatchWithProfile;
+    onPress: (matchId: string) => void;
+    onReactivate: (matchId: string) => void;
+  }) => {
+    const [reactivating, setReactivating] = useState(false);
+
+    const handleReactivate = useCallback(async () => {
+      setReactivating(true);
+      try {
+        const { error } = await supabase.rpc('reactivate_match', {
+          p_match_id: item.match_id,
+        });
+        if (error) {
+          const { message } = getErrorAlert(error, 'Failed to reactivate match');
+          Alert.alert('Error', message);
+        } else {
+          onReactivate(item.match_id);
+        }
+      } catch (err: any) {
+        const { message } = getErrorAlert(err, 'Failed to reactivate match');
+        Alert.alert('Error', message);
+      } finally {
+        setReactivating(false);
+      }
+    }, [item.match_id, onReactivate]);
+
+    return (
+      <AnimatedPressable
+        style={[styles.matchCard, styles.matchCardExpired]}
+        onPress={() => onPress(item.match_id)}
+      >
+        <View style={styles.cardRow}>
+          <View style={styles.avatarContainer}>
+            <Image
+              source={item.otherUserPhoto ? { uri: item.otherUserPhoto } : PLACEHOLDER_IMAGE}
+              style={styles.avatar}
+              contentFit="cover"
+              cachePolicy="memory-disk"
+            />
+          </View>
+          <View style={styles.matchInfo}>
+            <View style={styles.topRow}>
+              <Text style={[styles.matchName, styles.expiredText]} numberOfLines={1}>
+                {item.otherUserName}
+              </Text>
+              <Text style={styles.expiredLabel}>Expired</Text>
+            </View>
+            <View style={styles.bottomRow}>
+              <Text style={[styles.messagePreview, styles.expiredText]} numberOfLines={1}>
+                {formatDaysAgo(item.created_at)}
+              </Text>
+              {reactivating ? (
+                <ActivityIndicator size="small" color={GOLD[600]} />
+              ) : (
+                <GHButton
+                  title="Reactivate"
+                  onPress={handleReactivate}
+                  variant="gold"
+                  style={styles.reactivateButton}
+                  textStyle={styles.reactivateButtonText}
+                />
+              )}
+            </View>
+          </View>
+        </View>
+      </AnimatedPressable>
+    );
+  }
+);
+
+ExpiredMatchItem.displayName = 'ExpiredMatchItem';
+
 export default function MatchesScreen() {
+  const insets = useSafeAreaInsets();
   const navigation = useNavigation<MatchesScreenNavigationProp>();
   const [matches, setMatches] = useState<MatchWithProfile[]>([]);
   const [loading, setLoading] = useState(true);
@@ -86,11 +247,11 @@ export default function MatchesScreen() {
         }
 
         // Get matches directly from matches table (RLS allows viewing own matches)
+        // Fetch ALL matches (open + expired) for section display
         const { data: matchesData, error: queryError } = await supabase
           .from('matches')
-          .select('match_id, user_a, user_b, status, created_at')
+          .select('match_id, user_a, user_b, status, created_at, expires_at')
           .or(`user_a.eq.${user.id},user_b.eq.${user.id}`)
-          .eq('status', 'open')
           .order('created_at', { ascending: false });
 
         if (queryError) {
@@ -108,12 +269,15 @@ export default function MatchesScreen() {
         );
 
         // Batch fetch all profiles in a single query
-        let profilesMap = new Map<string, { photos: string[]; prompts: Record<string, string> }>();
+        let profilesMap = new Map<
+          string,
+          { full_name: string; photos: string[]; prompts: Record<string, string> }
+        >();
         if (otherUserIds.length > 0) {
           try {
             const { data: profilesData } = await supabase
               .from('profiles')
-              .select('id, photos, prompts')
+              .select('id, full_name, photos, prompts')
               .in('id', otherUserIds);
 
             // Create a map for O(1) lookup
@@ -122,6 +286,7 @@ export default function MatchesScreen() {
                 profilesData.map((profile) => [
                   profile.id,
                   {
+                    full_name: (profile.full_name as string) || '',
                     photos: (profile.photos as string[]) || [],
                     prompts: (profile.prompts as Record<string, string>) || {},
                   },
@@ -134,18 +299,39 @@ export default function MatchesScreen() {
           }
         }
 
+        // Batch fetch last messages per match
+        const matchIds = (matchesData || []).map((m: Match) => m.match_id);
+        let lastMessageMap = new Map<
+          string,
+          { content: string; sender_id: string; created_at: string }
+        >();
+        if (matchIds.length > 0) {
+          const { data: messagesData } = await supabase
+            .from('messages')
+            .select('match_id, content, sender_id, created_at')
+            .in('match_id', matchIds)
+            .order('created_at', { ascending: false });
+          if (messagesData) {
+            for (const msg of messagesData) {
+              if (!lastMessageMap.has(msg.match_id)) {
+                lastMessageMap.set(msg.match_id, msg);
+              }
+            }
+          }
+        }
+
         // Map matches with profile info from batch fetch
         const matchesWithProfiles = (matchesData || []).map((match: Match) => {
           const otherUserId = match.user_a === user.id ? match.user_b : match.user_a;
           const profile = profilesMap.get(otherUserId);
-          const photos = profile?.photos || [];
-          const prompts = profile?.prompts || {};
 
           return {
             ...match,
             otherUserId,
-            otherUserPhoto: photos[0],
-            otherUserName: prompts.headline || 'No name',
+            otherUserPhoto: (profile?.photos || [])[0],
+            otherUserName: profile?.full_name || 'No name',
+            lastMessage: lastMessageMap.get(match.match_id)?.content,
+            lastMessageIsOwn: lastMessageMap.get(match.match_id)?.sender_id === user.id,
           };
         });
 
@@ -318,10 +504,26 @@ export default function MatchesScreen() {
     [navigation]
   );
 
+  const handleReactivate = useCallback(() => {
+    // Refresh matches after reactivation
+    loadMatches(true);
+  }, [loadMatches]);
+
+  // Build sections for SectionList
+  const activeMatches = matches.filter((m) => m.status === 'open');
+  const expiredMatches = matches.filter((m) => m.status === 'expired');
+
+  const sections: MatchSection[] = [
+    { title: 'Conversations', data: activeMatches, type: 'active' as const },
+    ...(expiredMatches.length > 0
+      ? [{ title: 'Expired', data: expiredMatches, type: 'expired' as const }]
+      : []),
+  ];
+
   // Calculate item height for getItemLayout optimization
-  // matchCard: padding 16 top + 16 bottom = 32, avatar 60, marginBottom 12
-  // Total: 32 + 60 + 12 = 104px
-  const ITEM_HEIGHT = 104;
+  // matchCard: padding 12 top + 12 bottom = 24, two rows ~48, marginBottom 12
+  // Total: ~84px
+  const ITEM_HEIGHT = 84;
   const getItemLayout = useCallback(
     (_data: unknown, index: number) => ({
       length: ITEM_HEIGHT,
@@ -332,51 +534,104 @@ export default function MatchesScreen() {
   );
 
   const renderItem = useCallback(
-    ({ item }: { item: MatchWithProfile }) => <MatchItem item={item} onPress={handleMatchPress} />,
-    [handleMatchPress]
+    ({ item, section }: { item: MatchWithProfile; section: MatchSection }) => {
+      if (section.type === 'expired') {
+        return (
+          <ExpiredMatchItem
+            item={item}
+            onPress={handleMatchPress}
+            onReactivate={handleReactivate}
+          />
+        );
+      }
+      return <MatchItem item={item} onPress={handleMatchPress} />;
+    },
+    [handleMatchPress, handleReactivate]
+  );
+
+  const renderSectionHeader = useCallback(
+    ({ section }: { section: MatchSection }) => (
+      <View style={styles.listHeader}>
+        <Text
+          style={[
+            styles.listHeaderTitle,
+            section.type === 'expired' && styles.listHeaderTitleMuted,
+          ]}
+        >
+          {section.title}
+        </Text>
+        {section.data.length > 0 && (
+          <View style={[styles.newBadge, section.type === 'expired' && styles.newBadgeExpired]}>
+            <Text
+              style={[
+                styles.newBadgeText,
+                section.type === 'expired' && styles.newBadgeTextExpired,
+              ]}
+            >
+              {section.data.length} Match{section.data.length !== 1 ? 'es' : ''}
+            </Text>
+          </View>
+        )}
+      </View>
+    ),
+    []
   );
 
   if (loading) {
     return (
-      <View style={styles.container}>
-        <ActivityIndicator size="large" color={BRAND_COLORS.primary} />
+      <View style={[styles.container, { paddingTop: insets.top }]}>
+        <View style={styles.headerBar}>
+          <Text style={styles.headerTitle}>Matches</Text>
+        </View>
+        <View style={styles.skeletonContainer}>
+          <SkeletonCard style={styles.skeletonItem} />
+          <SkeletonCard style={styles.skeletonItem} />
+          <SkeletonCard style={styles.skeletonItem} />
+        </View>
       </View>
     );
   }
 
   if (error) {
     return (
-      <View style={styles.container}>
+      <View style={[styles.container, styles.centeredContainer, { paddingTop: insets.top }]}>
         <Text style={styles.errorText}>Failed to load matches</Text>
         <Text style={styles.errorSubtext}>{error}</Text>
-        <TouchableOpacity style={styles.retryButton} onPress={() => loadMatches()}>
-          <Text style={styles.retryButtonText}>Retry</Text>
-        </TouchableOpacity>
+        <GHButton title="Retry" onPress={() => loadMatches()} style={styles.actionButton} />
       </View>
     );
   }
 
   if (matches.length === 0) {
     return (
-      <View style={styles.container}>
+      <View style={[styles.container, styles.centeredContainer, { paddingTop: insets.top }]}>
         <Text style={styles.emptyText}>No matches yet</Text>
         <Text style={styles.emptySubtext}>Start swiping to find matches!</Text>
-        <TouchableOpacity style={styles.refreshButton} onPress={() => loadMatches()}>
-          <Text style={styles.refreshButtonText}>Refresh</Text>
-        </TouchableOpacity>
+        <GHButton title="Refresh" onPress={() => loadMatches()} style={styles.actionButton} />
       </View>
     );
   }
 
   return (
-    <View style={styles.container}>
-      <FlatList
-        data={matches}
+    <View style={[styles.container, { paddingTop: insets.top }]}>
+      <View style={styles.headerBar}>
+        <Text style={styles.headerTitle}>Matches</Text>
+      </View>
+      <SectionList
+        sections={sections}
         keyExtractor={(item) => item.match_id}
         renderItem={renderItem}
+        renderSectionHeader={renderSectionHeader}
         getItemLayout={getItemLayout}
         removeClippedSubviews={true}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+        stickySectionHeadersEnabled={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={BRAND_COLORS.primary}
+          />
+        }
         contentContainerStyle={styles.list}
       />
     </View>
@@ -386,95 +641,190 @@ export default function MatchesScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: GOLDEN_HOUR.bg,
+    backgroundColor: MIDNIGHT.bg,
+  },
+  headerBar: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: SPACING.lg,
+    height: 56,
+    borderBottomWidth: 1,
+    borderBottomColor: '#1a1f2e',
+  },
+  headerTitle: {
+    fontSize: TYPOGRAPHY.fontSize.xl,
+    fontFamily: TYPOGRAPHY.fontFamily.serifBold,
+    color: BRAND_COLORS.text[900],
+  },
+  centeredContainer: {
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  skeletonContainer: {
+    padding: SPACING.base,
+  },
+  skeletonItem: {
+    marginBottom: SPACING.md,
   },
   list: {
-    padding: 16,
+    padding: SPACING.base,
+  },
+  listHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: SPACING.base,
+    marginTop: SPACING.sm,
+  },
+  listHeaderTitle: {
+    fontSize: TYPOGRAPHY.fontSize.lg,
+    fontFamily: TYPOGRAPHY.fontFamily.serifBold,
+    color: BRAND_COLORS.text[900],
+  },
+  listHeaderTitleMuted: {
+    color: BRAND_COLORS.text[600],
+  },
+  newBadge: {
+    backgroundColor: 'rgba(10, 127, 116, 0.1)',
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.xs,
+    borderRadius: MIDNIGHT.radius.full,
+  },
+  newBadgeExpired: {
+    backgroundColor: 'rgba(239, 68, 68, 0.1)',
+  },
+  newBadgeText: {
+    fontSize: TYPOGRAPHY.fontSize.xs,
+    fontFamily: TYPOGRAPHY.fontFamily.medium,
+    color: BRAND_COLORS.primaryLight,
+  },
+  newBadgeTextExpired: {
+    color: BRAND_COLORS.danger,
   },
   matchCard: {
+    backgroundColor: 'rgba(17, 19, 24, 0.8)',
+    borderWidth: 1,
+    borderColor: '#1a1f2e',
+    borderRadius: 14,
+    padding: SPACING.md,
+    marginBottom: SPACING.md,
+  },
+  matchCardExpired: {
+    opacity: 0.5,
+  },
+  cardRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: GOLDEN_HOUR.inputBg,
-    borderRadius: GOLDEN_HOUR.radius.lg,
-    padding: 16,
-    marginBottom: 12,
-    ...GOLDEN_HOUR.shadow.warm,
+  },
+  avatarContainer: {
+    position: 'relative',
   },
   avatar: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: '#E2E8F0',
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: MIDNIGHT.borderDefault,
+  },
+  onlineDot: {
+    position: 'absolute',
+    bottom: 2,
+    right: 2,
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: BRAND_COLORS.primary,
+    borderWidth: 2,
+    borderColor: MIDNIGHT.bg,
   },
   matchInfo: {
     flex: 1,
-    marginLeft: 12,
+    marginLeft: SPACING.md,
+  },
+  topRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: SPACING.xs,
+  },
+  bottomRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
   },
   matchName: {
-    fontSize: 18,
-    fontWeight: '600',
+    fontSize: TYPOGRAPHY.fontSize.base,
+    fontFamily: TYPOGRAPHY.fontFamily.serifBold,
     color: BRAND_COLORS.text[900],
-    marginBottom: 4,
+    flex: 1,
+    marginRight: SPACING.sm,
   },
-  matchStatus: {
-    fontSize: 14,
+  timerText: {
+    fontSize: TYPOGRAPHY.fontSize.xs,
+    fontFamily: TYPOGRAPHY.fontFamily.medium,
     color: BRAND_COLORS.text[600],
+  },
+  timerTextUrgent: {
+    color: GOLD[600],
+  },
+  messagePreview: {
+    fontSize: TYPOGRAPHY.fontSize.sm,
+    fontFamily: TYPOGRAPHY.fontFamily.regular,
+    color: BRAND_COLORS.text[600],
+    flex: 1,
+    marginRight: SPACING.sm,
   },
   chevron: {
-    fontSize: 24,
-    color: BRAND_COLORS.text[600],
+    fontSize: TYPOGRAPHY.fontSize['2xl'],
+    color: BRAND_COLORS.text[500],
+  },
+  expiredLabel: {
+    fontSize: TYPOGRAPHY.fontSize.xs,
+    fontFamily: TYPOGRAPHY.fontFamily.medium,
+    color: BRAND_COLORS.danger,
+  },
+  expiredText: {
+    opacity: 0.8,
+  },
+  reactivateButton: {
+    paddingVertical: SPACING.xs,
+    paddingHorizontal: SPACING.md,
+    borderRadius: MIDNIGHT.radius.sm,
+  },
+  reactivateButtonText: {
+    fontSize: TYPOGRAPHY.fontSize.xs,
+    fontFamily: TYPOGRAPHY.fontFamily.semibold,
   },
   emptyText: {
-    fontSize: 20,
-    fontWeight: '600',
+    fontSize: TYPOGRAPHY.fontSize.xl,
+    fontFamily: TYPOGRAPHY.fontFamily.serifBold,
     color: BRAND_COLORS.text[900],
-    marginBottom: 8,
+    marginBottom: SPACING.sm,
     textAlign: 'center',
   },
   emptySubtext: {
-    fontSize: 16,
+    fontSize: TYPOGRAPHY.fontSize.base,
+    fontFamily: TYPOGRAPHY.fontFamily.regular,
     color: BRAND_COLORS.text[600],
     textAlign: 'center',
-    marginBottom: 16,
+    marginBottom: SPACING.base,
   },
-  refreshButton: {
-    backgroundColor: BRAND_COLORS.primary,
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-    borderRadius: GOLDEN_HOUR.radius.lg,
-    marginTop: 8,
-    ...GOLDEN_HOUR.shadow.warm,
-  },
-  refreshButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
+  actionButton: {
+    marginTop: SPACING.sm,
   },
   errorText: {
-    fontSize: 20,
-    fontWeight: '600',
+    fontSize: TYPOGRAPHY.fontSize.xl,
+    fontFamily: TYPOGRAPHY.fontFamily.serifBold,
     color: BRAND_COLORS.danger,
-    marginBottom: 8,
+    marginBottom: SPACING.sm,
     textAlign: 'center',
   },
   errorSubtext: {
-    fontSize: 16,
+    fontSize: TYPOGRAPHY.fontSize.base,
+    fontFamily: TYPOGRAPHY.fontFamily.regular,
     color: BRAND_COLORS.text[600],
-    marginBottom: 16,
+    marginBottom: SPACING.base,
     textAlign: 'center',
-    paddingHorizontal: 32,
-  },
-  retryButton: {
-    backgroundColor: BRAND_COLORS.primary,
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-    borderRadius: GOLDEN_HOUR.radius.lg,
-    marginTop: 8,
-    ...GOLDEN_HOUR.shadow.warm,
-  },
-  retryButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
+    paddingHorizontal: SPACING.xl,
   },
 });

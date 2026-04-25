@@ -25,7 +25,7 @@ describe('TypeScript Types', () => {
   it('should have Profile type with optional fields', () => {
     const profile: Profile = {
       user_id: '123e4567-e89b-12d3-a456-426614174000',
-      prompts: { headline: 'Test', bio: 'Test bio' },
+      prompts: { bio: 'Test bio' },
       availability: {},
       photos: ['url1', 'url2'],
       completion_pct: 100,
@@ -45,6 +45,7 @@ describe('TypeScript Types', () => {
       user_b: '123e4567-e89b-12d3-a456-426614174002',
       status: 'open',
       created_at: new Date().toISOString(),
+      expires_at: new Date(Date.now() + 72 * 60 * 60 * 1000).toISOString(),
     };
 
     expect(match.match_id).toBeDefined();

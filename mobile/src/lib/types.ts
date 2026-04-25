@@ -39,7 +39,7 @@ export interface Profile {
 
 export interface FeedItem {
   user_id: string;
-  headline: string;
+  full_name: string;
   bio: string;
   availability_summary: string;
   action_speed: number;
@@ -61,6 +61,7 @@ export interface Match {
   user_a: string;
   user_b: string;
   created_at: string;
+  expires_at: string;
   status: MatchStatus;
 }
 
