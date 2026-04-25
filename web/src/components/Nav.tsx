@@ -23,18 +23,19 @@ export function Nav() {
   }, []);
 
   return (
-    <nav
-      className={cn(
-        'fixed top-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-sm transition-shadow duration-300',
-        scrolled && 'shadow-nav',
-      )}
-    >
-      <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
-        {/* Logo */}
-        <Link href="/" className="flex items-center gap-2 text-xl font-bold text-ink-900">
-          <Image src="/logo-icon.png" alt="" width={32} height={32} />
-          Chem <span className="text-aqua-600">IRL</span>
-        </Link>
+    <>
+      <nav
+        className={cn(
+          'fixed top-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-sm transition-shadow duration-300',
+          scrolled && 'shadow-nav',
+        )}
+      >
+        <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
+          {/* Logo */}
+          <Link href="/" className="flex items-center gap-2 text-xl font-bold text-ink-900">
+            <Image src="/logo-icon.png" alt="" width={32} height={32} />
+            Chem <span className="text-aqua-600">IRL</span>
+          </Link>
 
           {/* Center links - desktop */}
           <div className="hidden md:flex items-center gap-8">
