@@ -10,6 +10,8 @@ const PRODUCT_LINKS = [
 
 const COMPANY_LINKS = [
   { href: '/about', label: 'About' },
+  { href: '/blog', label: 'Blog' },
+  { href: '/blog/rss.xml', label: 'RSS Feed' },
   { href: '/privacy', label: 'Privacy Policy' },
   { href: '/terms', label: 'Terms of Service' },
 ];

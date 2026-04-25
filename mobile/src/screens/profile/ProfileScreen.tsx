@@ -4,22 +4,26 @@ import {
   Text,
   StyleSheet,
   TextInput,
-  TouchableOpacity,
   ScrollView,
   Alert,
   ActivityIndicator,
+  useWindowDimensions,
 } from 'react-native';
 import { Image } from 'expo-image';
+import { Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as ImagePicker from 'expo-image-picker';
 import * as FileSystem from 'expo-file-system/legacy';
 import { decode } from 'base64-arraybuffer';
 import { compressImage } from '../../lib/imageCompression';
 import { supabase } from '../../lib/supabase/client';
-import { BRAND_COLORS, GOLDEN_HOUR } from '../../config/brand';
+import { BRAND_COLORS, MIDNIGHT, TYPOGRAPHY, SPACING, GOLD } from '../../config/brand';
+import AnimatedPressable from '../../components/ui/AnimatedPressable';
+import GHButton from '../../components/ui/GHButton';
 import { deletePhotoFromStorage } from '../../lib/storage';
 import { getErrorAlert } from '../../lib/errors';
 import { ensureProfileExists } from '../../lib/profile';
-import { sanitizeText, sanitizeMultilineText } from '../../lib/sanitize';
+import { sanitizeMultilineText } from '../../lib/sanitize';
 import { addBreadcrumb, clearUserContext } from '../../lib/sentry';
 import { trackEvent } from '../../lib/analytics';
 import {
@@ -55,8 +59,14 @@ type PhotoUploadState = 'idle' | 'uploading' | 'success' | 'error';
 type PhotoDeletionState = 'idle' | 'deleting';
 
 export default function ProfileScreen() {
+  const insets = useSafeAreaInsets();
+  const { width: screenWidth } = useWindowDimensions();
+  const contentPadding = 24;
+  const photoGridGap = 12;
+  const photoWidth = (screenWidth - contentPadding * 2 - photoGridGap * 2) / 3;
+
   // Profile content
-  const [headline, setHeadline] = useState('');
+  const [fullName, setFullName] = useState('');
   const [bio, setBio] = useState('');
   const [photos, setPhotos] = useState<string[]>([]);
 
@@ -100,7 +110,7 @@ export default function ProfileScreen() {
   const [failedUploadURIs, setFailedUploadURIs] = useState<Map<number, string>>(new Map());
   const reconciliationRunRef = useRef(false);
 
-  // Track which sections are expanded
+  // Track which sections are expanded (for edit mode)
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set());
 
   const toggleSection = useCallback((section: string) => {
@@ -132,7 +142,7 @@ export default function ProfileScreen() {
       // Load profiles data
       let { data: profile, error } = await supabase
         .from('profiles')
-        .select('prompts, photos, availability')
+        .select('full_name, prompts, photos, availability')
         .eq('id', user.id)
         .maybeSingle();
 
@@ -140,7 +150,7 @@ export default function ProfileScreen() {
         await ensureProfileExists(user.id);
         const next = await supabase
           .from('profiles')
-          .select('prompts, photos, availability')
+          .select('full_name, prompts, photos, availability')
           .eq('id', user.id)
           .maybeSingle();
         profile = next.data;
@@ -159,7 +169,7 @@ export default function ProfileScreen() {
         const demographics = (prompts.demographics ?? {}) as Record<string, any>;
         const preferences = (prompts.preferences ?? {}) as Record<string, any>;
 
-        setHeadline(prompts.headline || '');
+        setFullName((profile as any).full_name || '');
         setBio(prompts.bio || '');
         setHeightCm(demographics.height_cm != null ? String(demographics.height_cm) : '');
         setLanguages(demographics.languages || []);
@@ -247,13 +257,8 @@ export default function ProfileScreen() {
   };
 
   const handleSave = async () => {
-    const headlineTrimmed = headline.trim();
     const bioTrimmed = bio.trim();
 
-    if (headlineTrimmed && headlineTrimmed.length < 5) {
-      Alert.alert('Error', 'Headline must be at least 5 characters');
-      return;
-    }
     if (bioTrimmed && bioTrimmed.length < 20) {
       Alert.alert('Error', 'Bio must be at least 20 characters');
       return;
@@ -287,7 +292,6 @@ export default function ProfileScreen() {
       const currentPrompts = (currentProfile?.prompts ?? {}) as Record<string, any>;
       const currentAvailability = (currentProfile?.availability ?? {}) as Record<string, any>;
 
-      const sanitizedHeadline = headlineTrimmed ? sanitizeText(headlineTrimmed) : '';
       const sanitizedBio = bioTrimmed ? sanitizeMultilineText(bioTrimmed) : '';
 
       const demographics: Record<string, any> = {
@@ -322,7 +326,6 @@ export default function ProfileScreen() {
 
       const prompts = {
         ...currentPrompts,
-        headline: sanitizedHeadline || undefined,
         bio: sanitizedBio || undefined,
         demographics,
         preferences,
@@ -614,10 +617,11 @@ export default function ProfileScreen() {
   const renderSectionHeader = (title: string, sectionKey: string, summary?: string) => {
     const isExpanded = expandedSections.has(sectionKey);
     return (
-      <TouchableOpacity
+      <AnimatedPressable
         style={styles.sectionHeader}
         onPress={() => toggleSection(sectionKey)}
         disabled={saving}
+        haptic={false}
       >
         <View style={styles.sectionHeaderLeft}>
           <Text style={styles.sectionTitle}>{title}</Text>
@@ -627,8 +631,8 @@ export default function ProfileScreen() {
             </Text>
           ) : null}
         </View>
-        <Text style={styles.sectionChevron}>{isExpanded ? '▲' : '▼'}</Text>
-      </TouchableOpacity>
+        <Text style={styles.sectionChevron}>{isExpanded ? '\u25B2' : '\u25BC'}</Text>
+      </AnimatedPressable>
     );
   };
 
@@ -639,16 +643,17 @@ export default function ProfileScreen() {
   ) => (
     <View style={styles.pickerContainer}>
       {options.map((opt) => (
-        <TouchableOpacity
+        <AnimatedPressable
           key={opt.value}
           style={[styles.chip, value === opt.value && styles.chipSelected]}
           onPress={() => onSelect(value === opt.value ? null : opt.value)}
           disabled={saving}
+          haptic={false}
         >
           <Text style={[styles.chipText, value === opt.value && styles.chipTextSelected]}>
             {opt.label}
           </Text>
-        </TouchableOpacity>
+        </AnimatedPressable>
       ))}
     </View>
   );
@@ -656,16 +661,17 @@ export default function ProfileScreen() {
   const renderTagPicker = (values: string[], options: string[], onToggle: (v: string) => void) => (
     <View style={styles.pickerContainer}>
       {options.map((opt) => (
-        <TouchableOpacity
+        <AnimatedPressable
           key={opt}
           style={[styles.chip, values.includes(opt) && styles.chipSelected]}
           onPress={() => onToggle(opt)}
           disabled={saving}
+          haptic={false}
         >
           <Text style={[styles.chipText, values.includes(opt) && styles.chipTextSelected]}>
             {opt}
           </Text>
-        </TouchableOpacity>
+        </AnimatedPressable>
       ))}
     </View>
   );
@@ -678,498 +684,646 @@ export default function ProfileScreen() {
     );
   }
 
-  const genderLabel = GENDER_OPTIONS.find((o) => o.value === gender)?.label;
-  const orientationLabel = ORIENTATION_OPTIONS.find((o) => o.value === orientation)?.label;
   const intentLabel = INTENT_OPTIONS.find((o) => o.value === relationshipIntent)?.label;
-  const familyLabel = FAMILY_PLANS_OPTIONS.find((o) => o.value === familyPlans)?.label;
-  const petsLabel = PETS_OPTIONS.find((o) => o.value === pets)?.label;
-  const activityLabel = ACTIVITY_OPTIONS.find((o) => o.value === activityLevel)?.label;
   const loveLabel = LOVE_LANGUAGE_OPTIONS.find((o) => o.value === loveLanguage)?.label;
 
-  return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <Text style={styles.title}>Profile</Text>
-      <Text style={styles.subtitle}>Manage your profile information</Text>
+  // Build availability chip data
+  const availabilityChips = weeklySlots.map((slot) => {
+    const dayAbbrev = slot.day.substring(0, 3).toUpperCase();
+    const startHour = parseInt(slot.start_time.split(':')[0], 10);
+    let period = 'Morning';
+    if (startHour >= 12 && startHour < 17) period = 'Afternoon';
+    else if (startHour >= 17 && startHour < 21) period = 'Evening';
+    else if (startHour >= 21) period = 'Night';
+    return { day: dayAbbrev, time: period, slot };
+  });
 
-      {/* ── Headline & Bio ── */}
-      <View style={styles.section}>
-        <Text style={styles.label}>Headline</Text>
-        <TextInput
-          style={styles.input}
-          placeholder="A short, catchy headline"
-          placeholderTextColor={BRAND_COLORS.text[600]}
-          value={headline}
-          onChangeText={setHeadline}
-          maxLength={100}
-          editable={!saving}
-        />
-        <Text style={styles.label}>Bio</Text>
-        <TextInput
-          style={[styles.input, styles.textArea]}
-          placeholder="Tell people about yourself..."
-          placeholderTextColor={BRAND_COLORS.text[600]}
-          value={bio}
-          onChangeText={setBio}
-          multiline
-          numberOfLines={4}
-          maxLength={500}
-          editable={!saving}
-        />
+  return (
+    <View style={styles.container}>
+      {/* Fixed Header */}
+      <View style={[styles.header, { paddingTop: insets.top }]}>
+        <View style={styles.headerContent}>
+          <AnimatedPressable style={styles.headerIcon} onPress={() => {}} haptic={false}>
+            <Ionicons name="arrow-back" size={24} color={BRAND_COLORS.primary} />
+          </AnimatedPressable>
+          <Text style={styles.headerTitle}>Profile</Text>
+          <AnimatedPressable style={styles.headerIcon} onPress={() => {}} haptic={false}>
+            <Ionicons name="settings-outline" size={24} color={BRAND_COLORS.primary} />
+          </AnimatedPressable>
+        </View>
       </View>
 
-      {/* ── Photos ── */}
-      <View style={styles.section}>
-        <Text style={styles.label}>Photos</Text>
-        <View style={styles.photosContainer}>
-          {photos.map((photo, index) => {
-            const uploadState = photoUploadStates.get(index);
-            const deletionState = photoDeletionStates.get(index);
-            const isUploading = uploadState === 'uploading';
-            const isDeleting = deletionState === 'deleting';
-            return (
-              <View key={index} style={styles.photoWrapper}>
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 48 }]}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Hero Section */}
+        <View style={styles.heroSection}>
+          <View style={[styles.avatarRing, MIDNIGHT.glow.primary]}>
+            <View style={styles.avatarContainer}>
+              {photos.length > 0 ? (
                 <Image
-                  source={{ uri: photo }}
-                  style={styles.photo}
+                  source={{ uri: photos[0] }}
+                  style={styles.avatarImage}
                   contentFit="cover"
                   cachePolicy="memory-disk"
                 />
-                {isUploading && (
-                  <View style={styles.uploadOverlay}>
-                    <ActivityIndicator color="#fff" size="small" />
-                  </View>
-                )}
-                {isDeleting && (
-                  <View style={styles.uploadOverlay}>
-                    <ActivityIndicator color="#fff" size="small" />
-                    <Text style={styles.deletingText}>Deleting...</Text>
-                  </View>
-                )}
-                {uploadState === 'success' && (
-                  <View style={[styles.uploadOverlay, styles.successOverlay]}>
-                    <Text style={styles.checkmark}>✓</Text>
-                  </View>
-                )}
-                {uploadState === 'error' && (
-                  <View style={[styles.uploadOverlay, styles.errorOverlay]}>
-                    <Text style={styles.errorText}>!</Text>
-                    <TouchableOpacity style={styles.retryButton} onPress={() => retryUpload(index)}>
-                      <Text style={styles.retryText}>Retry</Text>
-                    </TouchableOpacity>
-                  </View>
-                )}
-                <TouchableOpacity
-                  style={styles.removePhotoButton}
-                  onPress={() => removePhoto(index)}
-                  disabled={saving || isUploading || isDeleting}
-                >
-                  <Text style={styles.removePhotoText}>×</Text>
-                </TouchableOpacity>
-              </View>
-            );
-          })}
-          {photos.length < 6 && (
-            <TouchableOpacity
-              style={styles.addPhotoButton}
-              onPress={pickImage}
-              disabled={uploading || saving}
-            >
-              {uploading ? (
-                <ActivityIndicator color={BRAND_COLORS.primary} />
               ) : (
-                <Text style={styles.addPhotoText}>+ Add Photo</Text>
+                <View style={styles.avatarPlaceholder}>
+                  <Ionicons name="person" size={40} color={BRAND_COLORS.text[500]} />
+                </View>
               )}
-            </TouchableOpacity>
+            </View>
+            <AnimatedPressable style={styles.avatarEditBadge} onPress={pickImage} haptic={false}>
+              <Ionicons name="pencil" size={12} color={BRAND_COLORS.onPrimary} />
+            </AnimatedPressable>
+          </View>
+          <Text style={styles.heroName}>{fullName || 'Your Name'}</Text>
+          <Text style={styles.heroTagline}>
+            {bio?.substring(0, 60) || 'Add a bio to stand out'}
+          </Text>
+        </View>
+
+        {/* About Card */}
+        <View style={styles.glassCard}>
+          <View style={styles.cardHeader}>
+            <Text style={styles.cardTitle}>About</Text>
+            <AnimatedPressable onPress={() => toggleSection('about')} haptic={false}>
+              <Ionicons name="pencil" size={16} color={BRAND_COLORS.text[500]} />
+            </AnimatedPressable>
+          </View>
+          {expandedSections.has('about') ? (
+            <View style={styles.editSection}>
+              <Text style={styles.fieldLabel}>Bio</Text>
+              <TextInput
+                style={[styles.input, styles.textArea]}
+                placeholder="Tell people about yourself..."
+                placeholderTextColor={BRAND_COLORS.text[600]}
+                value={bio}
+                onChangeText={setBio}
+                multiline
+                numberOfLines={4}
+                maxLength={500}
+                editable={!saving}
+              />
+            </View>
+          ) : (
+            <Text style={styles.cardBody}>
+              {bio || 'Tap the pencil to add a bio and let others know about you.'}
+            </Text>
           )}
         </View>
-      </View>
 
-      {/* ── Identity ── */}
-      {renderSectionHeader(
-        'Identity',
-        'identity',
-        [genderLabel, orientationLabel].filter(Boolean).join(' · ')
-      )}
-      {expandedSections.has('identity') && (
-        <View style={styles.sectionBody}>
-          <Text style={styles.fieldLabel}>Gender</Text>
-          {renderPicker(gender, GENDER_OPTIONS, (v) => setGender(v as UserGender | null))}
-          <Text style={styles.fieldLabel}>Interested in</Text>
-          {renderPicker(orientation, ORIENTATION_OPTIONS, (v) =>
-            setOrientation(v as UserOrientation | null)
+        {/* My Photos Card */}
+        <View style={styles.glassCard}>
+          <View style={styles.cardHeader}>
+            <Text style={styles.cardTitle}>My Photos</Text>
+            <AnimatedPressable onPress={() => toggleSection('photos')} haptic={false}>
+              <Text style={styles.viewAllText}>VIEW ALL</Text>
+            </AnimatedPressable>
+          </View>
+          <View style={styles.photoGrid}>
+            {photos.slice(0, 6).map((photo, index) => {
+              const uploadState = photoUploadStates.get(index);
+              const deletionState = photoDeletionStates.get(index);
+              const isUploading = uploadState === 'uploading';
+              const isDeleting = deletionState === 'deleting';
+              return (
+                <View
+                  key={index}
+                  style={[
+                    styles.photoGridItem,
+                    { width: photoWidth, height: photoWidth * (4 / 3) },
+                  ]}
+                >
+                  <Image
+                    source={{ uri: photo }}
+                    style={styles.photoGridImage}
+                    contentFit="cover"
+                    cachePolicy="memory-disk"
+                  />
+                  {isUploading && (
+                    <View style={styles.uploadOverlay}>
+                      <ActivityIndicator color={BRAND_COLORS.onPrimary} size="small" />
+                    </View>
+                  )}
+                  {isDeleting && (
+                    <View style={styles.uploadOverlay}>
+                      <ActivityIndicator color={BRAND_COLORS.onPrimary} size="small" />
+                      <Text style={styles.deletingText}>Deleting...</Text>
+                    </View>
+                  )}
+                  {uploadState === 'success' && (
+                    <View style={[styles.uploadOverlay, styles.successOverlay]}>
+                      <Text style={styles.checkmark}>{'\u2713'}</Text>
+                    </View>
+                  )}
+                  {uploadState === 'error' && (
+                    <View style={[styles.uploadOverlay, styles.errorOverlay]}>
+                      <Text style={styles.errorIcon}>!</Text>
+                      <AnimatedPressable
+                        style={styles.retryButton}
+                        onPress={() => retryUpload(index)}
+                      >
+                        <Text style={styles.retryText}>Retry</Text>
+                      </AnimatedPressable>
+                    </View>
+                  )}
+                  <AnimatedPressable
+                    style={styles.removePhotoButton}
+                    onPress={() => removePhoto(index)}
+                    disabled={saving || isUploading || isDeleting}
+                    haptic={false}
+                  >
+                    <Text style={styles.removePhotoText}>{'\u00D7'}</Text>
+                  </AnimatedPressable>
+                </View>
+              );
+            })}
+            {photos.length < 6 && (
+              <AnimatedPressable
+                style={[styles.addPhotoSlot, { width: photoWidth, height: photoWidth * (4 / 3) }]}
+                onPress={pickImage}
+                disabled={uploading || saving}
+                haptic={false}
+              >
+                {uploading ? (
+                  <ActivityIndicator color={BRAND_COLORS.primary} />
+                ) : (
+                  <Ionicons name="add" size={28} color={BRAND_COLORS.text[500]} />
+                )}
+              </AnimatedPressable>
+            )}
+          </View>
+        </View>
+
+        {/* Details Card */}
+        <View style={styles.glassCard}>
+          <View style={styles.cardHeader}>
+            <Text style={styles.cardTitle}>Details</Text>
+            <AnimatedPressable onPress={() => toggleSection('details')} haptic={false}>
+              <Ionicons name="pencil" size={16} color={BRAND_COLORS.text[500]} />
+            </AnimatedPressable>
+          </View>
+          {expandedSections.has('details') ? (
+            <View style={styles.editSection}>
+              <Text style={styles.fieldLabel}>Height (cm)</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="Height in cm (e.g. 175)"
+                placeholderTextColor={BRAND_COLORS.text[600]}
+                value={heightCm}
+                onChangeText={setHeightCm}
+                keyboardType="numeric"
+                maxLength={3}
+                editable={!saving}
+              />
+              {heightCm ? (
+                <AnimatedPressable onPress={() => setHeightCm('')} disabled={saving} haptic={false}>
+                  <Text style={styles.clearLink}>Clear height</Text>
+                </AnimatedPressable>
+              ) : null}
+
+              <Text style={[styles.fieldLabel, { marginTop: 16 }]}>Languages</Text>
+              {renderTagPicker(languages, LANGUAGE_OPTIONS, (v) =>
+                toggleMultiSelect(v, languages, setLanguages)
+              )}
+
+              <Text style={[styles.fieldLabel, { marginTop: 16 }]}>Looking for</Text>
+              {renderPicker(relationshipIntent, INTENT_OPTIONS, setRelationshipIntent)}
+
+              <Text style={[styles.fieldLabel, { marginTop: 16 }]}>Family plans</Text>
+              {renderPicker(familyPlans, FAMILY_PLANS_OPTIONS, setFamilyPlans)}
+
+              <Text style={[styles.fieldLabel, { marginTop: 16 }]}>Pets</Text>
+              {renderPicker(pets, PETS_OPTIONS, setPets)}
+
+              <Text style={[styles.fieldLabel, { marginTop: 16 }]}>Gender</Text>
+              {renderPicker(gender, GENDER_OPTIONS, (v) => setGender(v as UserGender | null))}
+
+              <Text style={[styles.fieldLabel, { marginTop: 16 }]}>Interested in</Text>
+              {renderPicker(orientation, ORIENTATION_OPTIONS, (v) =>
+                setOrientation(v as UserOrientation | null)
+              )}
+
+              <Text style={[styles.fieldLabel, { marginTop: 16 }]}>Activity level</Text>
+              {renderPicker(activityLevel, ACTIVITY_OPTIONS, setActivityLevel)}
+
+              <Text style={[styles.fieldLabel, { marginTop: 16 }]}>Drinking</Text>
+              {renderPicker(drinking, FREQUENCY_OPTIONS, setDrinking)}
+
+              <Text style={[styles.fieldLabel, { marginTop: 16 }]}>Smoking</Text>
+              {renderPicker(smoking, FREQUENCY_OPTIONS, setSmoking)}
+
+              <Text style={[styles.fieldLabel, { marginTop: 16 }]}>Drugs</Text>
+              {renderPicker(drugs, FREQUENCY_OPTIONS, setDrugs)}
+
+              <Text style={[styles.fieldLabel, { marginTop: 16 }]}>Diet</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="e.g. Vegan, Vegetarian, Halal..."
+                placeholderTextColor={BRAND_COLORS.text[600]}
+                value={diet}
+                onChangeText={setDiet}
+                maxLength={50}
+                editable={!saving}
+              />
+            </View>
+          ) : (
+            <View>
+              {/* Height row */}
+              <View style={styles.detailRow}>
+                <View style={styles.detailLeft}>
+                  <Ionicons name="resize" size={16} color={BRAND_COLORS.text[500]} />
+                  <Text style={styles.detailLabel}>Height</Text>
+                </View>
+                <Text style={styles.detailValue}>{heightCm ? `${heightCm} cm` : '\u2014'}</Text>
+              </View>
+              {/* Languages row */}
+              <View style={[styles.detailRow, styles.detailRowBorder]}>
+                <View style={styles.detailLeft}>
+                  <Ionicons name="language" size={16} color={BRAND_COLORS.text[500]} />
+                  <Text style={styles.detailLabel}>Languages</Text>
+                </View>
+                <Text style={styles.detailValue}>
+                  {languages.length > 0 ? languages.join(', ') : '\u2014'}
+                </Text>
+              </View>
+              {/* Intent row */}
+              <View style={[styles.detailRow, styles.detailRowBorder]}>
+                <View style={styles.detailLeft}>
+                  <Ionicons name="heart" size={16} color={BRAND_COLORS.text[500]} />
+                  <Text style={styles.detailLabel}>Intent</Text>
+                </View>
+                <Text style={[styles.detailValue, intentLabel && styles.detailValuePrimary]}>
+                  {intentLabel || '\u2014'}
+                </Text>
+              </View>
+            </View>
           )}
         </View>
-      )}
 
-      {/* ── Height ── */}
-      {renderSectionHeader('Height', 'height', heightCm ? `${heightCm} cm` : undefined)}
-      {expandedSections.has('height') && (
-        <View style={styles.sectionBody}>
-          <TextInput
-            style={styles.input}
-            placeholder="Height in cm (e.g. 175)"
-            placeholderTextColor={BRAND_COLORS.text[600]}
-            value={heightCm}
-            onChangeText={setHeightCm}
-            keyboardType="numeric"
-            maxLength={3}
-            editable={!saving}
-          />
-          {heightCm ? (
-            <TouchableOpacity onPress={() => setHeightCm('')} disabled={saving}>
-              <Text style={styles.clearLink}>Clear height</Text>
-            </TouchableOpacity>
+        {/* Interests Card */}
+        <View style={styles.glassCard}>
+          {renderSectionHeader(
+            'Interests',
+            'interests',
+            interests.length > 0
+              ? interests.slice(0, 3).join(', ') + (interests.length > 3 ? '...' : '')
+              : undefined
+          )}
+          {expandedSections.has('interests') ? (
+            <View style={styles.editSection}>
+              {renderTagPicker(interests, PRESET_INTERESTS, (v) =>
+                toggleMultiSelect(v, interests, setInterests)
+              )}
+            </View>
+          ) : interests.length > 0 ? (
+            <View style={[styles.availabilityChips, { marginTop: 12 }]}>
+              {interests.slice(0, 6).map((interest) => (
+                <View key={interest} style={styles.availChip}>
+                  <Text style={styles.availChipTime}>{interest}</Text>
+                </View>
+              ))}
+              {interests.length > 6 && (
+                <View style={styles.availChip}>
+                  <Text style={styles.availChipTime}>+{interests.length - 6} more</Text>
+                </View>
+              )}
+            </View>
           ) : null}
         </View>
-      )}
 
-      {/* ── Languages ── */}
-      {renderSectionHeader(
-        'Languages',
-        'languages',
-        languages.length > 0 ? languages.join(', ') : undefined
-      )}
-      {expandedSections.has('languages') && (
-        <View style={styles.sectionBody}>
-          {renderTagPicker(languages, LANGUAGE_OPTIONS, (v) =>
-            toggleMultiSelect(v, languages, setLanguages)
+        {/* Personality & Astrology Card */}
+        <View style={styles.glassCard}>
+          {renderSectionHeader(
+            'Personality & Astrology',
+            'personality',
+            [personalityType, astrologySign, loveLabel].filter(Boolean).join(' \u00B7 ')
           )}
-        </View>
-      )}
-
-      {/* ── Relationship ── */}
-      {renderSectionHeader(
-        'Relationship',
-        'relationship',
-        [intentLabel, familyLabel].filter(Boolean).join(' · ')
-      )}
-      {expandedSections.has('relationship') && (
-        <View style={styles.sectionBody}>
-          <Text style={styles.fieldLabel}>Looking for</Text>
-          {renderPicker(relationshipIntent, INTENT_OPTIONS, setRelationshipIntent)}
-          <Text style={styles.fieldLabel}>Family plans</Text>
-          {renderPicker(familyPlans, FAMILY_PLANS_OPTIONS, setFamilyPlans)}
-        </View>
-      )}
-
-      {/* ── Pets ── */}
-      {renderSectionHeader('Pets', 'pets', petsLabel)}
-      {expandedSections.has('pets') && (
-        <View style={styles.sectionBody}>{renderPicker(pets, PETS_OPTIONS, setPets)}</View>
-      )}
-
-      {/* ── Lifestyle ── */}
-      {renderSectionHeader('Lifestyle', 'lifestyle', activityLabel || undefined)}
-      {expandedSections.has('lifestyle') && (
-        <View style={styles.sectionBody}>
-          <Text style={styles.fieldLabel}>Activity level</Text>
-          {renderPicker(activityLevel, ACTIVITY_OPTIONS, setActivityLevel)}
-          <Text style={styles.fieldLabel}>Drinking</Text>
-          {renderPicker(drinking, FREQUENCY_OPTIONS, setDrinking)}
-          <Text style={styles.fieldLabel}>Smoking</Text>
-          {renderPicker(smoking, FREQUENCY_OPTIONS, setSmoking)}
-          <Text style={styles.fieldLabel}>Drugs</Text>
-          {renderPicker(drugs, FREQUENCY_OPTIONS, setDrugs)}
-          <Text style={styles.fieldLabel}>Diet</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="e.g. Vegan, Vegetarian, Halal..."
-            placeholderTextColor={BRAND_COLORS.text[600]}
-            value={diet}
-            onChangeText={setDiet}
-            maxLength={50}
-            editable={!saving}
-          />
-        </View>
-      )}
-
-      {/* ── Interests ── */}
-      {renderSectionHeader(
-        'Interests',
-        'interests',
-        interests.length > 0
-          ? interests.slice(0, 3).join(', ') + (interests.length > 3 ? '...' : '')
-          : undefined
-      )}
-      {expandedSections.has('interests') && (
-        <View style={styles.sectionBody}>
-          {renderTagPicker(interests, PRESET_INTERESTS, (v) =>
-            toggleMultiSelect(v, interests, setInterests)
-          )}
-        </View>
-      )}
-
-      {/* ── Personality & Astrology ── */}
-      {renderSectionHeader(
-        'Personality & Astrology',
-        'personality',
-        [personalityType, astrologySign, loveLabel].filter(Boolean).join(' · ')
-      )}
-      {expandedSections.has('personality') && (
-        <View style={styles.sectionBody}>
-          <Text style={styles.fieldLabel}>Love language</Text>
-          {renderPicker(loveLanguage, LOVE_LANGUAGE_OPTIONS, setLoveLanguage)}
-          <Text style={styles.fieldLabel}>Personality type (MBTI)</Text>
-          {renderTagPicker(personalityType ? [personalityType] : [], MBTI_OPTIONS, (v) =>
-            setPersonalityType(personalityType === v ? null : v)
-          )}
-          <Text style={styles.fieldLabel}>Astrology sign</Text>
-          {renderTagPicker(astrologySign ? [astrologySign] : [], ASTROLOGY_SIGNS, (v) =>
-            setAstrologySign(astrologySign === v ? null : v)
-          )}
-        </View>
-      )}
-
-      {/* ── Work & Education ── */}
-      {renderSectionHeader(
-        'Work & Education',
-        'work',
-        [jobTitle, education].filter((s) => s.trim()).join(' · ') || undefined
-      )}
-      {expandedSections.has('work') && (
-        <View style={styles.sectionBody}>
-          <Text style={styles.fieldLabel}>Job title</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="e.g. Software Engineer"
-            placeholderTextColor={BRAND_COLORS.text[600]}
-            value={jobTitle}
-            onChangeText={setJobTitle}
-            maxLength={100}
-            editable={!saving}
-          />
-          <Text style={styles.fieldLabel}>Education</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="e.g. University of Sydney"
-            placeholderTextColor={BRAND_COLORS.text[600]}
-            value={education}
-            onChangeText={setEducation}
-            maxLength={100}
-            editable={!saving}
-          />
-        </View>
-      )}
-
-      {/* ── When I'm Usually Free ── */}
-      {renderSectionHeader(
-        "When I'm Usually Free",
-        'availability',
-        weeklySlots.length > 0 ? weeklySlots.map(formatSlotDisplay).join(', ') : undefined
-      )}
-      {expandedSections.has('availability') && (
-        <View style={styles.sectionBody}>
-          {weeklySlots.map((slot, index) => (
-            <View key={index} style={styles.slotRow}>
-              <Text style={styles.slotText}>{formatSlotDisplay(slot)}</Text>
-              <TouchableOpacity onPress={() => removeSlot(index)} disabled={saving}>
-                <Text style={styles.clearLink}>Remove</Text>
-              </TouchableOpacity>
+          {expandedSections.has('personality') && (
+            <View style={styles.editSection}>
+              <Text style={styles.fieldLabel}>Love language</Text>
+              {renderPicker(loveLanguage, LOVE_LANGUAGE_OPTIONS, setLoveLanguage)}
+              <Text style={[styles.fieldLabel, { marginTop: 16 }]}>Personality type (MBTI)</Text>
+              {renderTagPicker(personalityType ? [personalityType] : [], MBTI_OPTIONS, (v) =>
+                setPersonalityType(personalityType === v ? null : v)
+              )}
+              <Text style={[styles.fieldLabel, { marginTop: 16 }]}>Astrology sign</Text>
+              {renderTagPicker(astrologySign ? [astrologySign] : [], ASTROLOGY_SIGNS, (v) =>
+                setAstrologySign(astrologySign === v ? null : v)
+              )}
             </View>
-          ))}
-          {weeklySlots.length < 3 && <AvailabilitySlotPicker onAdd={addSlot} disabled={saving} />}
-          {weeklySlots.length === 0 && (
-            <Text style={styles.fieldHint}>Add times when you're usually free for dates</Text>
           )}
         </View>
-      )}
 
-      {/* ── Save ── */}
-      <TouchableOpacity
-        style={[styles.saveButton, saving && styles.buttonDisabled]}
-        onPress={handleSave}
-        disabled={saving}
-      >
-        {saving ? (
-          <ActivityIndicator color="#fff" />
-        ) : (
-          <Text style={styles.saveButtonText}>Save Changes</Text>
-        )}
-      </TouchableOpacity>
+        {/* Work & Education Card */}
+        <View style={styles.glassCard}>
+          {renderSectionHeader(
+            'Work & Education',
+            'work',
+            [jobTitle, education].filter((s) => s.trim()).join(' \u00B7 ') || undefined
+          )}
+          {expandedSections.has('work') && (
+            <View style={styles.editSection}>
+              <Text style={styles.fieldLabel}>Job title</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="e.g. Software Engineer"
+                placeholderTextColor={BRAND_COLORS.text[600]}
+                value={jobTitle}
+                onChangeText={setJobTitle}
+                maxLength={100}
+                editable={!saving}
+              />
+              <Text style={[styles.fieldLabel, { marginTop: 16 }]}>Education</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="e.g. University of Sydney"
+                placeholderTextColor={BRAND_COLORS.text[600]}
+                value={education}
+                onChangeText={setEducation}
+                maxLength={100}
+                editable={!saving}
+              />
+            </View>
+          )}
+        </View>
 
-      <TouchableOpacity style={styles.signOutButton} onPress={handleSignOut}>
-        <Text style={styles.signOutText}>Sign Out</Text>
-      </TouchableOpacity>
-    </ScrollView>
+        {/* When I'm Usually Free Card */}
+        <View style={styles.glassCard}>
+          <View style={styles.cardHeader}>
+            <Text style={styles.cardTitle}>When I'm Usually Free</Text>
+            <Ionicons name="flash" size={16} color={GOLD[600]} />
+          </View>
+          {expandedSections.has('availability') ? (
+            <View style={styles.editSection}>
+              {weeklySlots.map((slot, index) => (
+                <View key={index} style={styles.slotRow}>
+                  <Text style={styles.slotText}>{formatSlotDisplay(slot)}</Text>
+                  <AnimatedPressable
+                    onPress={() => removeSlot(index)}
+                    disabled={saving}
+                    haptic={false}
+                  >
+                    <Text style={styles.clearLink}>Remove</Text>
+                  </AnimatedPressable>
+                </View>
+              ))}
+              {weeklySlots.length < 3 && (
+                <AvailabilitySlotPicker onAdd={addSlot} disabled={saving} />
+              )}
+              {weeklySlots.length === 0 && (
+                <Text style={styles.fieldHint}>Add times when you're usually free for dates</Text>
+              )}
+              <AnimatedPressable onPress={() => toggleSection('availability')} haptic={false}>
+                <Text style={[styles.viewAllText, { marginTop: 12 }]}>DONE</Text>
+              </AnimatedPressable>
+            </View>
+          ) : (
+            <>
+              {availabilityChips.length > 0 ? (
+                <View style={styles.availabilityChips}>
+                  {availabilityChips.map((chip, index) => (
+                    <View
+                      key={index}
+                      style={[styles.availChip, index === 0 && styles.availChipActive]}
+                    >
+                      <Text style={[styles.availChipDay, index === 0 && styles.availChipDayActive]}>
+                        {chip.day}
+                      </Text>
+                      <Text
+                        style={[styles.availChipTime, index === 0 && styles.availChipTimeActive]}
+                      >
+                        {chip.time}
+                      </Text>
+                    </View>
+                  ))}
+                </View>
+              ) : (
+                <AnimatedPressable onPress={() => toggleSection('availability')} haptic={false}>
+                  <Text style={styles.fieldHint}>Tap to add your usual free times</Text>
+                </AnimatedPressable>
+              )}
+              <Text style={styles.availabilityHint}>
+                Adding availability helps matches propose times faster
+              </Text>
+              {availabilityChips.length > 0 && (
+                <AnimatedPressable onPress={() => toggleSection('availability')} haptic={false}>
+                  <Text style={[styles.viewAllText, { marginTop: 8 }]}>EDIT</Text>
+                </AnimatedPressable>
+              )}
+            </>
+          )}
+        </View>
+
+        {/* Save Changes */}
+        <GHButton
+          title="Save Changes"
+          onPress={handleSave}
+          loading={saving}
+          disabled={saving}
+          style={styles.saveButton}
+        />
+
+        {/* Sign Out */}
+        <GHButton
+          title="Sign Out"
+          onPress={handleSignOut}
+          variant="coral"
+          style={styles.signOutButton}
+        />
+      </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: GOLDEN_HOUR.bg,
+    backgroundColor: MIDNIGHT.bg,
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    backgroundColor: MIDNIGHT.bg,
+  },
+  scrollView: {
+    flex: 1,
   },
   content: {
-    padding: 24,
-    paddingTop: 60,
-    paddingBottom: 48,
-  },
-  title: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    color: BRAND_COLORS.text[900],
-    marginBottom: 8,
-  },
-  subtitle: {
-    fontSize: 16,
-    color: BRAND_COLORS.text[600],
-    marginBottom: 24,
+    paddingHorizontal: 24,
+    paddingTop: 24,
   },
 
-  // Sections
-  section: {
-    marginBottom: 20,
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 14,
+  // Header
+  header: {
+    backgroundColor: MIDNIGHT.bg,
     borderBottomWidth: 1,
-    borderBottomColor: GOLDEN_HOUR.borderDefault,
+    borderBottomColor: '#1a1f2e',
   },
-  sectionHeaderLeft: {
-    flex: 1,
-    marginRight: 12,
+  headerContent: {
+    height: 56,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 24,
   },
-  sectionTitle: {
-    fontSize: 17,
-    fontWeight: '600',
+  headerIcon: {
+    width: 40,
+    height: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  headerTitle: {
+    fontSize: TYPOGRAPHY.fontSize.xl,
+    fontFamily: TYPOGRAPHY.fontFamily.serifBold,
     color: BRAND_COLORS.text[900],
-  },
-  sectionSummary: {
-    fontSize: 14,
-    color: BRAND_COLORS.text[600],
-    marginTop: 2,
-  },
-  sectionChevron: {
-    fontSize: 12,
-    color: BRAND_COLORS.text[600],
-  },
-  sectionBody: {
-    paddingVertical: 12,
-    gap: 12,
+    textAlign: 'center',
+    flex: 1,
   },
 
-  // Fields
-  label: {
-    fontSize: 16,
-    fontWeight: '600',
+  // Hero Section
+  heroSection: {
+    alignItems: 'center',
+    marginBottom: 32,
+  },
+  avatarRing: {
+    width: 106,
+    height: 106,
+    borderRadius: 53,
+    borderWidth: 3,
+    borderColor: BRAND_COLORS.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    position: 'relative',
+  },
+  avatarContainer: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    overflow: 'hidden',
+    backgroundColor: MIDNIGHT.surface,
+  },
+  avatarImage: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+  },
+  avatarPlaceholder: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: MIDNIGHT.inputBg,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  avatarEditBadge: {
+    position: 'absolute',
+    bottom: 0,
+    right: 0,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: BRAND_COLORS.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  heroName: {
+    fontFamily: TYPOGRAPHY.fontFamily.serifBold,
+    fontSize: TYPOGRAPHY.fontSize['3xl'],
     color: BRAND_COLORS.text[900],
-    marginBottom: 8,
+    textAlign: 'center',
+    marginTop: 16,
   },
-  fieldLabel: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: BRAND_COLORS.text[700],
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: GOLDEN_HOUR.borderDefault,
-    borderRadius: GOLDEN_HOUR.radius.lg,
-    padding: 14,
-    fontSize: 16,
-    backgroundColor: GOLDEN_HOUR.inputBg,
-    color: BRAND_COLORS.text[900],
-  },
-  textArea: {
-    height: 120,
-    textAlignVertical: 'top',
-  },
-  clearLink: {
-    fontSize: 14,
-    color: BRAND_COLORS.danger,
-    fontWeight: '500',
+  heroTagline: {
+    fontFamily: TYPOGRAPHY.fontFamily.medium,
+    fontSize: TYPOGRAPHY.fontSize.sm,
+    color: BRAND_COLORS.primary,
+    textAlign: 'center',
     marginTop: 4,
   },
 
-  // Availability slots
-  slotRow: {
+  // Glass Card
+  glassCard: {
+    ...MIDNIGHT.glassCard,
+    borderRadius: 24,
+    padding: 24,
+    marginBottom: 32,
+    overflow: 'hidden',
+  },
+  cardHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: GOLDEN_HOUR.inputBg,
-    padding: 12,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: GOLDEN_HOUR.borderDefault,
+    marginBottom: 16,
   },
-  slotText: {
-    fontSize: 14,
+  cardTitle: {
+    fontFamily: TYPOGRAPHY.fontFamily.serifBold,
+    fontSize: TYPOGRAPHY.fontSize.lg,
     color: BRAND_COLORS.text[900],
-    flex: 1,
   },
-  fieldHint: {
-    fontSize: 13,
+  cardBody: {
+    fontFamily: TYPOGRAPHY.fontFamily.regular,
+    fontSize: TYPOGRAPHY.fontSize.sm,
     color: BRAND_COLORS.text[600],
-    fontStyle: 'italic',
+    lineHeight: TYPOGRAPHY.fontSize.sm * TYPOGRAPHY.lineHeight.relaxed,
   },
-
-  // Chips / pickers
-  pickerContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  chip: {
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 20,
-    borderWidth: 1.5,
-    borderColor: GOLDEN_HOUR.borderDefault,
-    backgroundColor: GOLDEN_HOUR.inputBg,
-  },
-  chipSelected: {
-    borderColor: BRAND_COLORS.primary,
-    backgroundColor: '#D1FFFB',
-  },
-  chipText: {
-    fontSize: 14,
-    color: BRAND_COLORS.text[700],
-    fontWeight: '500',
-  },
-  chipTextSelected: {
+  viewAllText: {
+    fontFamily: TYPOGRAPHY.fontFamily.semibold,
+    fontSize: TYPOGRAPHY.fontSize.xs,
     color: BRAND_COLORS.primary,
-    fontWeight: '600',
+    textTransform: 'uppercase',
+    letterSpacing: TYPOGRAPHY.letterSpacing.wide,
   },
 
-  // Photos
-  photosContainer: {
+  // Photo Grid
+  photoGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 12,
   },
-  photoWrapper: {
+  photoGridItem: {
+    borderRadius: 16,
+    overflow: 'hidden',
     position: 'relative',
+    backgroundColor: '#1a1f2e',
   },
-  photo: {
-    width: 100,
-    height: 125,
-    borderRadius: GOLDEN_HOUR.radius.lg,
-    backgroundColor: '#E2E8F0',
+  photoGridImage: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 16,
   },
+  addPhotoSlot: {
+    borderRadius: 16,
+    backgroundColor: '#1a1f2e',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.05)',
+    borderStyle: 'dashed',
+  },
+
+  // Photo Overlays
   uploadOverlay: {
     position: 'absolute',
     top: 0,
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    borderRadius: GOLDEN_HOUR.radius.lg,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    borderRadius: 16,
     justifyContent: 'center',
     alignItems: 'center',
     zIndex: 1,
   },
   deletingText: {
-    color: '#fff',
-    fontSize: 12,
-    fontWeight: '600',
-    marginTop: 4,
+    color: BRAND_COLORS.onPrimary,
+    fontSize: TYPOGRAPHY.fontSize.xs,
+    fontFamily: TYPOGRAPHY.fontFamily.semibold,
+    marginTop: SPACING.xs,
   },
   successOverlay: {
     backgroundColor: 'rgba(34, 197, 94, 0.8)',
@@ -1180,20 +1334,20 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   checkmark: {
-    color: '#fff',
+    color: BRAND_COLORS.onPrimary,
     fontSize: 32,
     fontWeight: 'bold',
   },
-  errorText: {
-    color: '#fff',
+  errorIcon: {
+    color: BRAND_COLORS.onPrimary,
     fontSize: 24,
     fontWeight: 'bold',
   },
   retryButton: {
-    backgroundColor: '#fff',
+    backgroundColor: MIDNIGHT.surface,
     paddingHorizontal: 12,
     paddingVertical: 4,
-    borderRadius: 4,
+    borderRadius: MIDNIGHT.radius.sm,
   },
   retryText: {
     color: BRAND_COLORS.primary,
@@ -1206,62 +1360,212 @@ const styles = StyleSheet.create({
     right: -8,
     width: 24,
     height: 24,
-    borderRadius: GOLDEN_HOUR.radius.lg,
+    borderRadius: 12,
     backgroundColor: BRAND_COLORS.danger,
     justifyContent: 'center',
     alignItems: 'center',
+    zIndex: 2,
   },
   removePhotoText: {
-    color: '#fff',
+    color: BRAND_COLORS.onPrimary,
     fontSize: 18,
     fontWeight: 'bold',
     lineHeight: 20,
   },
-  addPhotoButton: {
-    width: 100,
-    height: 125,
-    borderRadius: GOLDEN_HOUR.radius.lg,
-    borderWidth: 2,
-    borderColor: BRAND_COLORS.primary,
-    borderStyle: 'dashed',
-    justifyContent: 'center',
+
+  // Details Card
+  detailRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: GOLDEN_HOUR.inputBg,
+    paddingVertical: 16,
   },
-  addPhotoText: {
+  detailRowBorder: {
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255,255,255,0.05)',
+  },
+  detailLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  detailLabel: {
+    fontFamily: TYPOGRAPHY.fontFamily.regular,
+    fontSize: TYPOGRAPHY.fontSize.sm,
+    color: BRAND_COLORS.text[500],
+  },
+  detailValue: {
+    fontFamily: TYPOGRAPHY.fontFamily.medium,
+    fontSize: TYPOGRAPHY.fontSize.sm,
+    color: BRAND_COLORS.text[900],
+  },
+  detailValuePrimary: {
+    color: BRAND_COLORS.primaryLight,
+  },
+
+  // Availability Chips
+  availabilityChips: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  availChip: {
+    backgroundColor: '#1a1f2e',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.05)',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 9999,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  availChipActive: {
+    backgroundColor: 'rgba(10,127,116,0.2)',
+    borderColor: 'rgba(10,127,116,0.3)',
+  },
+  availChipDay: {
+    fontSize: 10,
+    fontFamily: TYPOGRAPHY.fontFamily.bold,
+    color: BRAND_COLORS.text[600],
+    textTransform: 'uppercase',
+  },
+  availChipDayActive: {
     color: BRAND_COLORS.primary,
-    fontSize: 14,
-    fontWeight: '600',
+  },
+  availChipTime: {
+    fontSize: TYPOGRAPHY.fontSize.xs,
+    fontFamily: TYPOGRAPHY.fontFamily.regular,
+    color: BRAND_COLORS.text[600],
+  },
+  availChipTimeActive: {
+    color: BRAND_COLORS.primary,
+  },
+  availabilityHint: {
+    fontSize: 11,
+    fontFamily: TYPOGRAPHY.fontFamily.regular,
+    fontStyle: 'italic',
+    color: BRAND_COLORS.text[500],
+    marginTop: 16,
+  },
+
+  // Accordion Section Headers (inside glass cards)
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 2,
+  },
+  sectionHeaderLeft: {
+    flex: 1,
+    marginRight: 12,
+  },
+  sectionTitle: {
+    fontSize: TYPOGRAPHY.fontSize.lg,
+    fontFamily: TYPOGRAPHY.fontFamily.serifBold,
+    color: BRAND_COLORS.text[900],
+  },
+  sectionSummary: {
+    fontSize: TYPOGRAPHY.fontSize.sm,
+    fontFamily: TYPOGRAPHY.fontFamily.regular,
+    color: BRAND_COLORS.text[600],
+    marginTop: 2,
+  },
+  sectionChevron: {
+    fontSize: TYPOGRAPHY.fontSize.xs,
+    color: BRAND_COLORS.primary,
+  },
+
+  // Edit Section
+  editSection: {
+    gap: 12,
+  },
+
+  // Slots (availability edit mode)
+  slotRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    ...MIDNIGHT.glassCardSm,
+    padding: 12,
+  },
+  slotText: {
+    fontSize: TYPOGRAPHY.fontSize.sm,
+    fontFamily: TYPOGRAPHY.fontFamily.regular,
+    color: BRAND_COLORS.text[900],
+    flex: 1,
+  },
+
+  // Fields
+  fieldLabel: {
+    fontSize: TYPOGRAPHY.fontSize.sm,
+    fontFamily: TYPOGRAPHY.fontFamily.semibold,
+    color: BRAND_COLORS.text[700],
+  },
+  fieldHint: {
+    fontSize: TYPOGRAPHY.fontSize.xs + 1,
+    fontFamily: TYPOGRAPHY.fontFamily.regular,
+    color: BRAND_COLORS.text[500],
+    fontStyle: 'italic',
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: MIDNIGHT.borderDefault,
+    borderRadius: MIDNIGHT.radius.lg,
+    padding: 14,
+    fontSize: 16,
+    fontFamily: TYPOGRAPHY.fontFamily.regular,
+    backgroundColor: MIDNIGHT.inputBg,
+    color: BRAND_COLORS.text[900],
+  },
+  textArea: {
+    height: 120,
+    textAlignVertical: 'top',
+  },
+  clearLink: {
+    fontSize: TYPOGRAPHY.fontSize.sm,
+    fontFamily: TYPOGRAPHY.fontFamily.medium,
+    color: BRAND_COLORS.danger,
+    marginTop: SPACING.xs,
+  },
+
+  // Chips / pickers
+  pickerContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  chip: {
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: MIDNIGHT.radius.full,
+    borderWidth: 1,
+    borderColor: MIDNIGHT.borderDefault,
+    backgroundColor: MIDNIGHT.glassCard.backgroundColor,
+  },
+  chipSelected: {
+    borderColor: BRAND_COLORS.primary,
+    backgroundColor: BRAND_COLORS.primary,
+    ...MIDNIGHT.glow.selected,
+  },
+  chipText: {
+    fontSize: TYPOGRAPHY.fontSize.sm,
+    fontFamily: TYPOGRAPHY.fontFamily.medium,
+    color: BRAND_COLORS.text[700],
+  },
+  chipTextSelected: {
+    fontFamily: TYPOGRAPHY.fontFamily.semibold,
+    color: BRAND_COLORS.onPrimary,
   },
 
   // Buttons
   saveButton: {
-    backgroundColor: BRAND_COLORS.primary,
-    paddingVertical: 16,
-    borderRadius: GOLDEN_HOUR.radius.lg,
-    alignItems: 'center',
-    marginTop: 24,
-    ...GOLDEN_HOUR.shadow.warm,
-  },
-  buttonDisabled: {
-    opacity: 0.6,
-  },
-  saveButtonText: {
-    color: '#fff',
-    fontSize: 18,
-    fontWeight: '600',
+    marginTop: SPACING.lg,
   },
   signOutButton: {
-    backgroundColor: BRAND_COLORS.danger,
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-    borderRadius: GOLDEN_HOUR.radius.lg,
     alignSelf: 'flex-start',
-    marginTop: 16,
-  },
-  signOutText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
+    marginTop: SPACING.base,
+    paddingHorizontal: SPACING.lg,
+    paddingVertical: SPACING.md,
   },
 });

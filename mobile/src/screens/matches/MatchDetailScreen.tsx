@@ -1,20 +1,20 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-  ActivityIndicator,
-} from 'react-native';
+import { View, Text, StyleSheet, ScrollView, ActivityIndicator, FlatList } from 'react-native';
 import { Image } from 'expo-image';
+import { Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { supabase } from '../../lib/supabase/client';
 import { Match, Proposal, Confirm } from '../../lib/types';
-import { BRAND_COLORS, GOLDEN_HOUR } from '../../config/brand';
+import { BRAND_COLORS, MIDNIGHT, GOLD, TYPOGRAPHY, SPACING } from '../../config/brand';
 import { getErrorAlert } from '../../lib/errors';
 import ProposalCard from '../../components/ProposalCard';
+import AnimatedPressable from '../../components/ui/AnimatedPressable';
+import GHButton from '../../components/ui/GHButton';
+
+const PHOTO_WIDTH = 200;
+const PHOTO_HEIGHT = 260;
 
 const PLACEHOLDER_IMAGE = require('../../../assets/icon.png');
 
@@ -25,13 +25,17 @@ type MatchDetailRouteParams = {
 type MatchDetailNavigationProp = NativeStackNavigationProp<any, 'MatchDetail'>;
 
 export default function MatchDetailScreen() {
+  const insets = useSafeAreaInsets();
   const route = useRoute();
   const navigation = useNavigation<MatchDetailNavigationProp>();
   const { matchId } = route.params as MatchDetailRouteParams;
 
   const [match, setMatch] = useState<Match | null>(null);
-  const [otherUserPhoto, setOtherUserPhoto] = useState<string>('');
+  const [otherUserPhotos, setOtherUserPhotos] = useState<string[]>([]);
   const [otherUserName, setOtherUserName] = useState<string>('');
+  const [otherUserBio, setOtherUserBio] = useState<string>('');
+  const [otherUserInfoPills, setOtherUserInfoPills] = useState<string[]>([]);
+  const [activePhotoIndex, setActivePhotoIndex] = useState(0);
   const [proposals, setProposals] = useState<Proposal[]>([]);
   const [confirms, setConfirms] = useState<Confirm[]>([]);
   const [loading, setLoading] = useState(true);
@@ -74,7 +78,7 @@ export default function MatchDetailScreen() {
       // Load other user's profile (id = otherUserId; maybeSingle for missing profile)
       const { data: profile, error: profileError } = await supabase
         .from('profiles')
-        .select('photos, prompts')
+        .select('full_name, photos, prompts')
         .eq('id', otherUserId)
         .maybeSingle();
 
@@ -83,9 +87,30 @@ export default function MatchDetailScreen() {
         setError(message);
       } else if (profile) {
         const photos = (profile.photos as string[]) || [];
-        const prompts = (profile.prompts as Record<string, string>) || {};
-        setOtherUserPhoto(photos[0] || '');
-        setOtherUserName(prompts.headline || 'No name');
+        const prompts = (profile.prompts as Record<string, any>) || {};
+        setOtherUserPhotos(photos);
+        setOtherUserName(profile.full_name || 'No name');
+        setOtherUserBio(prompts.bio || '');
+
+        // Extract info pills from demographics and preferences
+        const pills: string[] = [];
+        const demographics = prompts.demographics as Record<string, any> | undefined;
+        const preferences = prompts.preferences as Record<string, any> | undefined;
+        if (demographics) {
+          Object.entries(demographics).forEach(([, value]) => {
+            if (typeof value === 'string' && value) pills.push(value);
+            if (Array.isArray(value))
+              value.forEach((v) => typeof v === 'string' && v && pills.push(v));
+          });
+        }
+        if (preferences) {
+          Object.entries(preferences).forEach(([, value]) => {
+            if (typeof value === 'string' && value) pills.push(value);
+            if (Array.isArray(value))
+              value.forEach((v) => typeof v === 'string' && v && pills.push(v));
+          });
+        }
+        setOtherUserInfoPills(pills);
       }
 
       // Load proposals
@@ -183,7 +208,7 @@ export default function MatchDetailScreen() {
 
   if (loading) {
     return (
-      <View style={styles.container}>
+      <View style={[styles.container, styles.centeredContainer, { paddingTop: insets.top }]}>
         <ActivityIndicator size="large" color={BRAND_COLORS.primary} />
       </View>
     );
@@ -191,12 +216,12 @@ export default function MatchDetailScreen() {
 
   if (error || !match) {
     return (
-      <View style={styles.container}>
+      <View style={[styles.container, styles.centeredContainer, { paddingTop: insets.top }]}>
         <Text style={styles.errorText}>{error || 'Match not found'}</Text>
         {error && (
-          <TouchableOpacity style={styles.retryButton} onPress={() => loadMatchData()}>
+          <AnimatedPressable style={styles.retryButton} onPress={() => loadMatchData()}>
             <Text style={styles.retryButtonText}>Retry</Text>
-          </TouchableOpacity>
+          </AnimatedPressable>
         )}
       </View>
     );
@@ -206,23 +231,89 @@ export default function MatchDetailScreen() {
   const latestProposal = proposals[0];
 
   return (
-    <ScrollView style={styles.container}>
+    <ScrollView style={styles.container} contentContainerStyle={{ paddingTop: insets.top }}>
+      {/* Back button */}
+      <View style={styles.backButtonRow}>
+        <AnimatedPressable
+          style={styles.backButton}
+          onPress={() => navigation.goBack()}
+          haptic={false}
+        >
+          <Ionicons name="arrow-back" size={24} color={BRAND_COLORS.primary} />
+        </AnimatedPressable>
+      </View>
+
+      {/* Profile section */}
       <View style={styles.header}>
-        <Image
-          source={otherUserPhoto ? { uri: otherUserPhoto } : PLACEHOLDER_IMAGE}
-          style={styles.avatar}
-          contentFit="cover"
-          cachePolicy="memory-disk"
-        />
+        {/* Photo gallery */}
+        {otherUserPhotos.length > 0 ? (
+          <View>
+            <FlatList
+              data={otherUserPhotos}
+              horizontal
+              pagingEnabled={false}
+              showsHorizontalScrollIndicator={false}
+              snapToInterval={PHOTO_WIDTH + SPACING.sm}
+              decelerationRate="fast"
+              contentContainerStyle={styles.photoGallery}
+              keyExtractor={(item, index) => `${index}-${item}`}
+              onMomentumScrollEnd={(e) => {
+                const index = Math.round(
+                  e.nativeEvent.contentOffset.x / (PHOTO_WIDTH + SPACING.sm)
+                );
+                setActivePhotoIndex(Math.min(index, otherUserPhotos.length - 1));
+              }}
+              renderItem={({ item }) => (
+                <Image
+                  source={{ uri: item }}
+                  style={styles.galleryPhoto}
+                  contentFit="cover"
+                  cachePolicy="memory-disk"
+                />
+              )}
+            />
+            {otherUserPhotos.length > 1 && (
+              <View style={styles.pageDots}>
+                {otherUserPhotos.map((_, index) => (
+                  <View
+                    key={index}
+                    style={[styles.pageDot, index === activePhotoIndex && styles.pageDotActive]}
+                  />
+                ))}
+              </View>
+            )}
+          </View>
+        ) : (
+          <Image
+            source={PLACEHOLDER_IMAGE}
+            style={styles.avatar}
+            contentFit="cover"
+            cachePolicy="memory-disk"
+          />
+        )}
+
+        {/* Name */}
         <Text style={styles.name}>{otherUserName}</Text>
+
+        {/* Bio */}
+        {otherUserBio ? <Text style={styles.bio}>{otherUserBio}</Text> : null}
+
+        {/* Info pills */}
+        {otherUserInfoPills.length > 0 && (
+          <View style={styles.pillsContainer}>
+            {otherUserInfoPills.map((pill, index) => (
+              <View key={`${pill}-${index}`} style={styles.pill}>
+                <Text style={styles.pillText}>{pill}</Text>
+              </View>
+            ))}
+          </View>
+        )}
       </View>
 
       {hasConfirmedDate && (
         <View style={styles.confirmedBanner}>
           <Text style={styles.confirmedText}>✓ Date Confirmed</Text>
-          <TouchableOpacity style={styles.chatButton} onPress={handleChat}>
-            <Text style={styles.chatButtonText}>Open Chat</Text>
-          </TouchableOpacity>
+          <GHButton title="Open Chat" onPress={handleChat} style={styles.chatButton} />
         </View>
       )}
 
@@ -243,9 +334,7 @@ export default function MatchDetailScreen() {
 
       {!hasActiveProposal && !hasConfirmedDate && (
         <View style={styles.section}>
-          <TouchableOpacity style={styles.proposeButton} onPress={handlePropose}>
-            <Text style={styles.proposeButtonText}>Propose 2-3 Times</Text>
-          </TouchableOpacity>
+          <GHButton title="Propose 2-3 Times" onPress={handlePropose} />
         </View>
       )}
 
@@ -270,93 +359,152 @@ export default function MatchDetailScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: GOLDEN_HOUR.bg,
+    backgroundColor: MIDNIGHT.bg,
+  },
+  centeredContainer: {
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  backButtonRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: SPACING.base,
+    height: 48,
+  },
+  backButton: {
+    width: 40,
+    height: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   header: {
     alignItems: 'center',
-    padding: 24,
+    paddingHorizontal: SPACING.lg,
+    paddingBottom: SPACING.lg,
     borderBottomWidth: 1,
-    borderBottomColor: GOLDEN_HOUR.borderDefault,
+    borderBottomColor: MIDNIGHT.borderDefault,
+  },
+  photoGallery: {
+    paddingHorizontal: SPACING.sm,
+    gap: SPACING.sm,
+  },
+  galleryPhoto: {
+    width: PHOTO_WIDTH,
+    height: PHOTO_HEIGHT,
+    borderRadius: MIDNIGHT.radius.md,
+    backgroundColor: MIDNIGHT.borderDefault,
+  },
+  pageDots: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: SPACING.md,
+    gap: SPACING.xs,
+  },
+  pageDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: BRAND_COLORS.text[500],
+  },
+  pageDotActive: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: BRAND_COLORS.primary,
   },
   avatar: {
     width: 100,
     height: 100,
     borderRadius: 50,
-    backgroundColor: '#E2E8F0',
-    marginBottom: 12,
+    backgroundColor: MIDNIGHT.borderDefault,
+    marginBottom: SPACING.md,
+    borderWidth: 3,
+    borderColor: BRAND_COLORS.primary,
   },
   name: {
-    fontSize: 24,
-    fontWeight: 'bold',
+    fontSize: TYPOGRAPHY.fontSize['2xl'],
+    fontFamily: TYPOGRAPHY.fontFamily.serifBold,
     color: BRAND_COLORS.text[900],
+    marginTop: SPACING.md,
+  },
+  bio: {
+    fontSize: TYPOGRAPHY.fontSize.base,
+    fontFamily: TYPOGRAPHY.fontFamily.regular,
+    color: BRAND_COLORS.text[600],
+    marginTop: SPACING.sm,
+    textAlign: 'center',
+    lineHeight: TYPOGRAPHY.fontSize.base * TYPOGRAPHY.lineHeight.relaxed,
+    paddingHorizontal: SPACING.base,
+  },
+  pillsContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    marginTop: SPACING.md,
+    gap: SPACING.sm,
+    paddingHorizontal: SPACING.base,
+  },
+  pill: {
+    backgroundColor: 'rgba(17, 19, 24, 0.8)',
+    borderWidth: 1,
+    borderColor: '#1a1f2e',
+    borderRadius: 14,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.xs,
+  },
+  pillText: {
+    fontSize: TYPOGRAPHY.fontSize.sm,
+    fontFamily: TYPOGRAPHY.fontFamily.medium,
+    color: BRAND_COLORS.text[700],
   },
   confirmedBanner: {
-    backgroundColor: BRAND_COLORS.success + '20',
-    padding: 16,
-    margin: 16,
-    borderRadius: GOLDEN_HOUR.radius.lg,
+    ...MIDNIGHT.glassCard,
+    borderColor: GOLD[600],
+    padding: SPACING.base,
+    margin: SPACING.base,
     alignItems: 'center',
+    ...MIDNIGHT.glow.gold,
   },
   confirmedText: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: BRAND_COLORS.success,
-    marginBottom: 12,
+    fontSize: TYPOGRAPHY.fontSize.lg,
+    fontFamily: TYPOGRAPHY.fontFamily.serifBold,
+    color: GOLD[600],
+    marginBottom: SPACING.md,
   },
   chatButton: {
-    backgroundColor: BRAND_COLORS.primary,
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-    borderRadius: GOLDEN_HOUR.radius.lg,
-    ...GOLDEN_HOUR.shadow.warm,
-  },
-  chatButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
+    alignSelf: 'stretch',
   },
   section: {
-    padding: 16,
+    padding: SPACING.base,
   },
   sectionTitle: {
-    fontSize: 20,
-    fontWeight: '600',
+    fontSize: TYPOGRAPHY.fontSize.xl,
+    fontFamily: TYPOGRAPHY.fontFamily.serifBold,
     color: BRAND_COLORS.text[900],
-    marginBottom: 12,
-  },
-  proposeButton: {
-    backgroundColor: BRAND_COLORS.primary,
-    paddingVertical: 16,
-    borderRadius: GOLDEN_HOUR.radius.lg,
-    alignItems: 'center',
-    ...GOLDEN_HOUR.shadow.warm,
-  },
-  proposeButtonText: {
-    color: '#fff',
-    fontSize: 18,
-    fontWeight: '600',
+    marginBottom: SPACING.md,
   },
   errorText: {
-    fontSize: 18,
-    fontWeight: '600',
+    fontSize: TYPOGRAPHY.fontSize.lg,
+    fontFamily: TYPOGRAPHY.fontFamily.serifBold,
     color: BRAND_COLORS.danger,
     textAlign: 'center',
-    marginTop: 40,
-    marginBottom: 16,
-    paddingHorizontal: 32,
+    marginTop: SPACING['2xl'],
+    marginBottom: SPACING.base,
+    paddingHorizontal: SPACING.xl,
   },
   retryButton: {
     backgroundColor: BRAND_COLORS.primary,
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-    borderRadius: GOLDEN_HOUR.radius.lg,
+    paddingVertical: SPACING.md,
+    paddingHorizontal: SPACING.lg,
+    borderRadius: MIDNIGHT.radius.lg,
     alignSelf: 'center',
-    marginTop: 8,
-    ...GOLDEN_HOUR.shadow.warm,
+    marginTop: SPACING.sm,
+    ...MIDNIGHT.glow.primary,
   },
   retryButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
+    color: BRAND_COLORS.onPrimary,
+    fontSize: TYPOGRAPHY.fontSize.base,
+    fontFamily: TYPOGRAPHY.fontFamily.semibold,
   },
 });

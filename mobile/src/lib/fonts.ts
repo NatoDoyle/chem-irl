@@ -1,4 +1,5 @@
 import * as Font from 'expo-font';
+import * as Sentry from '@sentry/react-native';
 import { useEffect, useState } from 'react';
 import {
   Inter_400Regular,
@@ -32,8 +33,11 @@ export async function loadFonts(): Promise<void> {
     await Font.loadAsync(fontAssets);
     fontsLoaded = true;
   } catch (error) {
-    // Font loading failed — continue without custom fonts.
-    // The app will fall back to system fonts.
+    // Font loading failed — continue without custom fonts. The app falls back
+    // to system fonts, which silently breaks the Midnight Chemistry aesthetic.
+    // Report to Sentry so we can detect this in prod.
+    Sentry.captureMessage('[fonts] Inter/Libre Caslon load failed — system fallback', 'warning');
+    Sentry.captureException(error);
     console.warn('[fonts] Failed to load fonts, using system fonts:', error);
     fontsLoaded = true;
   }

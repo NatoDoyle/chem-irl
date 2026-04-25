@@ -89,7 +89,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   disabled: {
-    opacity: 0.6,
+    opacity: 0.7,
   },
   textBase: {
     fontSize: TYPOGRAPHY.fontSize.lg,
@@ -124,7 +124,9 @@ const variantStyles: Record<GHButtonVariant, ViewStyle> = {
   ghost: {
     backgroundColor: 'transparent',
     borderWidth: 1.5,
-    borderColor: 'rgba(255,255,255,0.4)',
+    // Stronger border alpha so disabled state (opacity 0.7) stays visible:
+    // final alpha = 0.6 × 0.7 = 0.42, passes 3:1 contrast for non-text UI.
+    borderColor: 'rgba(255,255,255,0.6)',
   },
 };
 
