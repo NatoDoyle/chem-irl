@@ -43,7 +43,7 @@ CREATE TABLE IF NOT EXISTS waitlist_signups (
   why_signup TEXT
     CHECK (why_signup IS NULL OR length(why_signup) <= 500),
   referral_code TEXT UNIQUE NOT NULL
-    DEFAULT encode(gen_random_bytes(6), 'hex'),
+    DEFAULT encode(extensions.gen_random_bytes(6), 'hex'),
   referred_by_code TEXT
     REFERENCES waitlist_signups(referral_code) ON DELETE SET NULL,
   position INT NOT NULL
@@ -232,7 +232,7 @@ BEGIN
     END IF;
   END IF;
 
-  v_token := encode(gen_random_bytes(24), 'hex');
+  v_token := encode(extensions.gen_random_bytes(24), 'hex');
 
   INSERT INTO waitlist_signups (
     email, first_name, age_band, gender, city, why_signup,

@@ -11,7 +11,7 @@
 -- ============================================================================
 
 CREATE TABLE scoring_events (
-  event_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  event_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
   event_type TEXT NOT NULL,
   payload JSONB DEFAULT '{}',
@@ -299,6 +299,10 @@ $$;
 -- ============================================================================
 -- STEP 4: Discovery feed v2 — composite score ranking + impression tracking
 -- ============================================================================
+-- A pre-existing get_discovery_feed_v2 (different return columns) was created
+-- via the Dashboard SQL Editor before this migration file landed; CREATE OR
+-- REPLACE cannot change a function's return type, so drop first.
+DROP FUNCTION IF EXISTS get_discovery_feed_v2(UUID, INTEGER);
 
 CREATE OR REPLACE FUNCTION get_discovery_feed_v2(p_viewer UUID, p_limit INTEGER DEFAULT 20)
 RETURNS TABLE (
@@ -479,18 +483,40 @@ $$;
 -- ============================================================================
 -- STEP 8: Cron job updates
 -- ============================================================================
+-- Guarded against environments where pg_cron is not installed (e.g. fresh
+-- staging projects). cron.unschedule additionally guarded against the job
+-- not being present, since its exception is not catchable by pg_extension
+-- existence alone.
 
--- Unschedule old daily scoring job
-SELECT cron.unschedule('daily_scoring_midnight');
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM pg_extension WHERE extname = 'pg_cron') THEN
+    -- Unschedule old daily scoring job if it exists.
+    IF EXISTS (SELECT 1 FROM cron.job WHERE jobname = 'daily_scoring_midnight') THEN
+      PERFORM cron.unschedule('daily_scoring_midnight');
+    END IF;
 
--- Daily score materialization at midnight UTC
-SELECT cron.schedule('materialize_scores_daily', '0 0 * * *', $$SELECT materialize_scores();$$);
+    -- Daily score materialization at midnight UTC.
+    IF NOT EXISTS (SELECT 1 FROM cron.job WHERE jobname = 'materialize_scores_daily') THEN
+      PERFORM cron.schedule(
+        'materialize_scores_daily', '0 0 * * *',
+        'SELECT materialize_scores();'
+      );
+    END IF;
 
--- Stale match detection at 00:05 UTC daily
-SELECT cron.schedule('stale_matches_daily', '5 0 * * *', $$SELECT emit_stale_match_events();$$);
+    -- Stale match detection at 00:05 UTC daily.
+    IF NOT EXISTS (SELECT 1 FROM cron.job WHERE jobname = 'stale_matches_daily') THEN
+      PERFORM cron.schedule(
+        'stale_matches_daily', '5 0 * * *',
+        'SELECT emit_stale_match_events();'
+      );
+    END IF;
+  END IF;
+END;
+$$;
 
 -- Hourly proposal expiry stays on existing schedule (now emits events too)
--- No change needed: 'expire_proposals_hourly' already calls expire_proposals()
+-- via the updated expire_proposals(); no cron change needed here.
 
 -- ============================================================================
 -- Notify PostgREST to reload schema cache (new RPC: get_discovery_feed_v2)
