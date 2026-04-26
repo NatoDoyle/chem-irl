@@ -2,15 +2,20 @@ import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { getAllCategories, getPostsByCategory } from '@/lib/blog';
-import { CATEGORIES, CATEGORY_LABELS, type Category } from '@/lib/blog/schema';
+import {
+  CATEGORY_SLUGS,
+  getCategoryDescription,
+  getCategoryLabel,
+  type CategorySlug,
+} from '@/lib/blog/categories';
 import { PostCard } from '@/components/blog/PostCard';
 
 type PageProps = {
   params: Promise<{ category: string }>;
 };
 
-function isCategory(value: string): value is Category {
-  return (CATEGORIES as readonly string[]).includes(value);
+function isCategorySlug(value: string): value is CategorySlug {
+  return (CATEGORY_SLUGS as readonly string[]).includes(value);
 }
 
 export async function generateStaticParams() {
@@ -19,16 +24,16 @@ export async function generateStaticParams() {
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { category } = await params;
-  if (!isCategory(category)) return { title: 'Not found' };
+  if (!isCategorySlug(category)) return { title: 'Not found' };
   return {
-    title: `${CATEGORY_LABELS[category]} — Chem IRL Blog`,
-    description: `Posts in the ${CATEGORY_LABELS[category]} category.`,
+    title: `${getCategoryLabel(category)} — Chem IRL Blog`,
+    description: getCategoryDescription(category),
   };
 }
 
 export default async function CategoryPage({ params }: PageProps) {
   const { category } = await params;
-  if (!isCategory(category)) notFound();
+  if (!isCategorySlug(category)) notFound();
   const posts = getPostsByCategory(category);
   if (posts.length === 0) notFound();
 
@@ -39,9 +44,10 @@ export default async function CategoryPage({ params }: PageProps) {
           ← All posts
         </Link>
         <h1 className="text-4xl md:text-5xl font-bold text-ink-900 mb-4">
-          {CATEGORY_LABELS[category]}
+          {getCategoryLabel(category)}
         </h1>
-        <p className="text-lg text-ink-700">
+        <p className="text-lg text-ink-700 mb-2">{getCategoryDescription(category)}</p>
+        <p className="text-sm text-ink-600">
           {posts.length} {posts.length === 1 ? 'post' : 'posts'}
         </p>
       </header>

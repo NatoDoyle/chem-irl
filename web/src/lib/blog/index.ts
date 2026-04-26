@@ -5,7 +5,7 @@ import readingTime from 'reading-time';
 import {
   AuthorSchema,
   type Author,
-  type Category,
+  type CategorySlug,
   type Post,
   PostFrontmatterSchema,
 } from './schema';
@@ -90,7 +90,7 @@ export function getPostsByTag(tag: string): Post[] {
   return getAllPosts().filter((p) => p.tags.includes(tag));
 }
 
-export function getPostsByCategory(category: Category): Post[] {
+export function getPostsByCategory(category: CategorySlug): Post[] {
   return getAllPosts().filter((p) => p.category === category);
 }
 
@@ -100,8 +100,8 @@ export function getAllTags(): string[] {
   return Array.from(set).sort();
 }
 
-export function getAllCategories(): Category[] {
-  const set = new Set<Category>();
+export function getAllCategories(): CategorySlug[] {
+  const set = new Set<CategorySlug>();
   for (const p of getAllPosts()) set.add(p.category);
   return Array.from(set).sort();
 }
