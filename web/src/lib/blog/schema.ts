@@ -1,14 +1,6 @@
 import { z } from 'zod';
 
-export const CATEGORIES = ['product', 'safety', 'research', 'company'] as const;
-export type Category = (typeof CATEGORIES)[number];
-
-export const CATEGORY_LABELS: Record<Category, string> = {
-  product: 'Product',
-  safety: 'Safety',
-  research: 'Research',
-  company: 'Company',
-};
+import { CATEGORY_SLUGS } from './categories';
 
 export const PostFrontmatterSchema = z.object({
   title: z.string().min(3).max(120),
@@ -16,7 +8,7 @@ export const PostFrontmatterSchema = z.object({
   date: z.coerce.date(),
   author: z.string(),
   tags: z.array(z.string()).default([]),
-  category: z.enum(CATEGORIES),
+  category: z.enum(CATEGORY_SLUGS),
   excerpt: z.string().min(40).max(280),
   coverImage: z.string().optional(),
   draft: z.boolean().default(false),
@@ -41,3 +33,5 @@ export type Post = PostFrontmatter & {
   readingTimeMinutes: number;
   body: string;
 };
+
+export type { CategorySlug } from './categories';

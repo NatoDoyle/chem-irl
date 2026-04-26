@@ -1,18 +1,18 @@
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
-import { CATEGORY_LABELS, type Category } from '@/lib/blog/schema';
+import { CATEGORIES, type CategorySlug } from '@/lib/blog/categories';
 
-export function CategoryBadge({ category, className }: { category: Category; className?: string }) {
+export function CategoryBadge({ category, className }: { category: CategorySlug; className?: string }) {
   return (
     <Link
-      href={`/blog/category/${category}`}
+      href={`/blog/category/${CATEGORIES[category].path}`}
       className={cn(
         'inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold',
         'bg-aqua-50 text-aqua-700 hover:bg-aqua-100 transition-colors',
         className,
       )}
     >
-      {CATEGORY_LABELS[category]}
+      {CATEGORIES[category].label}
     </Link>
   );
 }
