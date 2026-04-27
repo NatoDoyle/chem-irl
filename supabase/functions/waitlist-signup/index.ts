@@ -114,9 +114,20 @@ serve(async (req) => {
       return json({ error: data?.error ?? 'signup_failed' }, 400);
     }
 
-    // Week 2 TODO: when data.was_new && data.email_confirmation_token, send
-    // confirmation email via Resend. For Week 1 we deliberately drop the
-    // token and return only the public-safe fields.
+    // Send confirmation email on new signups only. Feature-flagged on
+    // RESEND_API_KEY: when unset (e.g. before Resend is configured), log
+    // the would-be payload to the function logs and continue. The signup
+    // still succeeds — the user just stays in the unconfirmed cohort
+    // (uncounted by waitlist_count_dublin() until they confirm).
+    if (data.was_new === true && typeof data.email_confirmation_token === 'string') {
+      await sendConfirmationEmail({
+        to: email,
+        firstName: first_name,
+        position: data.position ?? null,
+        token: data.email_confirmation_token,
+      });
+    }
+
     return json(
       {
         success: true,
@@ -164,4 +175,81 @@ async function sha256Hex(input: string): Promise<string> {
   return Array.from(new Uint8Array(digest))
     .map((b) => b.toString(16).padStart(2, '0'))
     .join('');
+}
+
+// --- Confirmation email ---------------------------------------------------
+//
+// Sends a transactional email via Resend. The link points back at the
+// `waitlist-confirm` edge function, which marks email_confirmed_at and
+// applies referral score (if any). When RESEND_API_KEY is missing the
+// payload is logged and the call short-circuits — the signup still
+// succeeds (just stays unconfirmed until the next attempt).
+
+interface ConfirmationEmailArgs {
+  to: string;
+  firstName: string | null;
+  position: number | null;
+  token: string;
+}
+
+async function sendConfirmationEmail(args: ConfirmationEmailArgs): Promise<void> {
+  const apiKey = Deno.env.get('RESEND_API_KEY');
+  const fromAddress = Deno.env.get('WAITLIST_EMAIL_FROM') ?? 'Chem IRL <hello@chemirl.app>';
+  const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
+  const confirmUrl = `${supabaseUrl}/functions/v1/waitlist-confirm?token=${encodeURIComponent(args.token)}`;
+
+  const greeting = args.firstName ? `Hey ${args.firstName},` : 'Hey,';
+  const positionLine = args.position
+    ? `You're #${args.position} on the Dublin waitlist.`
+    : `You're on the Dublin waitlist.`;
+
+  const subject = 'Confirm your Chem IRL waitlist spot';
+
+  const html = `<!doctype html>
+<html><body style="font-family:-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif;line-height:1.5;color:#0F172A;max-width:560px;margin:0 auto;padding:32px 24px;">
+  <h1 style="font-size:22px;margin:0 0 16px;">Confirm your spot</h1>
+  <p>${greeting}</p>
+  <p>${positionLine} Tap the button below to confirm your email — that's how we know you're real.</p>
+  <p style="margin:32px 0;">
+    <a href="${confirmUrl}" style="background:#0F172A;color:#fff;text-decoration:none;padding:12px 20px;border-radius:8px;display:inline-block;">Confirm my email</a>
+  </p>
+  <p style="color:#475569;font-size:14px;">Or copy this link into your browser:<br><span style="word-break:break-all;">${confirmUrl}</span></p>
+  <hr style="border:none;border-top:1px solid #E2E8F0;margin:32px 0;">
+  <p style="color:#475569;font-size:12px;">If you didn't sign up for Chem IRL, you can ignore this email — your address won't be added to anything.</p>
+</body></html>`;
+
+  const text = `${greeting}\n\n${positionLine} Confirm your email:\n${confirmUrl}\n\nIf you didn't sign up for Chem IRL, ignore this email.\n`;
+
+  // Feature flag: if Resend isn't wired up yet, log the payload and bail.
+  if (!apiKey) {
+    console.log(
+      'waitlist-signup: RESEND_API_KEY not set — would have sent email',
+      JSON.stringify({ to: args.to, subject, confirmUrl }),
+    );
+    return;
+  }
+
+  try {
+    const res = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        from: fromAddress,
+        to: [args.to],
+        subject,
+        html,
+        text,
+      }),
+    });
+    if (!res.ok) {
+      const detail = await res.text();
+      console.error('Resend send failed', { status: res.status, detail });
+    }
+  } catch (err) {
+    // Don't bubble — the signup itself succeeded; email retry can come later.
+    console.error('Resend send threw', err);
+  }
 }
