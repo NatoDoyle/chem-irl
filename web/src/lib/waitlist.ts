@@ -173,6 +173,36 @@ export function buildReferralUrl(code: string): string {
   return `https://${domain}/download?ref=${encodeURIComponent(code)}`;
 }
 
+// --- Referrer first-name lookup (referral landing banner) ---------------
+
+export interface ReferrerLookupSuccess {
+  success: true;
+  firstName: string | null;
+}
+export interface ReferrerLookupFailure {
+  success: false;
+  error: string;
+}
+export type ReferrerLookupResult = ReferrerLookupSuccess | ReferrerLookupFailure;
+
+/**
+ * Calls the `waitlist_referrer_first_name` SECURITY DEFINER RPC. Returns
+ * just the referrer's first_name (or null if they didn't provide one).
+ * No other PII is exposed.
+ */
+export async function getReferrerFirstName(code: string): Promise<ReferrerLookupResult> {
+  const client = getSupabaseClient();
+  if (!client) return { success: false, error: 'configuration_missing' };
+  if (!code || !/^[a-zA-Z0-9]{6,32}$/.test(code)) {
+    return { success: false, error: 'invalid_code' };
+  }
+
+  const { data, error } = await client.rpc('waitlist_referrer_first_name', { p_code: code });
+
+  if (error) return { success: false, error: 'rpc_failed' };
+  return { success: true, firstName: typeof data === 'string' ? data : null };
+}
+
 // --- Confirmed-signup count (live counter) ------------------------------
 
 export interface CountSuccess {
