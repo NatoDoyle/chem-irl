@@ -6,6 +6,17 @@
 # Webhooks use shared secret (x-webhook-secret header) instead
 verify_jwt = false
 
+[functions.waitlist-signup]
+# Disable JWT verification — function is called anonymously from the
+# static Next.js marketing site. The function uses its own service-role
+# client to call the SECURITY DEFINER RPC `claim_waitlist_signup`.
+verify_jwt = false
+
+[functions.waitlist-confirm]
+# Disable JWT verification — function is reached by the GET link in the
+# transactional confirmation email. No client auth context.
+verify_jwt = false
+
 # Email Templates Configuration
 # These templates are used for local development with Supabase CLI
 # For hosted projects, configure templates in the Supabase Dashboard:

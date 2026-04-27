@@ -41,6 +41,10 @@ CREATE INDEX IF NOT EXISTS idx_token_tx_user ON token_transactions(user_id, crea
 -- ============================================================================
 -- STEP 3: expire_matches() function
 -- ============================================================================
+-- A pre-existing expire_matches() returns TABLE(expired_count int, message
+-- text) (from 20260322230000 / Dashboard). This v3 simplifies it to RETURNS
+-- void. CREATE OR REPLACE cannot change return type, so drop first.
+DROP FUNCTION IF EXISTS expire_matches();
 
 CREATE OR REPLACE FUNCTION expire_matches()
 RETURNS void LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
@@ -154,8 +158,18 @@ $$;
 -- ============================================================================
 -- STEP 6: Cron schedule for match expiry
 -- ============================================================================
+-- Guarded: pg_cron may not be installed on staging projects. Idempotent
+-- against an existing schedule of the same name.
 
-SELECT cron.schedule('expire-matches-hourly', '0 * * * *', 'SELECT expire_matches()');
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM pg_extension WHERE extname = 'pg_cron') THEN
+    IF NOT EXISTS (SELECT 1 FROM cron.job WHERE jobname = 'expire-matches-hourly') THEN
+      PERFORM cron.schedule('expire-matches-hourly', '0 * * * *', 'SELECT expire_matches()');
+    END IF;
+  END IF;
+END;
+$$;
 
 -- ============================================================================
 -- STEP 7: Notify PostgREST to reload schema cache

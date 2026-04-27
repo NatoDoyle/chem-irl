@@ -10,17 +10,18 @@ BEGIN;
 -- 1. Add expires_at column to matches
 -- ============================================================================
 
-ALTER TABLE matches ADD COLUMN expires_at TIMESTAMPTZ;
+ALTER TABLE matches ADD COLUMN IF NOT EXISTS expires_at TIMESTAMPTZ;
 
 -- Backfill existing rows
 UPDATE matches SET expires_at = created_at + INTERVAL '72 hours' WHERE expires_at IS NULL;
 
--- Add NOT NULL constraint and default after backfill
+-- Add NOT NULL constraint and default after backfill (both ALTERs are
+-- idempotent — no-ops if the column is already in the desired state).
 ALTER TABLE matches ALTER COLUMN expires_at SET NOT NULL;
 ALTER TABLE matches ALTER COLUMN expires_at SET DEFAULT NOW() + INTERVAL '72 hours';
 
 -- Partial index for cron job efficiency (only scans open matches)
-CREATE INDEX idx_matches_expires_at ON matches(expires_at) WHERE status = 'open';
+CREATE INDEX IF NOT EXISTS idx_matches_expires_at ON matches(expires_at) WHERE status = 'open';
 
 -- ============================================================================
 -- 2. Update create_like_and_check_match to set expires_at on conflict
