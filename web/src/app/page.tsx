@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import { BRAND } from '@/config/brand';
 import { AnimatedSection } from '@/components/AnimatedSection';
 import { PhoneMockup } from '@/components/PhoneMockup';
+import { WaitlistCounter } from '@/components/WaitlistCounter';
 
 const STEPS = [
   {
@@ -134,7 +135,7 @@ export default function Home() {
                 <div className="w-8 h-8 rounded-full bg-aqua-600 border-2 border-white" />
               </div>
               <p className="text-sm text-ink-500">
-                Join 2,000+ on the waitlist
+                <WaitlistCounter />
               </p>
             </div>
           </motion.div>
