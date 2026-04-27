@@ -1,8 +1,9 @@
 'use client';
 
-import { useState, useSyncExternalStore } from 'react';
+import { useEffect, useState, useSyncExternalStore } from 'react';
 import { useRouter } from 'next/navigation';
 import {
+  getReferrerFirstName,
   submitWaitlistSignup,
   type AgeBand,
   type Gender,
@@ -55,6 +56,22 @@ export function WaitlistForm() {
     getServerReferralCode,
   );
 
+  // Look up the referrer's first name when ?ref= is present, so we can
+  // show a "[Name] sent you" banner. setState happens only inside the
+  // .then() callback — subscribe-style — so no lint warning.
+  const [referrerFirstName, setReferrerFirstName] = useState<string | null>(null);
+  useEffect(() => {
+    if (!referredByCode) return;
+    let cancelled = false;
+    void getReferrerFirstName(referredByCode).then((result) => {
+      if (cancelled) return;
+      if (result.success) setReferrerFirstName(result.firstName);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [referredByCode]);
+
   const submitting = status.kind === 'submitting';
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
@@ -96,6 +113,13 @@ export function WaitlistForm() {
 
   return (
     <form onSubmit={onSubmit} className="flex flex-col gap-5">
+      {referredByCode && (
+        <div className="rounded-xl border border-aqua-300 bg-aqua-50 px-4 py-3 text-sm text-ink-900">
+          <strong>{referrerFirstName ?? 'A friend'}</strong> sent you their
+          Dublin waitlist link. Sign up below and you both move up the list.
+        </div>
+      )}
+
       <Field label="Email" htmlFor="wl-email" required>
         <input
           id="wl-email"
@@ -217,12 +241,6 @@ export function WaitlistForm() {
           <span className="text-ink-500">(required)</span>
         </span>
       </label>
-
-      {referredByCode && (
-        <p className="text-xs text-ink-500">
-          Joining via referral code <code className="rounded bg-aqua-50 px-1 py-0.5">{referredByCode}</code>.
-        </p>
-      )}
 
       {status.kind === 'error' && (
         <p role="alert" className="text-sm font-medium text-coral">
