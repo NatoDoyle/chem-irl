@@ -83,28 +83,20 @@ export function Footer() {
               </ul>
             </div>
 
-            {/* Newsletter */}
+            {/* Waitlist CTA — the actual signup form lives at /download. */}
             <div>
               <h3 className="font-semibold text-sm uppercase tracking-wider text-ink-400 mb-4">
-                Stay Updated
+                Get on the list
               </h3>
               <p className="text-sm text-gray-300 mb-4">
-                Get notified when we launch in your city.
+                Dublin only, for now. We&apos;ll email you when the beta opens.
               </p>
-              <div className="flex gap-2">
-                <input
-                  type="email"
-                  placeholder="Email address"
-                  aria-label="Email for newsletter"
-                  className="flex-1 min-w-0 bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-aqua-500"
-                />
-                <Link
-                  href="/download"
-                  className="bg-aqua-600 hover:bg-aqua-700 text-white font-medium px-4 py-2 rounded-lg text-sm transition-colors shrink-0"
-                >
-                  Join
-                </Link>
-              </div>
+              <Link
+                href="/download"
+                className="inline-flex items-center justify-center bg-aqua-600 hover:bg-aqua-700 text-white font-medium px-4 py-2 rounded-lg text-sm transition-colors"
+              >
+                Join the Dublin waitlist →
+              </Link>
             </div>
           </div>
         </div>
