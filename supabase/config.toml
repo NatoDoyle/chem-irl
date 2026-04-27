@@ -17,6 +17,12 @@ verify_jwt = false
 # transactional confirmation email. No client auth context.
 verify_jwt = false
 
+[functions.waitlist-forget]
+# Disable JWT verification — function authenticates via the
+# email_confirmation_token in the POST body (the token IS the proof of
+# identity). GDPR Article 17 right-to-erasure for unconfirmed signups.
+verify_jwt = false
+
 # Email Templates Configuration
 # These templates are used for local development with Supabase CLI
 # For hosted projects, configure templates in the Supabase Dashboard:
