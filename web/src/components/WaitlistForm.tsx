@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useSyncExternalStore } from 'react';
+import { useRouter } from 'next/navigation';
 import {
   submitWaitlistSignup,
   type AgeBand,
@@ -32,15 +33,10 @@ const GENDERS: { value: Gender; label: string }[] = [
 type Status =
   | { kind: 'idle' }
   | { kind: 'submitting' }
-  | {
-      kind: 'success';
-      position: number | null;
-      referralCode: string | null;
-      wasNew: boolean;
-    }
   | { kind: 'error'; message: string };
 
 export function WaitlistForm() {
+  const router = useRouter();
   const [email, setEmail] = useState('');
   const [firstName, setFirstName] = useState('');
   const [ageBand, setAgeBand] = useState<AgeBand | ''>('');
@@ -81,26 +77,21 @@ export function WaitlistForm() {
 
     const result = await submitWaitlistSignup(payload);
 
-    if (result.success) {
-      setStatus({
-        kind: 'success',
-        position: result.position,
-        referralCode: result.referral_code,
-        wasNew: result.was_new,
-      });
-    } else {
-      setStatus({ kind: 'error', message: humanError(result.error) });
+    if (result.success && result.referral_code) {
+      router.push(`/waitlist/success?code=${encodeURIComponent(result.referral_code)}`);
+      return;
     }
-  }
-
-  if (status.kind === 'success') {
-    return (
-      <SuccessCard
-        position={status.position}
-        referralCode={status.referralCode}
-        wasNew={status.wasNew}
-      />
-    );
+    if (result.success) {
+      // Edge case: success without a code (shouldn't happen). Fall through
+      // to the error branch with a generic message rather than getting
+      // stuck on "submitting".
+      setStatus({
+        kind: 'error',
+        message: 'Signed up, but the response was missing a code. Refresh and try again.',
+      });
+      return;
+    }
+    setStatus({ kind: 'error', message: humanError(result.error) });
   }
 
   return (
@@ -247,52 +238,6 @@ export function WaitlistForm() {
         {submitting ? 'Joining…' : 'Join the waitlist'}
       </button>
     </form>
-  );
-}
-
-// --- Success card ---------------------------------------------------------
-
-function SuccessCard({
-  position,
-  referralCode,
-  wasNew,
-}: {
-  position: number | null;
-  referralCode: string | null;
-  wasNew: boolean;
-}) {
-  const positionText = position ? `#${position}` : 'on';
-  const headline = wasNew
-    ? `You're ${positionText} on the Dublin list`
-    : `You're already ${positionText} on the Dublin list`;
-
-  return (
-    <div className="text-center" aria-live="polite">
-      <div className="mb-4 inline-flex items-center gap-2 rounded-full bg-aqua-100 px-3 py-1 text-sm font-semibold text-aqua-700">
-        Confirmed
-      </div>
-      <h2 className="mb-3 text-2xl font-bold text-ink-900">{headline}</h2>
-      {wasNew ? (
-        <p className="mb-4 text-ink-700">
-          Check your inbox — we just sent a confirmation link from{' '}
-          <span className="whitespace-nowrap">hello@chemirl.app</span>. Click it
-          to lock in your spot.
-        </p>
-      ) : (
-        <p className="mb-4 text-ink-700">
-          We already had this email on file. If you never confirmed, check your
-          inbox or spam for our earlier email.
-        </p>
-      )}
-      {referralCode && (
-        <p className="text-sm text-ink-500">
-          Your referral code:{' '}
-          <code className="rounded bg-aqua-50 px-1 py-0.5 text-ink-900">
-            {referralCode}
-          </code>
-        </p>
-      )}
-    </div>
   );
 }
 
