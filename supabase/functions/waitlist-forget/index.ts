@@ -15,18 +15,56 @@
 //
 // JWT verification disabled in supabase/config.toml — no client auth
 // context (the token IS the auth).
+//
+// CORS is locked down to the production marketing domain plus Vercel
+// preview deployments. Override via the `WAITLIST_ALLOWED_ORIGINS`
+// Supabase secret (comma-separated) for local dev or staging origins.
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type, Authorization, apikey, x-client-info',
-  'Access-Control-Max-Age': '86400',
-};
+const DEFAULT_ALLOWED_ORIGINS = new Set<string>([
+  'https://chemirl.app',
+  'https://www.chemirl.app',
+]);
+
+const VERCEL_PREVIEW_RE =
+  /^https:\/\/chem-irl(-[a-z0-9-]+)?-nathans-projects-[a-z0-9-]+\.vercel\.app$/;
+
+function buildCorsHeaders(req: Request): Record<string, string> {
+  const origin = req.headers.get('origin');
+  const headers: Record<string, string> = {
+    Vary: 'Origin',
+    'Access-Control-Allow-Methods': 'POST, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization, apikey, x-client-info',
+    'Access-Control-Max-Age': '86400',
+  };
+  if (origin && isAllowedOrigin(origin)) {
+    headers['Access-Control-Allow-Origin'] = origin;
+  }
+  return headers;
+}
+
+function isAllowedOrigin(origin: string): boolean {
+  if (DEFAULT_ALLOWED_ORIGINS.has(origin)) return true;
+  if (VERCEL_PREVIEW_RE.test(origin)) return true;
+  const extra = Deno.env.get('WAITLIST_ALLOWED_ORIGINS');
+  if (extra) {
+    for (const entry of extra.split(',')) {
+      if (entry.trim() === origin) return true;
+    }
+  }
+  return false;
+}
 
 serve(async (req) => {
+  const corsHeaders = buildCorsHeaders(req);
+  const json = (body: unknown, status: number): Response =>
+    new Response(JSON.stringify(body), {
+      status,
+      headers: { 'Content-Type': 'application/json', ...corsHeaders },
+    });
+
   if (req.method === 'OPTIONS') {
     return new Response(null, { status: 204, headers: corsHeaders });
   }
@@ -75,13 +113,6 @@ serve(async (req) => {
     return json({ error: 'internal_error' }, 500);
   }
 });
-
-function json(body: unknown, status: number): Response {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { 'Content-Type': 'application/json', ...corsHeaders },
-  });
-}
 
 async function safeJson(req: Request): Promise<Record<string, unknown> | null> {
   try {

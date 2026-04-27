@@ -7,8 +7,10 @@
 // caller's position + referral_code.
 //
 // JWT verification is disabled in supabase/config.toml ([functions.waitlist-signup]).
-// CORS is permissive for now — Week 7 hardening will restrict the origin
-// to the production marketing domain.
+// CORS is locked down to the production marketing domain plus Vercel
+// preview deployments (see buildCorsHeaders). Override via the
+// `WAITLIST_ALLOWED_ORIGINS` Supabase secret (comma-separated) for
+// local dev or staging origins.
 //
 // Week 1 scope (this file): no email sending. The RPC returns an
 // email_confirmation_token; we throw it away here and send an email in
@@ -61,14 +63,65 @@ const DISPOSABLE_EMAIL_DOMAINS = new Set([
 const RATE_LIMIT_MAX = 5;
 const RATE_LIMIT_WINDOW_SECONDS = 3600;
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type, Authorization, apikey, x-client-info',
-  'Access-Control-Max-Age': '86400',
-};
+// Silent dedup: a 2nd signup from the same IP hash with a *different*
+// email inside this window is bounced with the no-op success shape.
+// Per docs/DUBLIN_LAUNCH_PLAN.md §2.6. Different-email gate (vs raw IP
+// match) avoids breaking legit double-clicks — those are still handled
+// by the RPC's email-uniqueness path.
+const SILENT_DEDUP_WINDOW_SECONDS = 60;
+
+// Default-allow set for the public marketing surfaces.
+const DEFAULT_ALLOWED_ORIGINS = new Set<string>([
+  'https://chemirl.app',
+  'https://www.chemirl.app',
+]);
+
+// Vercel preview deployments for the chem-irl project.
+const VERCEL_PREVIEW_RE =
+  /^https:\/\/chem-irl(-[a-z0-9-]+)?-nathans-projects-[a-z0-9-]+\.vercel\.app$/;
+
+function buildCorsHeaders(req: Request): Record<string, string> {
+  const origin = req.headers.get('origin');
+  const headers: Record<string, string> = {
+    Vary: 'Origin',
+    'Access-Control-Allow-Methods': 'POST, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization, apikey, x-client-info',
+    'Access-Control-Max-Age': '86400',
+  };
+  if (origin && isAllowedOrigin(origin)) {
+    headers['Access-Control-Allow-Origin'] = origin;
+  }
+  return headers;
+}
+
+function isAllowedOrigin(origin: string): boolean {
+  if (DEFAULT_ALLOWED_ORIGINS.has(origin)) return true;
+  if (VERCEL_PREVIEW_RE.test(origin)) return true;
+  const extra = Deno.env.get('WAITLIST_ALLOWED_ORIGINS');
+  if (extra) {
+    for (const entry of extra.split(',')) {
+      if (entry.trim() === origin) return true;
+    }
+  }
+  return false;
+}
 
 serve(async (req) => {
+  const corsHeaders = buildCorsHeaders(req);
+  const json = (
+    body: unknown,
+    status: number,
+    extraHeaders?: Record<string, string>,
+  ): Response =>
+    new Response(JSON.stringify(body), {
+      status,
+      headers: {
+        'Content-Type': 'application/json',
+        ...corsHeaders,
+        ...(extraHeaders ?? {}),
+      },
+    });
+
   if (req.method === 'OPTIONS') {
     return new Response(null, { status: 204, headers: corsHeaders });
   }
@@ -137,6 +190,17 @@ serve(async (req) => {
     // --- Rate limit per IP hash (best-effort; fail open on query errors
     //     so transient DB issues don't block legitimate signups) ---
     if (ipHash) {
+      // Silent dedup runs first — abusers spamming many emails from one IP
+      // get the no-op success shape (same as the honeypot) so they can't
+      // probe response shape to distinguish signal from noise. Real users
+      // re-submitting their own email aren't matched (different-email gate).
+      if (await isRapidIpDuplicate(admin, ipHash, email)) {
+        return json(
+          { success: true, was_new: true, position: 0, referral_code: '', email_confirmed: false },
+          200,
+        );
+      }
+
       const allowed = await checkRateLimit(admin, ipHash);
       if (!allowed) {
         return json({ error: 'rate_limited' }, 429, {
@@ -200,17 +264,6 @@ serve(async (req) => {
 
 // --- Helpers ---
 
-function json(body: unknown, status: number, extraHeaders?: Record<string, string>): Response {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: {
-      'Content-Type': 'application/json',
-      ...corsHeaders,
-      ...(extraHeaders ?? {}),
-    },
-  });
-}
-
 function isDisposableEmail(email: string): boolean {
   const at = email.lastIndexOf('@');
   if (at < 0) return false;
@@ -235,6 +288,27 @@ async function checkRateLimit(admin: any, ipHash: string): Promise<boolean> {
   } catch (err) {
     console.error('rate-limit threw (failing open):', err);
     return true;
+  }
+}
+
+// deno-lint-ignore no-explicit-any
+async function isRapidIpDuplicate(admin: any, ipHash: string, email: string): Promise<boolean> {
+  try {
+    const since = new Date(Date.now() - SILENT_DEDUP_WINDOW_SECONDS * 1000).toISOString();
+    const { count, error } = await admin
+      .from('waitlist_signups')
+      .select('id', { count: 'exact', head: true })
+      .eq('ip_hash', ipHash)
+      .neq('email', email)
+      .gte('created_at', since);
+    if (error) {
+      console.error('rapid-dedup query failed (failing open):', error);
+      return false;
+    }
+    return (count ?? 0) > 0;
+  } catch (err) {
+    console.error('rapid-dedup threw (failing open):', err);
+    return false;
   }
 }
 
