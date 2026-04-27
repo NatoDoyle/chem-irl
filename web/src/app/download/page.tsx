@@ -1,5 +1,6 @@
 import { AnimatedSection } from '@/components/AnimatedSection';
 import { PhoneMockup } from '@/components/PhoneMockup';
+import { WaitlistForm } from '@/components/WaitlistForm';
 import { BRAND } from '@/config/brand';
 import type { Metadata } from 'next';
 
@@ -82,28 +83,17 @@ export default function DownloadPage() {
       {/* Waitlist form */}
       <section className="py-20 px-4">
         <AnimatedSection>
-          <div className="max-w-md mx-auto bg-white rounded-brand p-8 shadow-warm text-center">
-            <h2 className="text-2xl font-bold text-ink-900 mb-3">
-              Coming Soon
-            </h2>
-            <p className="text-ink-500 mb-6">
-              We&apos;re launching soon. Join the waitlist to be notified when
-              the app is available.
-            </p>
-            <form className="flex flex-col gap-3">
-              <input
-                type="email"
-                placeholder="Enter your email"
-                className="border border-aqua-200 rounded-xl px-4 py-3 text-ink-900 placeholder-ink-400 focus:outline-none focus:ring-2 focus:ring-aqua-500 focus:border-transparent"
-                aria-label="Email address"
-              />
-              <button
-                type="submit"
-                className="bg-aqua-600 hover:bg-aqua-700 text-white font-semibold py-3 px-6 rounded-xl transition-colors"
-              >
-                Join Waitlist
-              </button>
-            </form>
+          <div className="max-w-md mx-auto bg-white rounded-brand p-8 shadow-warm">
+            <div className="text-center mb-6">
+              <h2 className="text-2xl font-bold text-ink-900 mb-3">
+                Join the Dublin beta
+              </h2>
+              <p className="text-ink-500">
+                We&apos;re opening Chem IRL in Dublin first. Drop your email,
+                and we&apos;ll send a confirmation link to lock in your spot.
+              </p>
+            </div>
+            <WaitlistForm />
           </div>
         </AnimatedSection>
       </section>
