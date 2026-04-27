@@ -172,3 +172,31 @@ export function buildReferralUrl(code: string): string {
   const domain = process.env.NEXT_PUBLIC_DOMAIN ?? 'chemirl.app';
   return `https://${domain}/download?ref=${encodeURIComponent(code)}`;
 }
+
+// --- Confirmed-signup count (live counter) ------------------------------
+
+export interface CountSuccess {
+  success: true;
+  count: number;
+}
+export interface CountFailure {
+  success: false;
+  error: string;
+}
+export type CountResult = CountSuccess | CountFailure;
+
+/**
+ * Calls the `waitlist_count_dublin` SECURITY DEFINER RPC, which returns the
+ * number of confirmed Dublin signups (excludes unconfirmed). Used by the
+ * marketing-site live counter.
+ */
+export async function getWaitlistCount(): Promise<CountResult> {
+  const client = getSupabaseClient();
+  if (!client) return { success: false, error: 'configuration_missing' };
+
+  const { data, error } = await client.rpc('waitlist_count_dublin');
+
+  if (error) return { success: false, error: 'rpc_failed' };
+  if (typeof data !== 'number') return { success: false, error: 'unexpected_response' };
+  return { success: true, count: data };
+}

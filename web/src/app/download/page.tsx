@@ -1,5 +1,6 @@
 import { AnimatedSection } from '@/components/AnimatedSection';
 import { PhoneMockup } from '@/components/PhoneMockup';
+import { WaitlistCounter } from '@/components/WaitlistCounter';
 import { WaitlistForm } from '@/components/WaitlistForm';
 import { BRAND } from '@/config/brand';
 import type { Metadata } from 'next';
@@ -140,10 +141,10 @@ export default function DownloadPage() {
               </div>
             </div>
             <p className="text-ink-700 font-medium">
-              2,000+ people on the waitlist
+              <WaitlistCounter />
             </p>
             <p className="text-ink-500 text-sm mt-1">
-              Be the first to know when we launch in your area.
+              We&apos;ll email you when the Dublin beta opens.
             </p>
           </div>
         </AnimatedSection>
