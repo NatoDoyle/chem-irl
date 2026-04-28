@@ -4,6 +4,7 @@ import Script from 'next/script';
 import { Nav } from '@/components/Nav';
 import { Footer } from '@/components/Footer';
 import { SearchOverlay } from '@/components/blog/SearchOverlay';
+import { SentryInit } from '@/components/SentryInit';
 import './globals.css';
 
 const dmSans = DM_Sans({
@@ -45,6 +46,7 @@ export default function RootLayout({
       <body
         className={`${dmSans.variable} antialiased`}
       >
+        <SentryInit />
         <div data-pagefind-ignore="all">
           <Nav />
         </div>

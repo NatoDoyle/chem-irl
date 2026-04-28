@@ -1,18 +1,30 @@
 'use client';
 
+import { useEffect } from 'react';
+import * as Sentry from '@sentry/react';
 import Link from 'next/link';
 
 // Next.js App Router convention: error.tsx renders when an unhandled
 // error is thrown anywhere below this segment in the route tree. Must
 // be a Client Component because it receives a `reset` callback. Lives
 // inside the root layout, so Nav + Footer still render around it.
+//
+// App Router boundaries swallow errors before they reach window.onerror,
+// so we forward them to Sentry explicitly. Sentry.init is a no-op until
+// SentryInit fires from the root layout, so capture is silent until
+// NEXT_PUBLIC_SENTRY_DSN is configured.
 
 export default function GlobalError({
+  error,
   reset,
 }: {
   error: Error & { digest?: string };
   reset: () => void;
 }) {
+  useEffect(() => {
+    Sentry.captureException(error);
+  }, [error]);
+
   return (
     <section className="pt-32 pb-16 px-4">
       <div className="max-w-2xl mx-auto text-center">
