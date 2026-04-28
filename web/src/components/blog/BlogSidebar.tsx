@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { getCategoryCounts, getPopularTags } from '@/lib/blog';
 import { CATEGORIES } from '@/lib/blog/categories';
+import { BlogEmailCTA } from './BlogEmailCTA';
 
 export function BlogSidebar() {
   const categories = getCategoryCounts();
@@ -52,6 +53,8 @@ export function BlogSidebar() {
           </ul>
         </section>
       )}
+
+      <BlogEmailCTA />
     </aside>
   );
 }

@@ -1,4 +1,5 @@
 import Image from 'next/image';
+import Link from 'next/link';
 import type { Author } from '@/lib/blog/schema';
 
 export function AuthorCard({ author }: { author: Author }) {
@@ -19,7 +20,12 @@ export function AuthorCard({ author }: { author: Author }) {
         </div>
       )}
       <div className="flex-1 min-w-0">
-        <div className="font-semibold text-ink-900">{author.name}</div>
+        <Link
+          href={`/blog/author/${author.key}`}
+          className="font-semibold text-ink-900 hover:text-aqua-700 transition-colors"
+        >
+          {author.name}
+        </Link>
         {author.role && <div className="text-sm text-ink-500">{author.role}</div>}
         {author.bio && <p className="mt-2 text-sm text-ink-700 leading-relaxed">{author.bio}</p>}
       </div>

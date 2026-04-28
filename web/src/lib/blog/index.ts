@@ -127,6 +127,22 @@ export function paginate<T>(items: T[], page: number, perPage = POSTS_PER_PAGE):
   return { page: clamped, totalPages, items: items.slice(start, start + perPage) };
 }
 
+export function getAllAuthorSlugs(): string[] {
+  const set = new Set<string>();
+  for (const p of getAllPosts()) set.add(p.authorData.key);
+  return Array.from(set).sort();
+}
+
+export function getAuthorBySlug(slug: string): Author | null {
+  const posts = getAllPosts();
+  const match = posts.find((p) => p.authorData.key === slug);
+  return match ? match.authorData : null;
+}
+
+export function getPostsByAuthor(slug: string): Post[] {
+  return getAllPosts().filter((p) => p.authorData.key === slug);
+}
+
 export function getRelatedPosts(post: Post, limit = 3): Post[] {
   return getAllPosts()
     .filter((p) => p.slug !== post.slug)

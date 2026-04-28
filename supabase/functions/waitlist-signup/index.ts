@@ -18,44 +18,10 @@
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { EMAIL_RE, isDisposableEmail } from '../_shared/email-validation.ts';
 
 const ALLOWED_AGE_BANDS = ['18-21', '22-26', '27-31', '32-36', '37-44', '45+'];
 const ALLOWED_GENDERS = ['female', 'male', 'nonbinary', 'prefer_not_to_say'];
-const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
-
-// Common disposable / throwaway email providers. Not exhaustive — there
-// are thousands of dynamically-generated domains — but covers the most
-// common abuse patterns. Refresh quarterly per docs/DUBLIN_LAUNCH_PLAN.md
-// §2.6. Rate limit + honeypot are the deeper defenses.
-const DISPOSABLE_EMAIL_DOMAINS = new Set([
-  '0clickemail.com',
-  '10minutemail.com',
-  '20minutemail.com',
-  'discard.email',
-  'discardmail.com',
-  'dispostable.com',
-  'fakeinbox.com',
-  'getairmail.com',
-  'getnada.com',
-  'guerrillamail.com',
-  'inboxbear.com',
-  'maildrop.cc',
-  'mailinator.com',
-  'mintemail.com',
-  'mohmal.com',
-  'mt2014.com',
-  'mt2015.com',
-  'sharklasers.com',
-  'spam4.me',
-  'spamgourmet.com',
-  'tempail.com',
-  'tempmail.com',
-  'temp-mail.org',
-  'temporary-mail.net',
-  'throwaway.email',
-  'trashmail.com',
-  'yopmail.com',
-]);
 
 // Rate limit: max successful signups per IP-hash per rolling window.
 // Calibrated for the launch — humans never sign up 5+ times in an hour;
@@ -263,13 +229,6 @@ serve(async (req) => {
 });
 
 // --- Helpers ---
-
-function isDisposableEmail(email: string): boolean {
-  const at = email.lastIndexOf('@');
-  if (at < 0) return false;
-  const domain = email.slice(at + 1).toLowerCase();
-  return DISPOSABLE_EMAIL_DOMAINS.has(domain);
-}
 
 // deno-lint-ignore no-explicit-any
 async function checkRateLimit(admin: any, ipHash: string): Promise<boolean> {

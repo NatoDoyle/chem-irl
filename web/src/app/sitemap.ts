@@ -1,5 +1,11 @@
 import type { MetadataRoute } from 'next';
-import { getAllCategories, getAllPosts, getAllTags, POSTS_PER_PAGE } from '@/lib/blog';
+import {
+  getAllAuthorSlugs,
+  getAllCategories,
+  getAllPosts,
+  getAllTags,
+  POSTS_PER_PAGE,
+} from '@/lib/blog';
 
 export const dynamic = 'force-static';
 
@@ -50,5 +56,19 @@ export default function sitemap(): MetadataRoute.Sitemap {
     priority: 0.5,
   }));
 
-  return [...staticRoutes, ...postRoutes, ...paginationRoutes, ...tagRoutes, ...categoryRoutes];
+  const authorRoutes: MetadataRoute.Sitemap = getAllAuthorSlugs().map((slug) => ({
+    url: `${SITE}/blog/author/${slug}`,
+    lastModified: now,
+    changeFrequency: 'weekly',
+    priority: 0.4,
+  }));
+
+  return [
+    ...staticRoutes,
+    ...postRoutes,
+    ...paginationRoutes,
+    ...tagRoutes,
+    ...categoryRoutes,
+    ...authorRoutes,
+  ];
 }
