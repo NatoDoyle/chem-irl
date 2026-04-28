@@ -97,6 +97,27 @@ export function getAllCategories(): CategorySlug[] {
   return Array.from(set).sort();
 }
 
+export function getCategoryCounts(): { category: CategorySlug; count: number }[] {
+  const counts = new Map<CategorySlug, number>();
+  for (const p of getAllPosts()) {
+    counts.set(p.category, (counts.get(p.category) ?? 0) + 1);
+  }
+  return Array.from(counts.entries())
+    .map(([category, count]) => ({ category, count }))
+    .sort((a, b) => b.count - a.count || a.category.localeCompare(b.category));
+}
+
+export function getPopularTags(limit = 8): { tag: string; count: number }[] {
+  const counts = new Map<string, number>();
+  for (const p of getAllPosts()) {
+    for (const t of p.tags) counts.set(t, (counts.get(t) ?? 0) + 1);
+  }
+  return Array.from(counts.entries())
+    .map(([tag, count]) => ({ tag, count }))
+    .sort((a, b) => b.count - a.count || a.tag.localeCompare(b.tag))
+    .slice(0, limit);
+}
+
 export const POSTS_PER_PAGE = 10;
 
 export function paginate<T>(items: T[], page: number, perPage = POSTS_PER_PAGE): { page: number; totalPages: number; items: T[] } {
