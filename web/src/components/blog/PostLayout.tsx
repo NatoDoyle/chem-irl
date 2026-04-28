@@ -1,4 +1,3 @@
-import Image from 'next/image';
 import type { ReactNode } from 'react';
 import type { Post } from '@/lib/blog/schema';
 import { AuthorCard } from './AuthorCard';
@@ -39,7 +38,6 @@ export function PostLayout({
       name: 'Chem IRL',
       logo: { '@type': 'ImageObject', url: 'https://chemirl.app/logo-icon.png' },
     },
-    image: post.coverImage ? `https://chemirl.app${post.coverImage}` : undefined,
     mainEntityOfPage: `https://chemirl.app/blog/${post.slug}`,
   };
 
@@ -61,21 +59,6 @@ export function PostLayout({
         </h1>
         <p className="text-lg text-ink-700 leading-relaxed">{post.excerpt}</p>
       </header>
-
-      {post.coverImage && (
-        <div className="max-w-5xl mx-auto px-4 mb-12">
-          <div className="relative aspect-[16/9] rounded-brand overflow-hidden shadow-warm-lg">
-            <Image
-              src={post.coverImage}
-              alt=""
-              fill
-              sizes="(min-width: 1024px) 1024px, 100vw"
-              priority
-              unoptimized
-            />
-          </div>
-        </div>
-      )}
 
       <div className="max-w-3xl mx-auto px-4 prose prose-lg prose-ink prose-headings:font-bold prose-headings:text-ink-900 prose-a:text-aqua-600 prose-a:no-underline hover:prose-a:underline prose-code:text-coral prose-code:font-semibold prose-code:before:content-none prose-code:after:content-none prose-pre:bg-warm-bg prose-pre:border prose-pre:border-aqua-100 prose-blockquote:border-l-4 prose-blockquote:border-aqua-600 prose-blockquote:text-ink-700 prose-blockquote:not-italic prose-img:rounded-brand">
         {children}

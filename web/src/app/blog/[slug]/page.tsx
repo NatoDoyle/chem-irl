@@ -34,7 +34,6 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
       type: 'article',
       publishedTime: post.date.toISOString(),
       authors: [post.authorData.name],
-      images: post.coverImage ? [post.coverImage] : undefined,
     },
     twitter: { card: 'summary_large_image' },
     alternates: {

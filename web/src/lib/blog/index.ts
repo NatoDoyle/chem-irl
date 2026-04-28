@@ -55,15 +55,6 @@ function loadAllPosts(): Post[] {
           `Add content/authors/${frontmatter.author}.json`,
       );
     }
-    if (frontmatter.coverImage) {
-      const coverPath = path.resolve(process.cwd(), 'public', frontmatter.coverImage.replace(/^\//, ''));
-      if (!fs.existsSync(coverPath)) {
-        throw new Error(
-          `Post ${file} declares coverImage "${frontmatter.coverImage}" but ` +
-            `web/public/${frontmatter.coverImage.replace(/^\//, '')} is missing.`,
-        );
-      }
-    }
     const stats = readingTime(content);
     posts.push({
       ...frontmatter,
