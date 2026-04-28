@@ -2,6 +2,8 @@
   "framework": null,
   "buildCommand": "bun run build",
   "outputDirectory": "out",
+  "cleanUrls": true,
+  "trailingSlash": false,
   "headers": [
     {
       "source": "/(.*)",
