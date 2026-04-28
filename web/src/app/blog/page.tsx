@@ -3,7 +3,7 @@ import { getAllPosts, paginate } from '@/lib/blog';
 import { BlogIndexShell } from '@/components/blog/BlogIndexShell';
 
 const BLOG_SUBTITLE =
-  'Dating Advice, tips, honest takes and the thought process behind Chem IRL';
+  'Dating advice, tips, honest takes and the thought process behind Chem IRL';
 
 export const metadata: Metadata = {
   title: 'Blog — Chem IRL',
