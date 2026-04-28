@@ -2,12 +2,15 @@ import type { Metadata } from 'next';
 import { getAllPosts, paginate } from '@/lib/blog';
 import { BlogIndexShell } from '@/components/blog/BlogIndexShell';
 
+const BLOG_SUBTITLE =
+  'Dating Advice, tips, honest takes and the thought process behind Chem IRL';
+
 export const metadata: Metadata = {
   title: 'Blog — Chem IRL',
-  description: 'Research, product updates, and safety notes from the team behind Chem IRL.',
+  description: BLOG_SUBTITLE,
   openGraph: {
     title: 'Blog — Chem IRL',
-    description: 'Research, product updates, and safety notes from the team behind Chem IRL.',
+    description: BLOG_SUBTITLE,
     url: 'https://chemirl.app/blog',
     type: 'website',
   },
@@ -20,9 +23,9 @@ export default function BlogIndexPage() {
   return (
     <BlogIndexShell
       posts={items}
-      eyebrow={<p className="text-sm font-semibold text-aqua-600">Field notes</p>}
+      eyebrow={<p className="text-sm font-semibold text-aqua-600">The blog</p>}
       title="Writing from Chem IRL"
-      subtitle="Research, product decisions, and safety notes — how we think about getting people from match to meeting."
+      subtitle={BLOG_SUBTITLE}
       page={page}
       totalPages={totalPages}
     />
