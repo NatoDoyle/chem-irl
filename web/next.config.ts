@@ -14,6 +14,7 @@ const nextConfig: NextConfig = {
   env: {
     NEXT_PUBLIC_APP_NAME: process.env.NEXT_PUBLIC_APP_NAME || 'Chem IRL',
     NEXT_PUBLIC_DOMAIN: process.env.NEXT_PUBLIC_DOMAIN || 'chemirl.app',
+    NEXT_PUBLIC_PLAUSIBLE_DOMAIN: process.env.NEXT_PUBLIC_PLAUSIBLE_DOMAIN || '',
   },
 };
 
