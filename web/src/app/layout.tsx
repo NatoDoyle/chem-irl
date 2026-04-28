@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from 'next';
 import { DM_Sans } from 'next/font/google';
+import Script from 'next/script';
 import { Nav } from '@/components/Nav';
 import { Footer } from '@/components/Footer';
 import { SearchOverlay } from '@/components/blog/SearchOverlay';
@@ -38,6 +39,7 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const plausibleDomain = process.env.NEXT_PUBLIC_PLAUSIBLE_DOMAIN;
   return (
     <html lang="en">
       <body
@@ -51,6 +53,13 @@ export default function RootLayout({
           <Footer />
         </div>
         <SearchOverlay />
+        {plausibleDomain && (
+          <Script
+            data-domain={plausibleDomain}
+            src="https://plausible.io/js/script.outbound-links.js"
+            strategy="afterInteractive"
+          />
+        )}
       </body>
     </html>
   );
