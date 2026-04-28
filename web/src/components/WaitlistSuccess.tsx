@@ -21,6 +21,18 @@ function getServerCode(): null {
   return null;
 }
 
+// `?confirmed=1` is set by the waitlist-confirm edge function's redirect
+// after a successful email confirmation. We use it only to celebrate the
+// freshly-completed click — the underlying email_confirmed state still
+// comes from the RPC, not the URL.
+function getJustConfirmedFromUrl(): boolean {
+  if (typeof window === 'undefined') return false;
+  return new URL(window.location.href).searchParams.get('confirmed') === '1';
+}
+function getServerJustConfirmed(): false {
+  return false;
+}
+
 // Effect-stored fetch result, paired with the code it was for so we don't
 // flash stale data if the URL changes while a fetch is in flight.
 interface FetchedFor {
@@ -43,8 +55,13 @@ type DerivedState =
     };
 
 export function WaitlistSuccess() {
-  // SSR-safe URL read.
+  // SSR-safe URL reads.
   const code = useSyncExternalStore(noopSubscribe, getCodeFromUrl, getServerCode);
+  const justConfirmed = useSyncExternalStore(
+    noopSubscribe,
+    getJustConfirmedFromUrl,
+    getServerJustConfirmed,
+  );
   const [hydrated, setHydrated] = useState(false);
   const [fetched, setFetched] = useState<FetchedFor | null>(null);
 
@@ -136,7 +153,11 @@ export function WaitlistSuccess() {
   return (
     <Shell>
       <div className="mb-4 inline-flex items-center gap-2 rounded-full bg-aqua-100 px-3 py-1 text-sm font-semibold text-aqua-700">
-        {state.emailConfirmed ? 'Confirmed' : 'Almost there'}
+        {state.emailConfirmed
+          ? justConfirmed
+            ? '✓ Email confirmed'
+            : 'Confirmed'
+          : 'Almost there'}
       </div>
 
       <h1 className="text-3xl font-bold text-ink-900 mb-3">

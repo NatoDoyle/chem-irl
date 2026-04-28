@@ -3,15 +3,13 @@
 // Reached by the link in the confirmation email sent by waitlist-signup.
 // Wraps the SECURITY DEFINER RPC `confirm_waitlist_email`: validates the
 // single-use token, marks email_confirmed_at, applies any referral score,
-// and renders a minimal branded HTML page back to the user's browser.
+// and on success 302s into the marketing site's /waitlist/success page so
+// the user lands on the real shareable referral landing instead of a
+// dead-end Supabase URL. Errors still render inline since the marketing
+// site has no equivalent error path.
 //
 // JWT verification is disabled in supabase/config.toml — the link is
 // opened directly from email, no client auth context.
-//
-// Once the marketing site has a /waitlist/success page (Week 3) we may
-// switch this to a 302 redirect into that page with the position +
-// referral_code as query params. For Week 2 we render inline so the
-// confirm flow is self-contained.
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
@@ -20,6 +18,8 @@ const HTML_HEADERS = {
   'Content-Type': 'text/html; charset=utf-8',
   'Cache-Control': 'no-store',
 };
+
+const MARKETING_SUCCESS_URL = 'https://chemirl.app/waitlist/success';
 
 serve(async (req) => {
   // Only GET is meaningful (link click from email). HEAD also fine.
@@ -63,10 +63,15 @@ serve(async (req) => {
     return errorPage('We could not confirm this email. Try signing up again.', 400);
   }
 
-  return successPage({
-    position: typeof data.position === 'number' ? data.position : null,
-    referralCode: typeof data.referral_code === 'string' ? data.referral_code : null,
-  });
+  const referralCode = typeof data.referral_code === 'string' ? data.referral_code : null;
+  if (!referralCode) {
+    console.error('waitlist-confirm: rpc returned success without referral_code');
+    return errorPage('Something went wrong on our end. Try again in a few minutes.', 500);
+  }
+  const successUrl = new URL(MARKETING_SUCCESS_URL);
+  successUrl.searchParams.set('code', referralCode);
+  successUrl.searchParams.set('confirmed', '1');
+  return Response.redirect(successUrl.toString(), 302);
 });
 
 // --- HTML rendering -------------------------------------------------------
@@ -99,26 +104,6 @@ function shell(title: string, bodyInner: string, status: number): Response {
 </body>
 </html>`,
     { status, headers: HTML_HEADERS },
-  );
-}
-
-function successPage(args: { position: number | null; referralCode: string | null }): Response {
-  const positionLine = args.position
-    ? `<div class="pill">You're #${args.position} on the Dublin list</div>`
-    : '';
-  const referralLine = args.referralCode
-    ? `<p class="muted">Your referral link will live at <code>chemirl.app/?ref=${args.referralCode}</code> — once friends sign up through it, you move up the list. (We'll email you when that page goes live.)</p>`
-    : '';
-  return shell(
-    'Email confirmed',
-    `
-    ${positionLine}
-    <h1>Email confirmed</h1>
-    <p>You're in. We'll email you when Chem IRL opens the Dublin beta.</p>
-    ${referralLine}
-    <p class="muted">No more action needed today. Close this tab — we've got it from here.</p>
-  `,
-    200,
   );
 }
 
