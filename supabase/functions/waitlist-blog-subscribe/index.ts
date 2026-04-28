@@ -143,6 +143,12 @@ serve(async (req) => {
       return json({ error: 'subscribe_failed' }, 500);
     }
 
+    // Mirror the DB row into the Resend "blog" audience so blog
+    // subscribers are reachable from Resend Broadcasts without a manual
+    // export. Feature-flagged + fail-soft: missing env or Resend errors
+    // never fail the user's subscribe.
+    await subscribeToBlogAudience(email);
+
     return json({ ok: true }, 200);
   } catch (err) {
     console.error('waitlist-blog-subscribe unhandled error:', err);
@@ -193,4 +199,49 @@ async function sha256Hex(input: string): Promise<string> {
   return Array.from(new Uint8Array(digest))
     .map((b) => b.toString(16).padStart(2, '0'))
     .join('');
+}
+
+// --- Resend audience sync ------------------------------------------------
+//
+// Adds the subscriber to the configured Resend audience so the blog list
+// is broadcast-ready. When RESEND_API_KEY or RESEND_AUDIENCE_BLOG_ID is
+// missing the call is logged and skipped — the DB row already captured
+// the signup, so nothing is lost. Resend's audiences endpoint is
+// idempotent on email within an audience, so repeat submits are safe.
+
+async function subscribeToBlogAudience(email: string): Promise<void> {
+  const apiKey = Deno.env.get('RESEND_API_KEY');
+  const audienceId = Deno.env.get('RESEND_AUDIENCE_BLOG_ID');
+
+  if (!apiKey || !audienceId) {
+    console.log(
+      'waitlist-blog-subscribe: RESEND_API_KEY or RESEND_AUDIENCE_BLOG_ID not set — would have added contact',
+      JSON.stringify({ email }),
+    );
+    return;
+  }
+
+  try {
+    const res = await fetch(
+      `https://api.resend.com/audiences/${audienceId}/contacts`,
+      {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${apiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email, unsubscribed: false }),
+      },
+    );
+    if (!res.ok) {
+      const detail = await res.text();
+      console.error('Resend audiences add failed', {
+        status: res.status,
+        detail,
+      });
+    }
+  } catch (err) {
+    // Don't bubble — the DB write already succeeded.
+    console.error('Resend audiences add threw', err);
+  }
 }
