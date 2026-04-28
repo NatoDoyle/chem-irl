@@ -42,7 +42,11 @@ export function PostLayout({
   };
 
   return (
-    <article className="pt-24 pb-16">
+    <article
+      className="pt-24 pb-16"
+      data-pagefind-body
+      data-pagefind-meta={`title:${post.title}`}
+    >
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}

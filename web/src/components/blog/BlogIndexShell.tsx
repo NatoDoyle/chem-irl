@@ -3,6 +3,7 @@ import type { Post } from '@/lib/blog/schema';
 import { Pagination } from './Pagination';
 import { PostListItem } from './PostListItem';
 import { BlogSidebar } from './BlogSidebar';
+import { SearchBar } from './SearchBar';
 
 type Props = {
   posts: Post[];
@@ -29,7 +30,10 @@ export function BlogIndexShell({
     page !== undefined && totalPages !== undefined && totalPages > 1;
 
   return (
-    <div className="pt-24 pb-16 max-w-7xl mx-auto px-4">
+    <div
+      className="pt-24 pb-16 max-w-7xl mx-auto px-4"
+      data-pagefind-ignore="all"
+    >
       <header className="max-w-3xl mb-10">
         {eyebrow && <div className="mb-3">{eyebrow}</div>}
         <h1 className="text-4xl md:text-5xl font-bold text-ink-900 mb-4">
@@ -42,6 +46,7 @@ export function BlogIndexShell({
 
       <div className="grid md:grid-cols-[minmax(0,3fr)_minmax(0,1fr)] gap-12">
         <main>
+          <SearchBar />
           {beforeList}
           {posts.length === 0 ? (
             emptyState ?? (
