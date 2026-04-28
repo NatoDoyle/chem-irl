@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next';
 import { DM_Sans } from 'next/font/google';
 import { Nav } from '@/components/Nav';
 import { Footer } from '@/components/Footer';
+import { SearchOverlay } from '@/components/blog/SearchOverlay';
 import './globals.css';
 
 const dmSans = DM_Sans({
@@ -42,9 +43,14 @@ export default function RootLayout({
       <body
         className={`${dmSans.variable} antialiased`}
       >
-        <Nav />
+        <div data-pagefind-ignore="all">
+          <Nav />
+        </div>
         <main>{children}</main>
-        <Footer />
+        <div data-pagefind-ignore="all">
+          <Footer />
+        </div>
+        <SearchOverlay />
       </body>
     </html>
   );

@@ -1,8 +1,8 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
+import Link from 'next/link';
 import { getAllPosts, paginate, POSTS_PER_PAGE } from '@/lib/blog';
-import { PostCard } from '@/components/blog/PostCard';
-import { Pagination } from '@/components/blog/Pagination';
+import { BlogIndexShell } from '@/components/blog/BlogIndexShell';
 
 type PageProps = {
   params: Promise<{ page: string }>;
@@ -41,18 +41,16 @@ export default async function BlogPaginationPage({ params }: PageProps) {
   if (page !== pageNum) notFound();
 
   return (
-    <div className="pt-24 pb-16 max-w-7xl mx-auto px-4">
-      <header className="max-w-3xl mb-12">
-        <h1 className="text-4xl md:text-5xl font-bold text-ink-900 mb-4">
-          Blog · page {page}
-        </h1>
-      </header>
-      <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
-        {items.map((post) => (
-          <PostCard key={post.slug} post={post} />
-        ))}
-      </div>
-      <Pagination page={page} totalPages={totalPages} />
-    </div>
+    <BlogIndexShell
+      posts={items}
+      eyebrow={
+        <Link href="/blog" className="text-sm text-aqua-600 hover:underline">
+          ← All posts
+        </Link>
+      }
+      title={`Blog · page ${page}`}
+      page={page}
+      totalPages={totalPages}
+    />
   );
 }

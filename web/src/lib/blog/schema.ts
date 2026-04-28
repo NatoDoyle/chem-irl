@@ -10,7 +10,6 @@ export const PostFrontmatterSchema = z.object({
   tags: z.array(z.string()).default([]),
   category: z.enum(CATEGORY_SLUGS),
   excerpt: z.string().min(40).max(280),
-  coverImage: z.string().optional(),
   draft: z.boolean().default(false),
   canonicalUrl: z.string().url().optional(),
 });

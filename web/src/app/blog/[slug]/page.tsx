@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation';
 import { MDXRemote } from 'next-mdx-remote/rsc';
 import remarkGfm from 'remark-gfm';
 import rehypePrettyCode, { type Options as RehypePrettyCodeOptions } from 'rehype-pretty-code';
+import rehypeSlug from 'rehype-slug';
 import { getAllPosts, getPostBySlug, getRelatedPosts } from '@/lib/blog';
 import { PostLayout } from '@/components/blog/PostLayout';
 import { mdxComponents } from '@/mdx-components';
@@ -34,7 +35,6 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
       type: 'article',
       publishedTime: post.date.toISOString(),
       authors: [post.authorData.name],
-      images: post.coverImage ? [post.coverImage] : undefined,
     },
     twitter: { card: 'summary_large_image' },
     alternates: {
@@ -57,7 +57,7 @@ export default async function BlogPostPage({ params }: PageProps) {
         options={{
           mdxOptions: {
             remarkPlugins: [remarkGfm],
-            rehypePlugins: [[rehypePrettyCode, prettyCodeOptions]],
+            rehypePlugins: [rehypeSlug, [rehypePrettyCode, prettyCodeOptions]],
           },
         }}
       />

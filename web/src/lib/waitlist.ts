@@ -203,6 +203,65 @@ export async function getReferrerFirstName(code: string): Promise<ReferrerLookup
   return { success: true, firstName: typeof data === 'string' ? data : null };
 }
 
+// --- Blog subscribe (sidebar email CTA) ---------------------------------
+
+export interface BlogSubscribePayload {
+  email: string;
+  // Honeypot — set to non-empty to mark the submission as a bot.
+  website?: string;
+}
+
+export interface BlogSubscribeSuccess {
+  success: true;
+}
+export interface BlogSubscribeFailure {
+  success: false;
+  error: string;
+}
+export type BlogSubscribeResult = BlogSubscribeSuccess | BlogSubscribeFailure;
+
+/**
+ * POSTs an email-only subscribe to the waitlist-blog-subscribe edge
+ * function. Routes into the same waitlist_signups table as the launch
+ * waitlist but with source='blog_subscribe' so the two audiences can be
+ * segmented downstream.
+ */
+export async function submitBlogSubscribe(
+  payload: BlogSubscribePayload,
+): Promise<BlogSubscribeResult> {
+  if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+    return { success: false, error: 'configuration_missing' };
+  }
+
+  let res: Response;
+  try {
+    res = await fetch(`${SUPABASE_URL}/functions/v1/waitlist-blog-subscribe`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+      },
+      body: JSON.stringify(payload),
+    });
+  } catch {
+    return { success: false, error: 'network_error' };
+  }
+
+  let data: unknown;
+  try {
+    data = await res.json();
+  } catch {
+    return { success: false, error: `http_${res.status}` };
+  }
+
+  const obj = (data ?? {}) as Record<string, unknown>;
+  if (!res.ok || obj.ok !== true) {
+    const error = typeof obj.error === 'string' ? obj.error : `http_${res.status}`;
+    return { success: false, error };
+  }
+  return { success: true };
+}
+
 // --- Confirmed-signup count (live counter) ------------------------------
 
 export interface CountSuccess {

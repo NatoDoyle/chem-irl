@@ -55,15 +55,6 @@ function loadAllPosts(): Post[] {
           `Add content/authors/${frontmatter.author}.json`,
       );
     }
-    if (frontmatter.coverImage) {
-      const coverPath = path.resolve(process.cwd(), 'public', frontmatter.coverImage.replace(/^\//, ''));
-      if (!fs.existsSync(coverPath)) {
-        throw new Error(
-          `Post ${file} declares coverImage "${frontmatter.coverImage}" but ` +
-            `web/public/${frontmatter.coverImage.replace(/^\//, '')} is missing.`,
-        );
-      }
-    }
     const stats = readingTime(content);
     posts.push({
       ...frontmatter,
@@ -106,6 +97,27 @@ export function getAllCategories(): CategorySlug[] {
   return Array.from(set).sort();
 }
 
+export function getCategoryCounts(): { category: CategorySlug; count: number }[] {
+  const counts = new Map<CategorySlug, number>();
+  for (const p of getAllPosts()) {
+    counts.set(p.category, (counts.get(p.category) ?? 0) + 1);
+  }
+  return Array.from(counts.entries())
+    .map(([category, count]) => ({ category, count }))
+    .sort((a, b) => b.count - a.count || a.category.localeCompare(b.category));
+}
+
+export function getPopularTags(limit = 8): { tag: string; count: number }[] {
+  const counts = new Map<string, number>();
+  for (const p of getAllPosts()) {
+    for (const t of p.tags) counts.set(t, (counts.get(t) ?? 0) + 1);
+  }
+  return Array.from(counts.entries())
+    .map(([tag, count]) => ({ tag, count }))
+    .sort((a, b) => b.count - a.count || a.tag.localeCompare(b.tag))
+    .slice(0, limit);
+}
+
 export const POSTS_PER_PAGE = 10;
 
 export function paginate<T>(items: T[], page: number, perPage = POSTS_PER_PAGE): { page: number; totalPages: number; items: T[] } {
@@ -113,6 +125,22 @@ export function paginate<T>(items: T[], page: number, perPage = POSTS_PER_PAGE):
   const clamped = Math.min(Math.max(1, page), totalPages);
   const start = (clamped - 1) * perPage;
   return { page: clamped, totalPages, items: items.slice(start, start + perPage) };
+}
+
+export function getAllAuthorSlugs(): string[] {
+  const set = new Set<string>();
+  for (const p of getAllPosts()) set.add(p.authorData.key);
+  return Array.from(set).sort();
+}
+
+export function getAuthorBySlug(slug: string): Author | null {
+  const posts = getAllPosts();
+  const match = posts.find((p) => p.authorData.key === slug);
+  return match ? match.authorData : null;
+}
+
+export function getPostsByAuthor(slug: string): Post[] {
+  return getAllPosts().filter((p) => p.authorData.key === slug);
 }
 
 export function getRelatedPosts(post: Post, limit = 3): Post[] {
