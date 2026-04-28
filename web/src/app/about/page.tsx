@@ -6,6 +6,14 @@ export const metadata: Metadata = {
   title: 'About - Chem IRL',
   description:
     'Our story. Why we built a dating app focused on real-world meetings.',
+  openGraph: {
+    title: 'About - Chem IRL',
+    description:
+      'Our story. Why we built a dating app focused on real-world meetings.',
+    url: 'https://chemirl.app/about',
+    siteName: 'Chem IRL',
+    type: 'website',
+  },
 };
 
 const VALUES = [

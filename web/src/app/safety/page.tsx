@@ -6,6 +6,14 @@ export const metadata: Metadata = {
   title: 'Safety - Chem IRL',
   description:
     'Learn about safety features built into Chem IRL: reporting, verification, moderation, and more.',
+  openGraph: {
+    title: 'Safety - Chem IRL',
+    description:
+      'Learn about safety features built into Chem IRL: reporting, verification, moderation, and more.',
+    url: 'https://chemirl.app/safety',
+    siteName: 'Chem IRL',
+    type: 'website',
+  },
 };
 
 const SAFETY_FEATURES = [
