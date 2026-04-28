@@ -1,10 +1,13 @@
 'use client';
 
 import { useState } from 'react';
+import { trackEvent } from '@/lib/analytics';
 
 interface ShareButtonsProps {
   referralUrl: string;
 }
+
+type ShareChannel = 'whatsapp' | 'twitter' | 'sms' | 'copy';
 
 // Brand voice (per App Plans/Brand & Growth v2 §5): direct, outcome-driven,
 // no romance clichés. Tested across WhatsApp + X char limits.
@@ -19,20 +22,23 @@ export function ShareButtons({ referralUrl }: ShareButtonsProps) {
   const encodedUrl = encodeURIComponent(referralUrl);
   const encodedShortText = encodeURIComponent(SHARE_MESSAGE);
 
-  const links = [
+  const links: { label: string; channel: ShareChannel; href: string; external: boolean }[] = [
     {
       label: 'WhatsApp',
+      channel: 'whatsapp',
       href: `https://wa.me/?text=${encodedText}`,
       external: true,
     },
     {
       label: 'X / Twitter',
+      channel: 'twitter',
       // X dedupes URL from text body so include it once, separately, for the URL card.
       href: `https://twitter.com/intent/tweet?text=${encodedShortText}&url=${encodedUrl}`,
       external: true,
     },
     {
       label: 'iMessage',
+      channel: 'sms',
       // sms: scheme is iOS-friendly; on other platforms it'll prompt to pick an SMS app.
       href: `sms:?&body=${encodedText}`,
       external: false,
@@ -43,6 +49,7 @@ export function ShareButtons({ referralUrl }: ShareButtonsProps) {
     try {
       await navigator.clipboard.writeText(referralUrl);
       setCopied(true);
+      trackEvent('referral_share_clicked', { channel: 'copy' });
       setTimeout(() => setCopied(false), 2000);
     } catch {
       // No-op: if clipboard fails (permissions, http, ancient browser), the
@@ -59,6 +66,9 @@ export function ShareButtons({ referralUrl }: ShareButtonsProps) {
             href={link.href}
             target={link.external ? '_blank' : undefined}
             rel={link.external ? 'noopener noreferrer' : undefined}
+            onClick={() =>
+              trackEvent('referral_share_clicked', { channel: link.channel })
+            }
             className="rounded-full border border-aqua-200 bg-white px-4 py-2 text-sm font-medium text-ink-900 hover:border-aqua-400 hover:bg-aqua-50 transition-colors"
           >
             {link.label}

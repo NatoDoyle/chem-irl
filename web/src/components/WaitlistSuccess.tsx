@@ -1,8 +1,9 @@
 'use client';
 
-import { useEffect, useState, useSyncExternalStore } from 'react';
+import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import Link from 'next/link';
 import { ShareButtons } from '@/components/ShareButtons';
+import { trackEvent } from '@/lib/analytics';
 import {
   buildReferralUrl,
   getPositionForCode,
@@ -88,6 +89,20 @@ export function WaitlistSuccess() {
       cancelled = true;
     };
   }, [code]);
+
+  // Fire `referral_landing_viewed` exactly once per page mount, the
+  // first time the RPC returns a successful result. Re-renders don't
+  // re-fire because of the ref guard.
+  const viewedFired = useRef(false);
+  useEffect(() => {
+    if (viewedFired.current) return;
+    if (!fetched || !fetched.result.success) return;
+    viewedFired.current = true;
+    trackEvent('referral_landing_viewed', {
+      just_confirmed: justConfirmed,
+      email_confirmed: fetched.result.email_confirmed,
+    });
+  }, [fetched, justConfirmed]);
 
   // Derive UI state from URL + fetch — no synchronous setState in effects.
   const state: DerivedState = !hydrated
