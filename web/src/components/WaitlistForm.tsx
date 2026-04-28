@@ -1,7 +1,8 @@
 'use client';
 
-import { useEffect, useState, useSyncExternalStore } from 'react';
+import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { useRouter } from 'next/navigation';
+import { trackEvent } from '@/lib/analytics';
 import {
   getReferrerFirstName,
   submitWaitlistSignup,
@@ -74,6 +75,16 @@ export function WaitlistForm() {
 
   const submitting = status.kind === 'submitting';
 
+  // Fire `waitlist_form_started` once on first interaction. onFocus on
+  // the <form> bubbles from any input, so we don't have to wire this on
+  // every field.
+  const startedFired = useRef(false);
+  function handleFirstFocus() {
+    if (startedFired.current) return;
+    startedFired.current = true;
+    trackEvent('waitlist_form_started');
+  }
+
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     if (submitting) return;
@@ -95,6 +106,9 @@ export function WaitlistForm() {
     const result = await submitWaitlistSignup(payload);
 
     if (result.success && result.referral_code) {
+      trackEvent('waitlist_form_submitted', {
+        had_referrer: !!referredByCode,
+      });
       router.push(`/waitlist/success?code=${encodeURIComponent(result.referral_code)}`);
       return;
     }
@@ -112,7 +126,11 @@ export function WaitlistForm() {
   }
 
   return (
-    <form onSubmit={onSubmit} className="flex flex-col gap-5">
+    <form
+      onSubmit={onSubmit}
+      onFocus={handleFirstFocus}
+      className="flex flex-col gap-5"
+    >
       {referredByCode && (
         <div className="rounded-xl border border-aqua-300 bg-aqua-50 px-4 py-3 text-sm text-ink-900">
           <strong>{referrerFirstName ?? 'A friend'}</strong> sent you their
