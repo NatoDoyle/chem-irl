@@ -5,6 +5,14 @@ export const metadata: Metadata = {
   title: 'Terms of Service - Chem IRL',
   description:
     'Chem IRL terms of service. Read our terms and conditions for using the app.',
+  openGraph: {
+    title: 'Terms of Service - Chem IRL',
+    description:
+      'Chem IRL terms of service. Read our terms and conditions for using the app.',
+    url: 'https://chemirl.app/terms',
+    siteName: 'Chem IRL',
+    type: 'website',
+  },
 };
 
 const TOC_SECTIONS = [

@@ -5,6 +5,14 @@ export const metadata: Metadata = {
   title: 'How It Works - Chem IRL',
   description:
     'Get from match to meeting in days, not weeks. Learn how Chem IRL works.',
+  openGraph: {
+    title: 'How It Works - Chem IRL',
+    description:
+      'Get from match to meeting in days, not weeks. Learn how Chem IRL works.',
+    url: 'https://chemirl.app/how-it-works',
+    siteName: 'Chem IRL',
+    type: 'website',
+  },
 };
 
 const STEPS = [
