@@ -8,6 +8,7 @@ import {
   AppState,
   Alert,
   ActivityIndicator,
+  Pressable,
 } from 'react-native';
 import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -31,6 +32,9 @@ const PLACEHOLDER_IMAGE = require('../../../assets/icon.png');
 type MatchesStackParamList = {
   MatchesList: undefined;
   MatchDetail: { matchId: string };
+  Propose: { matchId: string; responseTo?: string };
+  Chat: { matchId: string };
+  ViewProfile: { userId: string };
 };
 
 type MatchesScreenNavigationProp = NativeStackNavigationProp<MatchesStackParamList, 'MatchesList'>;
@@ -41,6 +45,8 @@ interface MatchWithProfile extends Match {
   otherUserName?: string;
   lastMessage?: string;
   lastMessageIsOwn?: boolean;
+  hasActiveProposal: boolean;
+  hasConfirmedDate: boolean;
 }
 
 type MatchSection = {
@@ -83,7 +89,15 @@ function formatDaysAgo(createdAt: string): string {
 
 // Memoized match item component for active matches
 const MatchItem = memo(
-  ({ item, onPress }: { item: MatchWithProfile; onPress: (matchId: string) => void }) => {
+  ({
+    item,
+    onPress,
+    onPhotoPress,
+  }: {
+    item: MatchWithProfile;
+    onPress: (item: MatchWithProfile) => void;
+    onPhotoPress: (userId: string) => void;
+  }) => {
     const [timeLeft, setTimeLeft] = useState(() => formatTimeLeft(item.expires_at));
 
     // Tick timer every 60 seconds
@@ -101,9 +115,15 @@ const MatchItem = memo(
       : 'No messages yet';
 
     return (
-      <AnimatedPressable style={styles.matchCard} onPress={() => onPress(item.match_id)}>
+      <AnimatedPressable style={styles.matchCard} onPress={() => onPress(item)}>
         <View style={styles.cardRow}>
-          <View style={styles.avatarContainer}>
+          <Pressable
+            onPress={() => onPhotoPress(item.otherUserId)}
+            style={styles.avatarContainer}
+            accessibilityRole="button"
+            accessibilityLabel={`View ${item.otherUserName ?? 'match'}'s profile`}
+            hitSlop={6}
+          >
             <Image
               source={item.otherUserPhoto ? { uri: item.otherUserPhoto } : PLACEHOLDER_IMAGE}
               style={styles.avatar}
@@ -111,7 +131,7 @@ const MatchItem = memo(
               cachePolicy="memory-disk"
             />
             <View style={styles.onlineDot} />
-          </View>
+          </Pressable>
           <View style={styles.matchInfo}>
             <View style={styles.topRow}>
               <Text style={styles.matchName} numberOfLines={1}>
@@ -144,10 +164,12 @@ const ExpiredMatchItem = memo(
   ({
     item,
     onPress,
+    onPhotoPress,
     onReactivate,
   }: {
     item: MatchWithProfile;
-    onPress: (matchId: string) => void;
+    onPress: (item: MatchWithProfile) => void;
+    onPhotoPress: (userId: string) => void;
     onReactivate: (matchId: string) => void;
   }) => {
     const [reactivating, setReactivating] = useState(false);
@@ -175,17 +197,23 @@ const ExpiredMatchItem = memo(
     return (
       <AnimatedPressable
         style={[styles.matchCard, styles.matchCardExpired]}
-        onPress={() => onPress(item.match_id)}
+        onPress={() => onPress(item)}
       >
         <View style={styles.cardRow}>
-          <View style={styles.avatarContainer}>
+          <Pressable
+            onPress={() => onPhotoPress(item.otherUserId)}
+            style={styles.avatarContainer}
+            accessibilityRole="button"
+            accessibilityLabel={`View ${item.otherUserName ?? 'match'}'s profile`}
+            hitSlop={6}
+          >
             <Image
               source={item.otherUserPhoto ? { uri: item.otherUserPhoto } : PLACEHOLDER_IMAGE}
               style={styles.avatar}
               contentFit="cover"
               cachePolicy="memory-disk"
             />
-          </View>
+          </Pressable>
           <View style={styles.matchInfo}>
             <View style={styles.topRow}>
               <Text style={[styles.matchName, styles.expiredText]} numberOfLines={1}>
@@ -320,8 +348,28 @@ export default function MatchesScreen() {
           }
         }
 
+        // Batch fetch proposal + confirm state per match. Drives smart routing
+        // on tap (no proposal -> Propose, active proposal -> MatchDetail,
+        // confirmed -> Chat) without an extra round-trip per card.
+        const activeProposalMatchIds = new Set<string>();
+        const confirmedMatchIds = new Set<string>();
+        if (matchIds.length > 0) {
+          const [{ data: proposalsData }, { data: confirmsData }] = await Promise.all([
+            supabase.from('proposals').select('match_id, status').in('match_id', matchIds),
+            supabase.from('confirms').select('match_id').in('match_id', matchIds),
+          ]);
+          for (const p of proposalsData || []) {
+            if (p.status === 'active') {
+              activeProposalMatchIds.add(p.match_id);
+            }
+          }
+          for (const c of confirmsData || []) {
+            confirmedMatchIds.add(c.match_id);
+          }
+        }
+
         // Map matches with profile info from batch fetch
-        const matchesWithProfiles = (matchesData || []).map((match: Match) => {
+        const matchesWithProfiles: MatchWithProfile[] = (matchesData || []).map((match: Match) => {
           const otherUserId = match.user_a === user.id ? match.user_b : match.user_a;
           const profile = profilesMap.get(otherUserId);
 
@@ -332,6 +380,8 @@ export default function MatchesScreen() {
             otherUserName: profile?.full_name || 'No name',
             lastMessage: lastMessageMap.get(match.match_id)?.content,
             lastMessageIsOwn: lastMessageMap.get(match.match_id)?.sender_id === user.id,
+            hasActiveProposal: activeProposalMatchIds.has(match.match_id),
+            hasConfirmedDate: confirmedMatchIds.has(match.match_id),
           };
         });
 
@@ -497,9 +547,26 @@ export default function MatchesScreen() {
     setRefreshing(false);
   };
 
+  // Route based on the match's current state. The previous behaviour always
+  // landed on MatchDetail, which was an empty stop ("photo + name + propose
+  // button") whenever no proposal existed. Now the user goes straight to the
+  // next action: propose, see proposal status, or chat.
   const handleMatchPress = useCallback(
-    (matchId: string) => {
-      navigation.navigate('MatchDetail', { matchId });
+    (item: MatchWithProfile) => {
+      if (item.hasConfirmedDate) {
+        navigation.navigate('Chat', { matchId: item.match_id });
+      } else if (item.hasActiveProposal) {
+        navigation.navigate('MatchDetail', { matchId: item.match_id });
+      } else {
+        navigation.navigate('Propose', { matchId: item.match_id });
+      }
+    },
+    [navigation]
+  );
+
+  const handlePhotoPress = useCallback(
+    (userId: string) => {
+      navigation.navigate('ViewProfile', { userId });
     },
     [navigation]
   );
@@ -540,13 +607,14 @@ export default function MatchesScreen() {
           <ExpiredMatchItem
             item={item}
             onPress={handleMatchPress}
+            onPhotoPress={handlePhotoPress}
             onReactivate={handleReactivate}
           />
         );
       }
-      return <MatchItem item={item} onPress={handleMatchPress} />;
+      return <MatchItem item={item} onPress={handleMatchPress} onPhotoPress={handlePhotoPress} />;
     },
-    [handleMatchPress, handleReactivate]
+    [handleMatchPress, handlePhotoPress, handleReactivate]
   );
 
   const renderSectionHeader = useCallback(
