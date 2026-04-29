@@ -12,7 +12,7 @@ Chem IRL is a dating app optimized for real-world follow-through and reduced tim
 - `supabase/` — database migrations (authoritative for deployed state), edge functions, config
 - `db/` — reference SQL files (schema, RLS, RPCs, triggers, scoring). These are canonical design docs but may lag behind applied migrations; treat `supabase/migrations/` as the source of truth for what's deployed.
 - `web/` — static Next.js marketing site, deployed to Vercel as static export
-- `docs/` — product, architecture, and implementation docs
+- `docs/` — product, architecture, and implementation docs. Sub-areas: `docs/setup/` (env + Supabase bootstrap), `docs/deployment/`, `docs/development/`, `docs/infrastructure/`. Top-level files like `DUBLIN_LAUNCH_PLAN.md`, `PAYMENT_PROCESSOR_PLAN.md`, and dated drift reports (e.g. `SUPABASE_MIGRATION_DRIFT_*.md`) are point-in-time records — read with caution.
 - `agent_docs/` — task-specific agent instructions
 - `scripts/` — root-level utility scripts (markdown link checker, test email sender)
 
@@ -21,6 +21,23 @@ Chem IRL is a dating app optimized for real-world follow-through and reduced tim
 - Use `bun` instead of `npm` for all package operations (install, add, remove, run, etc.)
 - Never use `npm install`, `npm run`, or any `npm` CLI commands.
 - If a README, guide, or any project documentation references `npm`, update it to use `bun` so the docs stay consistent and up to date.
+
+## Available tools (CLIs and MCP)
+
+Prefer these over writing instructions for the user to run by hand. The default should be "I'll do it via the CLI/MCP," not "go do this in a web dashboard."
+
+- **Supabase CLI (`supabase`)** — installed and on PATH. Use it for migration and schema work:
+  - `supabase migration list --linked` — see which timestamps are applied on the linked project (replaces manual `SELECT … FROM supabase_migrations.schema_migrations`).
+  - `supabase migration new <slug>` — scaffold a new migration with a non-colliding timestamp.
+  - `supabase db diff --linked --schema public` — preview what a local migration will change on the remote.
+  - `supabase db push` — apply local migrations to the linked project (only when the user has approved the change).
+  - `supabase functions deploy <name>` — deploy edge functions in `supabase/functions/`.
+- **Supabase MCP** — `mcp__claude_ai_Supabase__*` tools (`list_projects`, `execute_sql`) may be loaded in the session for read-only checks. If available, use them for one-off queries against the live DB. Treat MCP-issued SQL as production access: read-only by default, mutations only with explicit approval.
+- **GitHub CLI (`gh`)** — installed and on PATH. Use for PRs, issues, runs: `gh pr create`, `gh pr view --comments`, `gh run list`, `gh run watch`, `gh issue list`.
+- **bun** — see Package Management above.
+- **Expo MCP** — `expo-mcp` is configured at the project scope; use it for Expo-specific introspection if it loads in the session.
+
+Manual Dashboard / web-UI steps should only appear in instructions when the action is destructive, requires SSO/2FA, or genuinely cannot be scripted.
 
 ## Build and development commands
 
@@ -41,6 +58,7 @@ bun run format:check               # Prettier check
 ```
 
 ### Running a single test
+Default `bun test` runs the unit (node) suite only. RN component tests require `bun run test:native` (or the explicit `jest.native.config.js` invocation) — they will not run via `bun test`.
 ```bash
 cd mobile && bunx jest -c jest.unit.config.js --testPathPattern="<pattern>"   # unit (node)
 cd mobile && bunx jest -c jest.native.config.js --testPathPattern="<pattern>" # RN component (jest-expo)
@@ -48,11 +66,14 @@ cd mobile && bunx jest -c jest.native.config.js --testPathPattern="<pattern>" # 
 
 ### Other useful mobile commands
 ```bash
-bun run lint:fix         # auto-fix lint issues
-bun run format           # auto-format all files
-bun run check:env        # validate .env configuration
-bun run use:staging      # switch to staging Supabase env
-bun run use:production   # switch to production Supabase env
+bun run lint:fix             # auto-fix lint issues
+bun run format               # auto-format all files
+bun run check:env            # validate .env configuration
+bun run use:staging          # switch to staging Supabase env
+bun run use:production       # switch to production Supabase env
+bun run test:native          # React Native component tests (jest-expo)
+bun run verify:staging       # smoke-test the staging Supabase project
+bun run test:beta:smoke:new  # scaffold a new beta smoke-test run log
 ```
 
 ### Root-level
@@ -106,6 +127,7 @@ No separate backend server. The mobile app connects directly to Supabase (Postgr
 - PostgreSQL functions/RPCs (called via `supabase.rpc()`)
 - Edge functions (`supabase/functions/`) for server-side logic like push notifications
 - Database triggers (auto-create profile on signup, etc.)
+- Scheduled jobs via `pg_cron` (e.g. periodic scoring rollups)
 
 ### Web app structure (`web/src/`)
 - **`app/`** — Next.js 16 App Router routes: landing, `download/`, `how-it-works/`, `waitlist/`, `blog/` (MDX), plus `about/`, `privacy/`, `safety/`, `terms/`. Static export only — no API routes.
@@ -158,7 +180,8 @@ Mobile app uses `EXPO_PUBLIC_*` env vars loaded via Expo. See `mobile/.env.examp
 
 - Follow existing patterns before introducing new abstractions.
 - Treat schema, auth, ranking logic, and production-facing flows as high-risk areas; read the relevant docs before changing them.
-- Never modify an already-applied Supabase migration. To check if a migration has been applied, run in the Supabase Dashboard SQL Editor: `SELECT 1 FROM supabase_migrations.schema_migrations WHERE version = '<timestamp>';` — if it returns a row, create a new timestamped migration instead.
+- Never modify an already-applied Supabase migration. To check whether a migration is applied, run `supabase migration list --linked` (preferred) or query `supabase_migrations.schema_migrations` via the Supabase MCP / CLI. If the timestamp appears in the applied list, create a new timestamped migration instead.
+- Before adding a new migration, check `supabase/migrations/` for an existing file with the same timestamp prefix. Two files sharing a `YYYYMMDDHHMMSS` prefix will collide; pick the next minute (or second) instead. Use `supabase migration new <slug>` to avoid this. See commit `fe85dd6` for the prior incident.
 - Do not change an existing RPC/function return shape in place; create a versioned replacement such as `_v2` and update callers.
 - When changing PostgREST RPC-related functions or exposed schema behavior, account for schema cache reload requirements (include `SELECT pg_notify('pgrst','reload schema');` in migrations).
 - RLS: `upsert` with `onConflict` can trigger UPDATE, so an UPDATE policy is required for that path.
@@ -232,6 +255,15 @@ Read only the docs relevant to the task:
 ## Validation
 
 Run or propose only the validations relevant to the files changed. Prefer root-cause fixes over bypassing checks.
+
+## Reporting and verification discipline
+
+- Never claim a check, build, commit, or push happened unless the relevant command output appears in the current session.
+- Banned phrases without proof in the same response: "all checks pass", "tests pass", "committed", "pushed", "verified", "implementation complete".
+- If you did not run a command, say so explicitly. If you only inspected files, say "no code changes made".
+- When you do run quality gates, paste the actual transcript (or a faithful summary with the exit status), not a description of what they would have shown.
+- For commits and pushes, include the SHA from `git log -1 --oneline` and the output of `git status --porcelain`.
+- This mirrors the stricter contract in `.cursorrules`; if the two ever conflict, prefer the stricter rule.
 
 ## Self-Improvement Protocol
 
