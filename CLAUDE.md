@@ -42,7 +42,8 @@ bun run format:check               # Prettier check
 
 ### Running a single test
 ```bash
-cd mobile && bunx jest -c jest.unit.config.js --testPathPattern="<pattern>"
+cd mobile && bunx jest -c jest.unit.config.js --testPathPattern="<pattern>"   # unit (node)
+cd mobile && bunx jest -c jest.native.config.js --testPathPattern="<pattern>" # RN component (jest-expo)
 ```
 
 ### Other useful mobile commands
@@ -59,12 +60,23 @@ bun run use:production   # switch to production Supabase env
 bun run docs:check       # validate markdown links across docs
 ```
 
+### Web app (run from `web/`)
+```bash
+bun install              # install dependencies
+bun run dev              # next dev (localhost:3000)
+bun run build            # next build + pagefind index → ./out
+bun run lint             # ESLint (eslint-config-next)
+bun run type-check       # tsc --noEmit
+```
+
+The web build emits a static export (`output: 'export'`) and runs `pagefind` against `out/` for client-side blog search. There are no API routes — anything dynamic goes through Supabase edge functions.
+
 ## Architecture
 
 ### Mobile app structure (`mobile/src/`)
 - **`navigation/`** — Three navigators: `AuthNavigator` (login/signup), `OnboardingNavigator` (profile setup), `MainNavigator` (main app with bottom tabs)
 - **`screens/`** — Organized by feature: `auth/`, `onboarding/`, `discover/`, `matches/`, `profile/`, `debug/`
-- **`lib/`** — Shared utilities and service modules (auth, analytics, notifications, image compression, offline queue, Supabase client)
+- **`lib/`** — Shared utilities and service modules (auth, analytics, notifications, image compression, offline queue, Supabase client, Sentry, IAP via `iap.ts` + `tokens.ts`, availability/timezone helpers, error normalization). The app has a paid token economy — see `iap.ts`, `tokens.ts`, `components/TokenPurchaseModal.tsx`, and the `validate-receipt` edge function.
 - **`lib/supabase/client.ts`** — Single Supabase client instance, imported throughout the app. Uses a custom `LargeSecureStore` that encrypts session tokens with AES-256 (key in SecureStore, ciphertext in AsyncStorage) to work around Expo SecureStore's 2048-byte value limit.
 - **`config/brand.ts`** — Brand colors (aquamarine palette), design tokens, and user-facing copy
 - **`contexts/`** — React contexts (e.g., `ProfileRefreshContext`)
@@ -94,6 +106,17 @@ No separate backend server. The mobile app connects directly to Supabase (Postgr
 - PostgreSQL functions/RPCs (called via `supabase.rpc()`)
 - Edge functions (`supabase/functions/`) for server-side logic like push notifications
 - Database triggers (auto-create profile on signup, etc.)
+
+### Web app structure (`web/src/`)
+- **`app/`** — Next.js 16 App Router routes: landing, `download/`, `how-it-works/`, `waitlist/`, `blog/` (MDX), plus `about/`, `privacy/`, `safety/`, `terms/`. Static export only — no API routes.
+- **`content/`** — MDX blog posts; rendered via `next-mdx-remote` + `gray-matter` + `rehype-pretty-code`.
+- **`components/`** — Marketing components (`Nav`, `Footer`, `WaitlistForm`, `PhoneMockup`, `SentryInit`, `blog/*`).
+- Waitlist flow: form posts to the `waitlist-signup` edge function → confirmation email → `waitlist-confirm` GET link → optional `waitlist-forget` for GDPR erasure. Blog sidebar uses `waitlist-blog-subscribe`.
+
+### Edge functions (`supabase/functions/`)
+- `push` — sends push notifications. Webhook endpoint; `verify_jwt = false`, authenticates via `x-webhook-secret`.
+- `validate-receipt` — validates iOS/Android IAP receipts.
+- `waitlist-signup`, `waitlist-confirm`, `waitlist-forget`, `waitlist-blog-subscribe` — anonymous-callable from the marketing site; all have `verify_jwt = false` in `supabase/config.toml` and use a service-role client to call SECURITY DEFINER RPCs. Don't re-enable JWT verification without rerouting the callers.
 
 ### Testing
 Two Jest configurations:
@@ -150,6 +173,52 @@ Mobile app uses `EXPO_PUBLIC_*` env vars loaded via Expo. See `mobile/.env.examp
 - If `main` diverges from `origin/main`, stop and ask before resolving.
 - Keep at most 3 active WIP branches. Merged branches should be deleted; abandoned branches should be tagged (`archive/<branch>`) then deleted.
 - Read `agent_docs/git_workflow.md` for full details.
+
+### Enforcement hooks
+`.claude/hooks/` runs on `PreToolUse` to enforce the rules above:
+- `block-edit-on-main.sh` — blocks `Edit`/`Write`/`NotebookEdit` when the target file's working tree is on `main` (worktree-aware: resolves the branch from the file's directory, not the shell CWD).
+- `block-push-to-main.sh` — blocks `git push` when the shell's CWD is on `main`.
+- `enforce-branch-hygiene.sh` — runs on `git checkout -b` / `git switch -c`; blocks if the working tree is dirty or warns if the local branch count exceeds 5.
+
+If a hook blocks a tool call, the fix is almost always "create or switch to a feature branch first," not bypassing the hook.
+
+### Worktrees (parallel feature work)
+
+Use git worktrees when working on two or more features in parallel across separate terminals. Each worktree is a full working copy with its own checked-out branch.
+
+**Where they live:** `.worktrees/<branch-with-slash-as-dash>/` at the repo root. The directory is gitignored. Convention: branch `feat/mobile-ux-fixes` → worktree `.worktrees/feat-mobile-ux-fixes/`.
+
+**Create a worktree (always branch off fresh `origin/main`):**
+```bash
+git fetch origin --prune
+git worktree add -b feat/<desc> .worktrees/feat-<desc> origin/main
+cd .worktrees/feat-<desc>
+```
+
+**Bootstrap each worktree.** `node_modules` and `.env*` files do not carry over (the former is gitignored, and Expo/RN native modules don't symlink reliably). Per worktree:
+```bash
+cp ../../mobile/.env.local mobile/.env.local 2>/dev/null || true   # if you have one
+cd mobile && bun install                                            # or: cd web && bun install
+```
+
+**Avoid dev-server port collisions when running two worktrees at once:**
+```bash
+cd mobile && bun start --port 8082         # Metro defaults to 8081
+cd web && bun run dev -- -p 3001            # Next.js defaults to 3000
+```
+
+**Cleanup after merge:**
+```bash
+git worktree remove .worktrees/feat-<desc>
+git branch -d feat/<desc>
+git push origin --delete feat/<desc>
+```
+For abandoned work: `git worktree remove --force` + `git branch -D` (tag `archive/<branch>` first if you want a recovery point).
+
+**Hygiene:**
+- Keep ≤3 active worktrees (same limit as branches).
+- `git worktree list` to inspect; `git worktree prune` to clean up stale registrations after a manual directory delete.
+- Enforcement hooks (`.claude/hooks/`) work per-worktree automatically — they resolve the branch from the file's directory.
 
 ## How to work
 
