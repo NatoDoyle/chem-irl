@@ -13,7 +13,16 @@ export const metadata: Metadata = {
     url: 'https://chemirl.app/about',
     siteName: 'Chem IRL',
     type: 'website',
+    images: [{ url: '/opengraph-image.png', width: 1200, height: 630 }],
   },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'About - Chem IRL',
+    description:
+      'Our story. Why we built a dating app focused on real-world meetings.',
+    images: ['/opengraph-image.png'],
+  },
+  alternates: { canonical: '/about' },
 };
 
 const VALUES = [

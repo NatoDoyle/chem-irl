@@ -12,6 +12,7 @@ export const PostFrontmatterSchema = z.object({
   excerpt: z.string().min(40).max(280),
   draft: z.boolean().default(false),
   canonicalUrl: z.string().url().optional(),
+  image: z.string().optional(),
 });
 
 export type PostFrontmatter = z.infer<typeof PostFrontmatterSchema>;

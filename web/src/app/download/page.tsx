@@ -10,6 +10,23 @@ export const metadata: Metadata = {
   title: 'Join the Dublin beta - Chem IRL',
   description:
     'Chem IRL is launching in Dublin. Join the iOS and Android waitlist — match → meet in days, not weeks.',
+  openGraph: {
+    title: 'Join the Dublin beta - Chem IRL',
+    description:
+      'Chem IRL is launching in Dublin. Join the iOS and Android waitlist — match → meet in days, not weeks.',
+    url: 'https://chemirl.app/download',
+    siteName: 'Chem IRL',
+    type: 'website',
+    images: [{ url: '/opengraph-image.png', width: 1200, height: 630 }],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Join the Dublin beta - Chem IRL',
+    description:
+      'Chem IRL is launching in Dublin. Join the iOS and Android waitlist — match → meet in days, not weeks.',
+    images: ['/opengraph-image.png'],
+  },
+  alternates: { canonical: '/download' },
 };
 
 const POST_SIGNUP_STEPS = [
@@ -66,7 +83,7 @@ export default function DownloadPage() {
             </h1>
 
             <p className="mb-8 max-w-xl text-lg text-ink-500 md:text-xl">
-              {BRAND.name} is launching in Dublin. Drop your email below and
+              {BRAND.name}  is launching in Dublin. Drop your email below and
               we&rsquo;ll send a confirmation link to lock in your spot for the
               iOS and Android beta.
             </p>

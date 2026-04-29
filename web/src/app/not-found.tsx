@@ -4,6 +4,7 @@ import type { Metadata } from 'next';
 export const metadata: Metadata = {
   title: 'Not found - Chem IRL',
   description: "The page you're looking for isn't here.",
+  robots: { index: false, follow: false },
 };
 
 export default function NotFound() {

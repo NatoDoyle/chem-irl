@@ -15,10 +15,12 @@ export async function GET() {
   const posts = getAllPosts();
   const site = 'https://chemirl.app';
   const feedUpdated = posts[0]?.date ?? new Date();
+  const fallbackImage = `${site}/opengraph-image.png`;
 
   const items = posts
     .map((post) => {
       const url = `${site}/blog/${post.slug}`;
+      const imageUrl = post.image ?? fallbackImage;
       return `    <item>
       <title>${escape(post.title)}</title>
       <link>${url}</link>
@@ -27,6 +29,7 @@ export async function GET() {
       <pubDate>${post.date.toUTCString()}</pubDate>
       <author>noreply@chemirl.app (${escape(post.authorData.name)})</author>
       <category>${escape(post.category)}</category>
+      <enclosure url="${escape(imageUrl)}" type="image/png" length="0" />
     </item>`;
     })
     .join('\n');

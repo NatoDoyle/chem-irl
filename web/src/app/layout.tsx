@@ -29,6 +29,12 @@ export const metadata: Metadata = {
     siteName: 'Chem IRL',
     type: 'website',
   },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Chem IRL - Spend less time texting. Test chemistry IRL.',
+    description: "Chemistry and vibe aren't on a screen. Meet face to face.",
+  },
+  manifest: '/manifest.webmanifest',
   other: {
     'msapplication-TileColor': '#FFFBF7',
     'apple-mobile-web-app-status-bar-style': 'default',

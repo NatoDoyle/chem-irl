@@ -5,6 +5,23 @@ export const metadata: Metadata = {
   title: 'Privacy Policy - Chem IRL',
   description:
     'Chem IRL privacy policy. Learn how we collect, use, and protect your data.',
+  openGraph: {
+    title: 'Privacy Policy - Chem IRL',
+    description:
+      'Chem IRL privacy policy. Learn how we collect, use, and protect your data.',
+    url: 'https://chemirl.app/privacy',
+    siteName: 'Chem IRL',
+    type: 'website',
+    images: [{ url: '/opengraph-image.png', width: 1200, height: 630 }],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Privacy Policy - Chem IRL',
+    description:
+      'Chem IRL privacy policy. Learn how we collect, use, and protect your data.',
+    images: ['/opengraph-image.png'],
+  },
+  alternates: { canonical: '/privacy' },
 };
 
 export default function PrivacyPage() {

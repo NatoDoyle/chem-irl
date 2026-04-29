@@ -30,6 +30,7 @@ export function PostLayout({
     '@type': 'BlogPosting',
     headline: post.title,
     description: post.excerpt,
+    image: post.image ?? 'https://chemirl.app/opengraph-image.png',
     datePublished: post.date.toISOString(),
     author: {
       '@type': 'Person',
@@ -38,7 +39,7 @@ export function PostLayout({
     publisher: {
       '@type': 'Organization',
       name: 'Chem IRL',
-      logo: { '@type': 'ImageObject', url: 'https://chemirl.app/logo-icon.png' },
+      logo: { '@type': 'ImageObject', url: 'https://chemirl.app/icon.png' },
     },
     mainEntityOfPage: `https://chemirl.app/blog/${post.slug}`,
   };
