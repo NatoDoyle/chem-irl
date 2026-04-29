@@ -6,6 +6,7 @@ import { supabase } from '../../lib/supabase/client';
 import { FeedItem } from '../../lib/types';
 import DiscoveryCardStack from '../../components/DiscoveryCardStack';
 import MatchModal from '../../components/MatchModal';
+import DiscoveryFilterSheet from '../../components/DiscoveryFilterSheet';
 import { BRAND_COLORS, MIDNIGHT, TYPOGRAPHY, SPACING } from '../../config/brand';
 import { getErrorAlert } from '../../lib/errors';
 import ConnectionStatus from '../../components/ConnectionStatus';
@@ -14,6 +15,13 @@ import { addBreadcrumb } from '../../lib/sentry';
 import { trackEvent } from '../../lib/analytics';
 import AnimatedPressable from '../../components/ui/AnimatedPressable';
 import { SkeletonCard } from '../../components/ui/Skeleton';
+import {
+  DiscoveryFilters,
+  DEFAULT_FILTERS,
+  loadFilters,
+  saveFilters,
+  toRpcParams,
+} from '../../lib/discoveryFilters';
 
 type FeedItemWithPhotos = FeedItem & { photos: string[] };
 
@@ -30,12 +38,18 @@ export default function DiscoverScreen() {
   const [newMatchId, setNewMatchId] = useState<string | null>(null);
   const [hasMore, setHasMore] = useState(true);
   const [seenUserIds, setSeenUserIds] = useState<Set<string>>(new Set());
+  const [filters, setFilters] = useState<DiscoveryFilters>(DEFAULT_FILTERS);
+  const [filterSheetVisible, setFilterSheetVisible] = useState(false);
   // Throttle like actions to prevent spam (min 1 second between likes)
   const likeThrottleRef = useRef(createThrottle(() => {}, 1000));
   const feedLenRef: MutableRefObject<number> = useRef(0);
   const seenIdsRef: MutableRefObject<Set<string>> = useRef(new Set());
+  // Held in a ref so loadFeed doesn't have to be re-memoised every time
+  // filters change (which would also re-trigger the load-on-mount effect).
+  const filtersRef: MutableRefObject<DiscoveryFilters> = useRef(filters);
   feedLenRef.current = feed.length;
   seenIdsRef.current = seenUserIds;
+  filtersRef.current = filters;
 
   const loadFeed = useCallback(async (reset: boolean = false) => {
     if (reset) {
@@ -64,9 +78,10 @@ export default function DiscoverScreen() {
       const requestLimit = currentFeedSize + FEED_PAGE_SIZE;
       const currentSeenIds = reset ? new Set<string>() : seenIdsRef.current;
 
-      const { data, error: rpcError } = await supabase.rpc('get_discovery_feed_v3', {
+      const { data, error: rpcError } = await supabase.rpc('get_discovery_feed_v4', {
         p_viewer: user.id,
         p_limit: requestLimit,
+        ...toRpcParams(filtersRef.current),
       });
 
       if (rpcError) {
@@ -145,6 +160,54 @@ export default function DiscoverScreen() {
     loadFeed(true);
   }, [loadFeed]);
 
+  // Hydrate filters from the user's saved profile preferences once on mount.
+  // After the first load completes, the feed will refresh with these applied.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
+        if (!user || cancelled) return;
+        const stored = await loadFilters(user.id);
+        if (cancelled) return;
+        setFilters(stored);
+        filtersRef.current = stored;
+        // Re-run the feed query with the loaded filters. If the initial mount
+        // already returned with default filters, this is the cheapest way to
+        // make sure the user sees their saved set without flickering.
+        loadFeed(true);
+      } catch (err) {
+        // Filter hydration is best-effort; failures fall back to defaults.
+        console.warn('Failed to hydrate discovery filters', err);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [loadFeed]);
+
+  const handleApplyFilters = useCallback(
+    async (next: DiscoveryFilters) => {
+      setFilters(next);
+      filtersRef.current = next;
+      try {
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
+        if (user) {
+          await saveFilters(user.id, next);
+        }
+      } catch (err: any) {
+        const { message } = getErrorAlert(err, 'Failed to save filters');
+        Alert.alert('Filters not saved', message);
+      }
+      await loadFeed(true);
+    },
+    [loadFeed]
+  );
+
   const handleLike = async (userId: string) => {
     // Prevent rapid successive likes (rate limiting)
     if (likeThrottleRef.current.isThrottled()) {
@@ -213,7 +276,7 @@ export default function DiscoverScreen() {
     <View style={[styles.header, { paddingTop: insets.top + SPACING.sm }]}>
       <Text style={styles.headerTitle}>Chem IRL</Text>
       <AnimatedPressable
-        onPress={() => {}}
+        onPress={() => setFilterSheetVisible(true)}
         style={styles.filterButton}
         accessibilityLabel="Filter settings"
       >
@@ -297,6 +360,12 @@ export default function DiscoverScreen() {
           setMatchModalVisible(false);
           setNewMatchId(null);
         }}
+      />
+      <DiscoveryFilterSheet
+        visible={filterSheetVisible}
+        initialFilters={filters}
+        onClose={() => setFilterSheetVisible(false)}
+        onApply={handleApplyFilters}
       />
     </View>
   );
