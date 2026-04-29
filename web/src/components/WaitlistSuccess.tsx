@@ -34,6 +34,20 @@ function getServerJustConfirmed(): false {
   return false;
 }
 
+// `?source=blog|waitlist` is set by waitlist-confirm so this single page
+// can render the right copy for either list. Blog confirms have no
+// referral arc and skip the position/score UI entirely.
+type SignupSource = 'blog' | 'waitlist';
+
+function getSourceFromUrl(): SignupSource | null {
+  if (typeof window === 'undefined') return null;
+  const raw = new URL(window.location.href).searchParams.get('source');
+  return raw === 'blog' || raw === 'waitlist' ? raw : null;
+}
+function getServerSource(): null {
+  return null;
+}
+
 // Effect-stored fetch result, paired with the code it was for so we don't
 // flash stale data if the URL changes while a fetch is in flight.
 interface FetchedFor {
@@ -63,6 +77,11 @@ export function WaitlistSuccess() {
     getJustConfirmedFromUrl,
     getServerJustConfirmed,
   );
+  const source = useSyncExternalStore(
+    noopSubscribe,
+    getSourceFromUrl,
+    getServerSource,
+  );
   const [hydrated, setHydrated] = useState(false);
   const [fetched, setFetched] = useState<FetchedFor | null>(null);
 
@@ -79,7 +98,10 @@ export function WaitlistSuccess() {
 
   // Fire the RPC fetch whenever the URL code changes. Only setState
   // happens inside the async callback (subscribe-style — allowed).
+  // Skipped for blog source — blog confirms have no referral arc and the
+  // RPC would return not_found for an email-only row anyway.
   useEffect(() => {
+    if (source === 'blog') return;
     if (code === null) return;
     let cancelled = false;
     void getPositionForCode(code).then((result) => {
@@ -88,7 +110,7 @@ export function WaitlistSuccess() {
     return () => {
       cancelled = true;
     };
-  }, [code]);
+  }, [code, source]);
 
   // Fire `referral_landing_viewed` exactly once per page mount, the
   // first time the RPC returns a successful result. Re-renders don't
@@ -103,6 +125,13 @@ export function WaitlistSuccess() {
       email_confirmed: fetched.result.email_confirmed,
     });
   }, [fetched, justConfirmed]);
+
+  // Blog confirms have a complete UI without the position RPC — render
+  // the dedicated view as soon as the URL has resolved. Wait for hydration
+  // so the SSR pass doesn't briefly show the no-code branch.
+  if (hydrated && source === 'blog') {
+    return <BlogSubscribeConfirmed justConfirmed={justConfirmed} />;
+  }
 
   // Derive UI state from URL + fetch — no synchronous setState in effects.
   const state: DerivedState = !hydrated
@@ -218,6 +247,37 @@ export function WaitlistSuccess() {
           Use a different email
         </Link>
       </p>
+    </Shell>
+  );
+}
+
+// --- Blog branch ----------------------------------------------------------
+
+// Renders for `?source=blog`. Blog confirms have no referral arc and no
+// position to display, so this is a deliberately minimal "you're in" view.
+function BlogSubscribeConfirmed({ justConfirmed }: { justConfirmed: boolean }) {
+  return (
+    <Shell>
+      <div className="mb-4 inline-flex items-center gap-2 rounded-full bg-aqua-100 px-3 py-1 text-sm font-semibold text-aqua-700">
+        {justConfirmed ? '✓ Email confirmed' : 'Confirmed'}
+      </div>
+
+      <h1 className="text-3xl font-bold text-ink-900 mb-3">
+        You&apos;re subscribed to the Chem IRL blog
+      </h1>
+
+      <p className="text-ink-700 mb-6">
+        We&apos;ll email new posts to your inbox. No spam, no marketing
+        blasts — just the writing. Unsubscribe any time from the link at the
+        bottom of every email.
+      </p>
+
+      <Link
+        href="/blog"
+        className="inline-flex items-center justify-center bg-aqua-600 hover:bg-aqua-700 text-white font-semibold py-3 px-6 rounded-xl transition-colors"
+      >
+        Read the blog →
+      </Link>
     </Shell>
   );
 }
