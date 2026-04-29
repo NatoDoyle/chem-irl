@@ -1,14 +1,19 @@
 // Supabase Edge Function: Blog Subscribe
 //
 // Lightweight sibling of waitlist-signup for the marketing-site blog
-// sidebar email CTA. Accepts only { email } and writes a row with
-// source='blog_subscribe' to the shared waitlist_signups table — same
-// list, different audience, segmentable downstream by source.
+// sidebar email CTA. Accepts only { email }, calls the service-role RPC
+// claim_blog_subscribe to insert (or refresh the token of) a row with
+// source='blog_subscribe' in the shared waitlist_signups table, then
+// sends a double-opt-in email via Resend pointing at waitlist-confirm.
+//
+// Audience push moved to waitlist-confirm (post-confirm) so only confirmed
+// contacts land in the Resend audience — typo'd or bot emails never make
+// it onto the broadcast list.
 //
 // Why not reuse waitlist-signup? That function expects age_band/gender
-// and goes through the SECURITY DEFINER RPC for position/score logic
-// that is irrelevant for a blog subscriber. A separate slim function
-// keeps each entry point single-purpose.
+// and goes through claim_waitlist_signup for position/score logic that
+// is irrelevant for a blog subscriber. A separate slim function keeps
+// each entry point single-purpose.
 //
 // Security mirrors waitlist-signup: same CORS allowlist, same IP-hash
 // rate limit (best-effort, fail-open), same honeypot + disposable-email
@@ -122,32 +127,34 @@ serve(async (req) => {
       }
     }
 
-    // Direct insert — service role bypasses RLS, schema allows null
-    // age_band/gender/etc., position/referral_code populate via
-    // sequence + default. Upsert with ignoreDuplicates so a repeat
-    // submit returns success instead of a noisy unique-violation.
-    const { error } = await admin.from('waitlist_signups').upsert(
-      {
-        email,
-        source: 'blog_subscribe',
-        ip_hash: ipHash,
-        // Submitting the form is the consent — we're explicitly asking
-        // for blog emails here, no separate checkbox needed.
-        consent_marketing: true,
-      },
-      { onConflict: 'email', ignoreDuplicates: true },
-    );
+    // Service-role RPC handles insert + idempotent token re-issue. The
+    // RPC keeps the confirmation token off the public PostgREST surface —
+    // only this edge function, running with the service-role key, sees it.
+    const { data, error } = await admin.rpc('claim_blog_subscribe', {
+      p_email: email,
+      p_ip_hash: ipHash,
+    });
 
     if (error) {
-      console.error('waitlist-blog-subscribe insert failed:', error);
+      console.error('claim_blog_subscribe rpc failed:', error);
       return json({ error: 'subscribe_failed' }, 500);
     }
+    if (!data || data.success !== true) {
+      return json({ error: data?.error ?? 'subscribe_failed' }, 400);
+    }
 
-    // Mirror the DB row into the Resend "blog" audience so blog
-    // subscribers are reachable from Resend Broadcasts without a manual
-    // export. Feature-flagged + fail-soft: missing env or Resend errors
-    // never fail the user's subscribe.
-    await subscribeToBlogAudience(email);
+    // Send the double-opt-in email. The RPC issues a token only for
+    // genuinely new blog signups and for not-yet-confirmed re-submits;
+    // existing-confirmed users and waitlist-overlap cases come back
+    // without a token (silent no-op — see migration comments). The
+    // Resend audience push is deferred to waitlist-confirm so only
+    // confirmed contacts land in the audience.
+    if (typeof data.email_confirmation_token === 'string') {
+      await sendBlogConfirmationEmail({
+        to: email,
+        token: data.email_confirmation_token,
+      });
+    }
 
     return json({ ok: true }, 200);
   } catch (err) {
@@ -201,47 +208,81 @@ async function sha256Hex(input: string): Promise<string> {
     .join('');
 }
 
-// --- Resend audience sync ------------------------------------------------
+// --- Confirmation email --------------------------------------------------
 //
-// Adds the subscriber to the configured Resend audience so the blog list
-// is broadcast-ready. When RESEND_API_KEY or RESEND_AUDIENCE_BLOG_ID is
-// missing the call is logged and skipped — the DB row already captured
-// the signup, so nothing is lost. Resend's audiences endpoint is
-// idempotent on email within an audience, so repeat submits are safe.
+// Sends a transactional double-opt-in email via Resend, pointing at the
+// waitlist-confirm edge function. Mirrors sendConfirmationEmail() in
+// waitlist-signup so both flows fail-soft in the same way: when
+// RESEND_API_KEY is missing the payload is logged and the call
+// short-circuits — the signup itself still succeeds, just stays
+// unconfirmed (and so isn't pushed to the Resend audience).
 
-async function subscribeToBlogAudience(email: string): Promise<void> {
+interface BlogConfirmationEmailArgs {
+  to: string;
+  token: string;
+}
+
+async function sendBlogConfirmationEmail(
+  args: BlogConfirmationEmailArgs,
+): Promise<void> {
   const apiKey = Deno.env.get('RESEND_API_KEY');
-  const audienceId = Deno.env.get('RESEND_AUDIENCE_BLOG_ID');
+  const fromAddress =
+    Deno.env.get('WAITLIST_EMAIL_FROM') ?? 'Chem IRL <hello@chemirl.app>';
+  const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
+  const confirmUrl =
+    `${supabaseUrl}/functions/v1/waitlist-confirm` +
+    `?token=${encodeURIComponent(args.token)}`;
 
-  if (!apiKey || !audienceId) {
+  const subject = 'Confirm your Chem IRL blog subscription';
+
+  const html = `<!doctype html>
+<html><body style="font-family:-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif;line-height:1.5;color:#0F172A;max-width:560px;margin:0 auto;padding:32px 24px;">
+  <h1 style="font-size:22px;margin:0 0 16px;">Confirm your subscription</h1>
+  <p>Thanks for subscribing to the Chem IRL blog. Tap the button below to confirm your email — that's how we know you're real.</p>
+  <p style="margin:32px 0;">
+    <a href="${confirmUrl}" style="background:#0F172A;color:#fff;text-decoration:none;padding:12px 20px;border-radius:8px;display:inline-block;">Confirm my email</a>
+  </p>
+  <p style="color:#475569;font-size:14px;">Or copy this link into your browser:<br><span style="word-break:break-all;">${confirmUrl}</span></p>
+  <hr style="border:none;border-top:1px solid #E2E8F0;margin:32px 0;">
+  <p style="color:#475569;font-size:12px;">If you didn't subscribe to the Chem IRL blog, you can ignore this email — your address won't be added to anything.</p>
+</body></html>`;
+
+  const text =
+    `Thanks for subscribing to the Chem IRL blog. Confirm your email:\n` +
+    `${confirmUrl}\n\n` +
+    `If you didn't subscribe, ignore this email.\n`;
+
+  if (!apiKey) {
     console.log(
-      'waitlist-blog-subscribe: RESEND_API_KEY or RESEND_AUDIENCE_BLOG_ID not set — would have added contact',
-      JSON.stringify({ email }),
+      'waitlist-blog-subscribe: RESEND_API_KEY not set — would have sent email',
+      JSON.stringify({ to: args.to, subject, confirmUrl }),
     );
     return;
   }
 
   try {
-    const res = await fetch(
-      `https://api.resend.com/audiences/${audienceId}/contacts`,
-      {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${apiKey}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ email, unsubscribed: false }),
+    const res = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
       },
-    );
+      body: JSON.stringify({
+        from: fromAddress,
+        to: [args.to],
+        subject,
+        html,
+        text,
+        // Token is unique per signup attempt; safe stable id for retry dedup.
+        idempotencyKey: `confirm-blog/${args.token}`,
+      }),
+    });
     if (!res.ok) {
       const detail = await res.text();
-      console.error('Resend audiences add failed', {
-        status: res.status,
-        detail,
-      });
+      console.error('Resend send failed', { status: res.status, detail });
     }
   } catch (err) {
-    // Don't bubble — the DB write already succeeded.
-    console.error('Resend audiences add threw', err);
+    // Don't bubble — the signup itself succeeded; email retry can come later.
+    console.error('Resend send threw', err);
   }
 }

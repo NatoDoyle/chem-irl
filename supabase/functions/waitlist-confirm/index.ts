@@ -1,9 +1,15 @@
 // Supabase Edge Function: Waitlist Confirm
 //
-// Reached by the link in the confirmation email sent by waitlist-signup.
-// Wraps the SECURITY DEFINER RPC `confirm_waitlist_email`: validates the
-// single-use token, marks email_confirmed_at, applies any referral score,
-// and on success 302s into the marketing site's /waitlist/success page so
+// Shared confirm endpoint for both lists. Reached by the link in the
+// confirmation email sent by either waitlist-signup (waitlist) or
+// waitlist-blog-subscribe (blog). Wraps the SECURITY DEFINER RPC
+// `confirm_waitlist_email_v2`: validates the single-use token, marks
+// email_confirmed_at, applies referral score for waitlist signups, and
+// returns the row's source so this function can push the freshly-confirmed
+// contact to the right Resend audience.
+//
+// On success it 302s into the marketing site's /waitlist/success page
+// with a `source` discriminator and (for waitlist) a referral `code`, so
 // the user lands on the real shareable referral landing instead of a
 // dead-end Supabase URL. Errors still render inline since the marketing
 // site has no equivalent error path.
@@ -43,12 +49,12 @@ serve(async (req) => {
 
   const admin = createClient(supabaseUrl, serviceRoleKey);
 
-  const { data, error } = await admin.rpc('confirm_waitlist_email', {
+  const { data, error } = await admin.rpc('confirm_waitlist_email_v2', {
     p_token: token,
   });
 
   if (error) {
-    console.error('confirm_waitlist_email rpc failed:', error);
+    console.error('confirm_waitlist_email_v2 rpc failed:', error);
     return errorPage('Something went wrong. Try clicking the link again.', 500);
   }
 
@@ -63,16 +69,106 @@ serve(async (req) => {
     return errorPage('We could not confirm this email. Try signing up again.', 400);
   }
 
-  const referralCode = typeof data.referral_code === 'string' ? data.referral_code : null;
-  if (!referralCode) {
-    console.error('waitlist-confirm: rpc returned success without referral_code');
-    return errorPage('Something went wrong on our end. Try again in a few minutes.', 500);
+  const email = typeof data.email === 'string' ? data.email : null;
+  const source: ConfirmedSource | null =
+    data.source === 'blog_subscribe' || data.source === 'waitlist'
+      ? data.source
+      : null;
+
+  if (!email || !source) {
+    console.error(
+      'waitlist-confirm: rpc returned success without email or source',
+    );
+    return errorPage(
+      'Something went wrong on our end. Try again in a few minutes.',
+      500,
+    );
   }
+
+  // Push the now-confirmed contact to the appropriate Resend audience.
+  // Fail-soft: a Resend outage shouldn't break the user's success page —
+  // the DB row is the canonical confirmed state, the audience is downstream.
+  await addToResendAudience(email, source);
+
   const successUrl = new URL(MARKETING_SUCCESS_URL);
-  successUrl.searchParams.set('code', referralCode);
+  successUrl.searchParams.set(
+    'source',
+    source === 'blog_subscribe' ? 'blog' : 'waitlist',
+  );
   successUrl.searchParams.set('confirmed', '1');
+
+  if (source === 'waitlist') {
+    const referralCode =
+      typeof data.referral_code === 'string' ? data.referral_code : null;
+    if (!referralCode) {
+      console.error(
+        'waitlist-confirm: waitlist confirm returned without referral_code',
+      );
+      return errorPage(
+        'Something went wrong on our end. Try again in a few minutes.',
+        500,
+      );
+    }
+    successUrl.searchParams.set('code', referralCode);
+  }
+
   return Response.redirect(successUrl.toString(), 302);
 });
+
+// --- Resend audience push -------------------------------------------------
+//
+// Adds the freshly-confirmed subscriber to the right Resend audience based
+// on which list they signed up for. The audiences endpoint is idempotent
+// on email within an audience (Resend guarantee), so a re-click edge case
+// doesn't duplicate. Fail-soft: log and continue if RESEND_API_KEY or the
+// audience id is missing, or if Resend returns an error — the DB row is
+// the canonical "is confirmed" state, the audience is downstream.
+
+type ConfirmedSource = 'waitlist' | 'blog_subscribe';
+
+async function addToResendAudience(
+  email: string,
+  source: ConfirmedSource,
+): Promise<void> {
+  const apiKey = Deno.env.get('RESEND_API_KEY');
+  const audienceId = Deno.env.get(
+    source === 'blog_subscribe'
+      ? 'RESEND_AUDIENCE_BLOG_ID'
+      : 'RESEND_AUDIENCE_WAITLIST_ID',
+  );
+
+  if (!apiKey || !audienceId) {
+    console.log(
+      'waitlist-confirm: RESEND_API_KEY or audience id not set — would have added contact',
+      JSON.stringify({ email, source }),
+    );
+    return;
+  }
+
+  try {
+    const res = await fetch(
+      `https://api.resend.com/audiences/${audienceId}/contacts`,
+      {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${apiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email, unsubscribed: false }),
+      },
+    );
+    if (!res.ok) {
+      const detail = await res.text();
+      console.error('Resend audiences add failed', {
+        status: res.status,
+        detail,
+        source,
+      });
+    }
+  } catch (err) {
+    console.error('Resend audiences add threw', err);
+  }
+}
 
 // --- HTML rendering -------------------------------------------------------
 
