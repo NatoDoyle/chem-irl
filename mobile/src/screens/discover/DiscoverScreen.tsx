@@ -156,12 +156,10 @@ export default function DiscoverScreen() {
     }
   }, []);
 
-  useEffect(() => {
-    loadFeed(true);
-  }, [loadFeed]);
-
-  // Hydrate filters from the user's saved profile preferences once on mount.
-  // After the first load completes, the feed will refresh with these applied.
+  // Hydrate filters from the user's saved preferences, then load the feed
+  // exactly once. The previous structure ran loadFeed twice on mount (once
+  // unconditionally, once after filter hydration), which doubled the
+  // network cost and prolonged the loading state.
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -169,18 +167,19 @@ export default function DiscoverScreen() {
         const {
           data: { user },
         } = await supabase.auth.getUser();
-        if (!user || cancelled) return;
-        const stored = await loadFilters(user.id);
         if (cancelled) return;
-        setFilters(stored);
-        filtersRef.current = stored;
-        // Re-run the feed query with the loaded filters. If the initial mount
-        // already returned with default filters, this is the cheapest way to
-        // make sure the user sees their saved set without flickering.
-        loadFeed(true);
+        if (user) {
+          const stored = await loadFilters(user.id);
+          if (cancelled) return;
+          setFilters(stored);
+          filtersRef.current = stored;
+        }
       } catch (err) {
-        // Filter hydration is best-effort; failures fall back to defaults.
         console.warn('Failed to hydrate discovery filters', err);
+      } finally {
+        if (!cancelled) {
+          loadFeed(true);
+        }
       }
     })();
     return () => {
@@ -285,74 +284,74 @@ export default function DiscoverScreen() {
     </View>
   );
 
-  if (loading) {
-    return (
-      <View style={styles.container}>
-        {headerContent}
-        <View style={styles.skeletonContainer}>
-          <SkeletonCard style={styles.skeletonItem} />
-          <SkeletonCard style={styles.skeletonItem} />
-          <SkeletonCard style={styles.skeletonItem} />
-        </View>
-      </View>
-    );
-  }
-
-  if (error) {
-    return (
-      <View style={styles.container}>
-        {headerContent}
-        <View style={styles.centeredContent}>
-          <Text style={styles.errorText}>Failed to load discovery feed</Text>
-          <Text style={styles.errorSubtext}>{error}</Text>
-          <AnimatedPressable style={styles.retryButton} onPress={() => loadFeed(true)}>
-            <Text style={styles.retryButtonText}>Retry</Text>
-          </AnimatedPressable>
-        </View>
-      </View>
-    );
-  }
-
-  if (feed.length === 0 && !loading) {
-    return (
-      <View style={styles.container}>
-        {headerContent}
-        <View style={styles.centeredContent}>
-          <Text style={styles.emptyText}>No more profiles to discover</Text>
-          <Text style={styles.emptySubtext}>Check back later for new matches</Text>
-          <AnimatedPressable style={styles.refreshButton} onPress={() => loadFeed(true)}>
-            <Text style={styles.refreshButtonText}>Refresh</Text>
-          </AnimatedPressable>
-        </View>
-      </View>
-    );
-  }
-
   const handleLoadMore = () => {
     if (!loadingMore && hasMore && feed.length > 0) {
       loadFeed(false);
     }
   };
 
+  // Render the four states inline rather than via early returns so the
+  // MatchModal and DiscoveryFilterSheet portals stay mounted at all times.
+  // Previously, the filter button silently no-op'd in loading/error/empty
+  // states because the sheet wasn't in the React tree.
+  let body: React.ReactNode;
+  if (loading) {
+    body = (
+      <View style={styles.skeletonContainer}>
+        <SkeletonCard style={styles.skeletonItem} />
+        <SkeletonCard style={styles.skeletonItem} />
+        <SkeletonCard style={styles.skeletonItem} />
+      </View>
+    );
+  } else if (error) {
+    body = (
+      <View style={styles.centeredContent}>
+        <Text style={styles.errorText}>Failed to load discovery feed</Text>
+        <Text style={styles.errorSubtext}>{error}</Text>
+        <AnimatedPressable style={styles.retryButton} onPress={() => loadFeed(true)}>
+          <Text style={styles.retryButtonText}>Retry</Text>
+        </AnimatedPressable>
+      </View>
+    );
+  } else if (feed.length === 0) {
+    body = (
+      <View style={styles.centeredContent}>
+        <Text style={styles.emptyText}>No more profiles to discover</Text>
+        <Text style={styles.emptySubtext}>
+          Try widening your filters or check back later for new matches
+        </Text>
+        <AnimatedPressable style={styles.refreshButton} onPress={() => loadFeed(true)}>
+          <Text style={styles.refreshButtonText}>Refresh</Text>
+        </AnimatedPressable>
+      </View>
+    );
+  } else {
+    body = (
+      <>
+        <ConnectionStatus />
+        <View style={styles.cardArea}>
+          <DiscoveryCardStack
+            feed={feed}
+            onLike={handleLike}
+            onPass={handlePass}
+            onRefresh={() => loadFeed(true)}
+            onLoadMore={handleLoadMore}
+            loadingMore={loadingMore}
+            hasMore={hasMore}
+            loadMoreThreshold={LOAD_MORE_THRESHOLD}
+          />
+        </View>
+        <View style={[styles.footer, { paddingBottom: insets.bottom + SPACING.sm }]}>
+          <Text style={styles.footerText}>SWIPE FOR MORE REACTIONS</Text>
+        </View>
+      </>
+    );
+  }
+
   return (
     <View style={styles.container}>
       {headerContent}
-      <ConnectionStatus />
-      <View style={styles.cardArea}>
-        <DiscoveryCardStack
-          feed={feed}
-          onLike={handleLike}
-          onPass={handlePass}
-          onRefresh={() => loadFeed(true)}
-          onLoadMore={handleLoadMore}
-          loadingMore={loadingMore}
-          hasMore={hasMore}
-          loadMoreThreshold={LOAD_MORE_THRESHOLD}
-        />
-      </View>
-      <View style={[styles.footer, { paddingBottom: insets.bottom + SPACING.sm }]}>
-        <Text style={styles.footerText}>SWIPE FOR MORE REACTIONS</Text>
-      </View>
+      {body}
       <MatchModal
         visible={matchModalVisible}
         matchId={newMatchId}
