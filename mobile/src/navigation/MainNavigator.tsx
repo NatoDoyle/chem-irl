@@ -5,6 +5,7 @@ import MatchesScreen from '../screens/matches/MatchesScreen';
 import MatchDetailScreen from '../screens/matches/MatchDetailScreen';
 import ProposeScreen from '../screens/matches/ProposeScreen';
 import ChatScreen from '../screens/matches/ChatScreen';
+import ViewProfileScreen from '../screens/matches/ViewProfileScreen';
 import ProfileScreen from '../screens/profile/ProfileScreen';
 import { BRAND_COLORS, MIDNIGHT, TYPOGRAPHY } from '../config/brand';
 
@@ -33,6 +34,7 @@ export type MatchesStackParamList = {
   MatchDetail: { matchId: string };
   Propose: { matchId: string; responseTo?: string };
   Chat: { matchId: string };
+  ViewProfile: { userId: string };
 };
 
 const Tab = createBottomTabNavigator<MainTabParamList>();
@@ -45,6 +47,7 @@ function MatchesStackNavigator() {
       <MatchesStack.Screen name="MatchDetail" component={MatchDetailScreen} />
       <MatchesStack.Screen name="Propose" component={ProposeScreen} />
       <MatchesStack.Screen name="Chat" component={ChatScreen} />
+      <MatchesStack.Screen name="ViewProfile" component={ViewProfileScreen} />
     </MatchesStack.Navigator>
   );
 }

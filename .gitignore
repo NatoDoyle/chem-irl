@@ -45,6 +45,9 @@ next-env.d.ts
 # superpowers brainstorm artifacts
 .superpowers/
 
+# git worktrees (isolated workspaces)
+.worktrees/
+
 # accidental package manager artifacts
 mobile/mobile@*
 chem-irl@*
