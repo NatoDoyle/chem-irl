@@ -12,7 +12,16 @@ export const metadata: Metadata = {
     url: 'https://chemirl.app/how-it-works',
     siteName: 'Chem IRL',
     type: 'website',
+    images: [{ url: '/opengraph-image.png', width: 1200, height: 630 }],
   },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'How It Works - Chem IRL',
+    description:
+      'Get from match to meeting in days, not weeks. Learn how Chem IRL works.',
+    images: ['/opengraph-image.png'],
+  },
+  alternates: { canonical: '/how-it-works' },
 };
 
 const STEPS = [

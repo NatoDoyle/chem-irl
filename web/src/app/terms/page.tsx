@@ -12,7 +12,16 @@ export const metadata: Metadata = {
     url: 'https://chemirl.app/terms',
     siteName: 'Chem IRL',
     type: 'website',
+    images: [{ url: '/opengraph-image.png', width: 1200, height: 630 }],
   },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Terms of Service - Chem IRL',
+    description:
+      'Chem IRL terms of service. Read our terms and conditions for using the app.',
+    images: ['/opengraph-image.png'],
+  },
+  alternates: { canonical: '/terms' },
 };
 
 const TOC_SECTIONS = [

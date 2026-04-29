@@ -13,7 +13,16 @@ export const metadata: Metadata = {
     url: 'https://chemirl.app/safety',
     siteName: 'Chem IRL',
     type: 'website',
+    images: [{ url: '/opengraph-image.png', width: 1200, height: 630 }],
   },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Safety - Chem IRL',
+    description:
+      'Learn about safety features built into Chem IRL: reporting, verification, moderation, and more.',
+    images: ['/opengraph-image.png'],
+  },
+  alternates: { canonical: '/safety' },
 };
 
 const SAFETY_FEATURES = [
