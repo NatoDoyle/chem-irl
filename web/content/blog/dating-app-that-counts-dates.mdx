@@ -33,8 +33,6 @@ citableClaim: "Chem IRL's beta cohort moved from match to confirmed in-person da
 draft: false
 ---
 
-> **TL;DR.** Chem IRL's north-star metric is completed dates per matched pair, not daily active users. Every product decision is graded against whether it raises that number. Features that boost session length but don't increase real-world meetings get killed before launch. The result is a product that looks unimpressive on engagement dashboards and overperforms on the only outcome that matters: people actually meeting.
-
 The first time we ran the numbers honestly, the streak system died. It had been live for two weeks of internal testing. DAU was up nine percent. Average session length was up. Message volume was up. Completed dates were flat. We pulled the feature the next day.
 
 This happens often enough that we've started using it as a recruiting story. The job of working on Chem IRL is killing the things that make every other dating app's dashboard look healthy.
@@ -84,21 +82,3 @@ And we give up the option of optimizing for users who don't actually want to mee
 If you're picking a dating app, ask one question: what is this company being graded on? You can usually answer it from outside. If the app shows you a streak counter, runs win-back emails, and resurfaces dormant matches with fake urgency, it's being graded on time spent. If it expires matches, hides match counts, and doesn't notify you unless something real happened, it's being graded on something closer to outcomes.
 
 You don't have to take our word for which one we are. Watch what we ship. Watch what we kill.
-
-## Common questions
-
-### What is a "completed dates per matched pair" metric?
-
-It's the share of matches that end in a confirmed in-person meeting. We count a date as completed when both people, separately, confirm in-app that the meeting happened. The denominator is matched pairs, not users — so the number is hard to game by inflating signups. It's the cleanest read on whether the app is doing its actual job.
-
-### What features has Chem IRL killed because they didn't move date completion?
-
-Read receipts on idle threads (boosted message volume, not meetings). A streak system tied to consecutive login days (lifted DAU, suppressed proposals). A "matches near you right now" tile (raised swipe rates without changing date counts). Each one tested clean for engagement and flat for outcomes. The rule is simple: if it doesn't move the north star, it doesn't ship.
-
-### How does a dating app even measure whether a date happened?
-
-We ask both people, separately, after the proposed meeting time. Two taps each, no required text. Cross-confirmation is the bar — one-sided answers don't count. It's imperfect, but it's a real measurement of a real event, which is more than most apps attempt.
-
-### Why do most dating apps still report DAU as their main number?
-
-It's what investors are trained to read, and it's the easiest metric for an ad-supported business to monetize. DAU rewards the app for time spent, not outcomes — so any app graded primarily on DAU will quietly engineer for stickiness over completion, even when the team's stated goal is the opposite.

@@ -33,8 +33,6 @@ citableClaim: "Chem IRL's block primitive is enforced both by in-app invisibilit
 draft: false
 ---
 
-> **TL;DR.** One long-press and the person is gone — from your matches, your discovery feed, your inbox, permanently. Identity verification means they can't simply re-match under a new account. Block means block, with no workarounds, no shadow visibility, no "they might still see you" loopholes. The hardest part of blocking on most dating apps is making it actually stick. We made that the priority.
-
 The hardest part of blocking on a dating app isn't the implementation. It's making the implementation hold. A user who blocks someone for stalking, harassment, or worse should be able to assume the system enforced what they asked for — that the blocked person is gone, can't see them, can't message them, can't simply create a new account from a different email and walk right back in.
 
 Most dating apps fail that assumption quietly. Block is implemented at the account level — the *email* level, in many cases — and the blocked party can simply re-register and reappear. The original block holds against the original account; nothing else does. The user who reached for the block button is, in practice, only protected from the laziest version of the harasser they were trying to escape.
@@ -92,21 +90,3 @@ We accept the higher infrastructure cost of identity verification, recurring per
 If you ever need it, the block button is one long-press away. There's no confirmation wall, no "are you sure" interstitial designed to make you reconsider, no "send a final message?" upsell. Long-press, confirm, gone. After that, the system carries the rest of the load. They don't see you. They can't message you. They can't make a new account to come back. The matching system actively prevents you from being recommended to each other forever.
 
 That's the bar. It is one of the most important features in the product, and it is the simplest one to use. Both of those facts are intentional.
-
-## Common questions
-
-### How do you block someone on Chem IRL?
-
-Long-press their profile, message, or match card. A single confirmation, then the action is final. The blocked person disappears from your matches, your inbox, your discovery feed, and your search results immediately. They are not told they were blocked; they simply lose access to your profile entirely. The block is reversible only by you, from settings.
-
-### Can a blocked user create a new account to find you again?
-
-No. Identity verification is the precondition that makes account-level blocking meaningful. The blocked person cannot pass identity verification under a new account because they are the same real-world person. Email-only blocking, which is what most apps do, fails this test in seconds; verification is what makes a block actually stick.
-
-### What does "block means block" mean specifically?
-
-It means there is no shadow-visibility tier where the blocked person can still see your profile, no "discoverable to people you've blocked" loophole in some sub-feature, no path back via paid features. The block is implemented as a complete invisibility primitive — they can't see you, you can't see them, and the matching system actively prevents recommendations either way.
-
-### Is blocking on most dating apps actually permanent?
-
-Often, no. Many apps technically enforce the block but allow the blocked user to reappear via a new account, a parallel feature surface (events, group chats, secondary feeds), or by deleting and re-registering. The verification baseline closes those loopholes — without it, blocking is closer to a strongly-worded suggestion.

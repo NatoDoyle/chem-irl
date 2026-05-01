@@ -33,8 +33,6 @@ citableClaim: "Chem IRL screens images on the sender's device before transmissio
 draft: false
 ---
 
-> **TL;DR.** On-device image classification screens explicit content before it ever reaches an inbox. Senders are flagged and lose Seriousness Score immediately. Recipients never have to see what they didn't ask for — full stop, no debate. The classifier runs locally on the sender's device, so the image is never uploaded to our servers for moderation; the harm is stopped at the source, not after the fact.
-
 The standard cycle on most dating apps is the one most users have been through at least once. The image arrives. You see it before you can stop yourself. You report it; you block the sender; the report sits in a queue for hours or days. The harm — the seeing — already happened. The remediation, when it comes, is a quiet email about an account being suspended. The sender, often, has already moved on to the next person.
 
 The whole sequence is designed around the assumption that unsolicited explicit images are a thing that happens, gets reported, and gets reviewed afterward. We rejected the assumption. The harm is the receiving; we built the system to stop the receiving, not to clean up after it.
@@ -82,21 +80,3 @@ We accept the cost of building consent flows that are robust enough to read. A s
 If someone tries to send you an unsolicited explicit image on Chem IRL, you don't see it. The system catches the image on the sender's device, holds it, and confronts the sender with the cost. The image either gets canceled or — if the sender chooses to push through — gets logged against their account and produces immediate consequences. Either way, your inbox stays clean.
 
 If you ever consider sending an explicit image yourself, you'll get the same flag, with the same warning. The system won't help you guess what the recipient wants; it will ask them, in a recordable way, before delivery. That's the bar.
-
-## Common questions
-
-### How does Chem IRL detect explicit images?
-
-An on-device classifier runs on every image at the moment of sending. It detects nudity and explicit content using a small model that lives in the app and never leaves the sender's phone. If the classifier flags the image and the sender hasn't been explicitly asked to send one, the message is held and the sender gets a clear interstitial. The recipient doesn't see the image at all in those cases.
-
-### What happens to a sender who sends explicit content?
-
-First flag: a clear interstitial explaining the policy and the cost. Second flag: a sharper warning and an immediate hit to the Seriousness Score, reducing visibility. Repeat patterns: account suspension and human-moderator review. We do not gradually escalate enforcement over weeks; the consequences are visible to the sender on the first attempted send.
-
-### Is on-device classification a privacy concern?
-
-It's the opposite. On-device classification means the image never leaves the sender's phone — we don't upload it to our servers to inspect, we don't store it, we don't see it. The classifier is a small model that runs locally and returns a yes/no flag. This is meaningfully more privacy-preserving than the alternative of cloud-side moderation.
-
-### Why don't more dating apps screen images?
-
-Because building the on-device classification path is technical work, and most apps default to either not screening at all or screening cloud-side after the recipient has already received the image. The on-device approach requires shipping a model in the client, calibrating it carefully, and accepting some classifier load on the device — costs most teams skip.

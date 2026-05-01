@@ -34,8 +34,6 @@ citableClaim: "Chem IRL is one of the only major dating apps that asks both part
 draft: false
 ---
 
-> **TL;DR.** After a scheduled date, Chem IRL prompts both people separately to confirm whether the meeting happened. The two answers are cross-checked. Confirmed dates lift Seriousness Score and earn reputation badges; confirmed no-shows lower it. The result is a system where reliability is visible and scoreable, rather than a private cost the no-showed user absorbs alone.
-
 You proposed Wednesday night at seven. They said yes. You walked to the bar, took a stool at the corner, and waited. Forty-five minutes later you walked home in the same coat you'd just put on. A week later, the match you'd never confirmed-confirmed slid quietly out of your inbox when it expired. The only person who knew that meeting had failed to happen was you.
 
 This is the part of dating-app design most apps decline to fix because fixing it would require admitting the meeting was supposed to happen at all. The app is built to deliver matches, not meetings, and a meeting that didn't happen is, structurally, none of its business. Chem IRL is built to deliver meetings. That makes it, by extension, our business.
@@ -87,21 +85,3 @@ We also add a little post-date friction — two taps a couple of hours after a m
 After your next date, the app will ask. Two taps. If it went well, say so; the system rewards you accordingly. If it didn't happen, say that too; the system protects future users by remembering. Either answer is a small honest move that compounds across the user base into a more reliable product for everyone.
 
 That's the design. The meeting is the point; we built the app to know whether the point was reached.
-
-## Common questions
-
-### How does Chem IRL confirm a date happened?
-
-After the scheduled meeting time, both people get a separate two-tap prompt: did the date happen? Yes lifts the count and the Seriousness Score; no asks a single follow-up. The two answers are cross-checked. Matching answers count cleanly. A mismatch (one yes, one no) triggers a soft review that doesn't immediately punish either party — it flags the pattern.
-
-### Why doesn't every dating app confirm dates?
-
-Because most apps deliberately don't measure offline outcomes. Building the prompt is technically trivial; building the system that does something with the answers — feeding them into matching, into reputation, into business decisions — is hard. And measuring real-world outcomes risks proving that the app's matching isn't producing them. Most apps prefer not to know.
-
-### What if only one person confirms the date?
-
-It's logged as unconfirmed. We do not penalize the user who didn't respond to the prompt; people get busy, miss notifications, forget. Repeat patterns of non-response do reduce the Seriousness Score over time. The asymmetry is intentional — it's expensive to falsely punish a real user, and cheap to under-count a real meeting.
-
-### What happens if you mark a date as a no-show?
-
-If both people agree it didn't happen, the match closes. If one says yes and the other says no, the case goes into a soft-review queue rather than triggering an automatic strike. Repeated no-show reports against the same user, especially from different matches over time, build a pattern that does affect their visibility and account status.
