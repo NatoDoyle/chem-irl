@@ -33,8 +33,12 @@
 //   * On Android: call the Google Play Developer API
 //                (purchases.subscriptionsv2.get) to verify the purchaseToken
 //                and read product/expiry/status from the response.
-// Until then, the function is staging-only and the App Store / Play
-// configuration should not advertise live products.
+//
+// Behaviour gate: until that work lands, the placeholder validator only
+// runs when the Supabase project has STAGING_TRUST_RECEIPTS=true. In
+// production (env unset / set to anything else) the function returns 503
+// rather than granting a fabricated subscription. This makes "forgot to
+// remove the staging override" louder than "trusted a forged receipt".
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
@@ -98,8 +102,31 @@ serve(async (req) => {
   }
 
   // PLACEHOLDER VALIDATION
-  // See PRODUCTION TODO at top. For now we assume the receipt is good and
-  // derive a 30-day period from now. This is staging-only behaviour.
+  // See PRODUCTION TODO at top. The placeholder only runs when the project
+  // has STAGING_TRUST_RECEIPTS=true. Without that env var we fail closed —
+  // production must not silently grant subscriptions on unverified receipts.
+  const trustStaging = Deno.env.get('STAGING_TRUST_RECEIPTS') === 'true';
+  if (!trustStaging) {
+    console.error(
+      'validate-subscription: refusing to validate without real store-side ' +
+        'verification. Set STAGING_TRUST_RECEIPTS=true on staging only.',
+    );
+    return jsonResponse(
+      {
+        error: 'receipt_validation_unavailable',
+        detail:
+          'Real App Store / Google Play receipt verification is not yet ' +
+          'implemented. On staging, set STAGING_TRUST_RECEIPTS=true to allow ' +
+          'placeholder behaviour during development.',
+      },
+      503,
+    );
+  }
+  console.warn(
+    'validate-subscription: STAGING_TRUST_RECEIPTS=true; trusting receipt ' +
+      'without store-side verification (staging only)',
+  );
+
   const validation = await validateReceiptPlaceholder({
     receipt,
     platform,

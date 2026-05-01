@@ -179,6 +179,34 @@ async function handleTurn(ctx: TurnContext): Promise<Response> {
   const matchId =
     typeof body.match_id === 'string' && body.match_id.length > 0 ? body.match_id : null;
 
+  // --- Match ownership: when match_id is supplied, the caller must be a
+  //     participant of that match. RLS already prevents read-leakage of
+  //     iris_conversations to other users, but without this check a
+  //     malicious caller could create iris_conversations rows tagged with
+  //     somebody else's match_id, and (more importantly) Phase 2's
+  //     chat_coach surface will load match-thread context — that path
+  //     MUST never see a thread the caller isn't part of.
+  if (matchId) {
+    if (!isUuid(matchId)) {
+      return jsonResponse({ error: 'invalid_match_id' }, 400);
+    }
+    const { data: matchRow, error: matchErr } = await admin
+      .from('matches')
+      .select('match_id, user_a, user_b')
+      .eq('match_id', matchId)
+      .maybeSingle();
+    if (matchErr) {
+      console.error('iris-chat: match lookup failed', matchErr);
+      return jsonResponse({ error: 'match_lookup_failed' }, 500);
+    }
+    if (!matchRow) {
+      return jsonResponse({ error: 'match_not_found' }, 404);
+    }
+    if (matchRow.user_a !== userId && matchRow.user_b !== userId) {
+      return jsonResponse({ error: 'forbidden_match' }, 403);
+    }
+  }
+
   // --- Rate limit per user per window ---
   const rateOk = await checkRateLimit(admin, userId);
   if (!rateOk) {
@@ -630,6 +658,14 @@ async function checkRateLimit(admin: any, userId: string): Promise<boolean> {
     console.error('iris-chat: rate limit query failed (failing open)', err);
     return true;
   }
+}
+
+// Cheap UUID syntax check — guards against junk match_id values being passed
+// to the matches lookup. We only care about format; ownership is verified
+// by the actual SELECT against the matches table.
+const UUID_RE = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/;
+function isUuid(value: string): boolean {
+  return UUID_RE.test(value);
 }
 
 // Minimal SSE parser: splits by double-newline, extracts `data:` JSON. Used
