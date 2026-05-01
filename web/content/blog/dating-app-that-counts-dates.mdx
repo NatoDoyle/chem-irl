@@ -1,0 +1,104 @@
+---
+title: "Forget DAU. Chem IRL Counts Dates — and That's What Makes It the Best Dating App."
+slug: dating-app-that-counts-dates
+date: 2026-05-01
+lastReviewed: 2026-05-01
+author: nathan
+tags:
+  - product
+  - values
+  - time-to-date
+category: behind
+primaryQuestion: "Why does Chem IRL track completed dates instead of daily active users?"
+secondaryQuestions:
+  - "What is a 'completed dates per matched pair' metric?"
+  - "What features has Chem IRL killed because they didn't move date completion?"
+  - "How does a dating app even measure whether a date happened?"
+  - "Why do most dating apps still report DAU as their main number?"
+entities:
+  - "completed dates per matched pair"
+  - "the 72-hour rule"
+tldr: "Chem IRL's north-star metric is completed dates per matched pair, not daily active users. Every product decision is graded against whether it raises that number. Features that boost session length but don't increase real-world meetings get killed before launch. The result is a product that looks unimpressive on engagement dashboards and overperforms on the only outcome that matters: people actually meeting."
+excerpt: "Most apps grade themselves on time spent. Chem IRL grades itself on dates that happened — and kills features that lift the wrong number."
+faq:
+  - question: "What is a 'completed dates per matched pair' metric?"
+    answer: "It's the share of matches that end in a confirmed in-person meeting. We count a date as completed when both people, separately, confirm in-app that the meeting happened. The denominator is matched pairs, not users — so the number is hard to game by inflating signups. It's the cleanest read on whether the app is doing its actual job."
+  - question: "What features has Chem IRL killed because they didn't move date completion?"
+    answer: "Read receipts on idle threads (boosted message volume, not meetings). A streak system tied to consecutive login days (lifted DAU, suppressed proposals). A 'matches near you right now' tile (raised swipe rates without changing date counts). Each one tested clean for engagement and flat for outcomes. The rule is simple: if it doesn't move the north star, it doesn't ship."
+  - question: "How does a dating app even measure whether a date happened?"
+    answer: "We ask both people, separately, after the proposed meeting time. Two taps each, no required text. Cross-confirmation is the bar — one-sided answers don't count. It's imperfect, but it's a real measurement of a real event, which is more than most apps attempt. Read more in [did the date actually happen](/blog/dating-app-that-confirms-dates)."
+  - question: "Why do most dating apps still report DAU as their main number?"
+    answer: "It's what investors are trained to read, and it's the easiest metric for an ad-supported business to monetize. DAU rewards the app for time spent, not outcomes — so any app graded primarily on DAU will quietly engineer for stickiness over completion, even when the team's stated goal is the opposite."
+citableClaim: "Chem IRL's beta cohort moved from match to confirmed in-person date in a median of six days."
+draft: false
+---
+
+> **TL;DR.** Chem IRL's north-star metric is completed dates per matched pair, not daily active users. Every product decision is graded against whether it raises that number. Features that boost session length but don't increase real-world meetings get killed before launch. The result is a product that looks unimpressive on engagement dashboards and overperforms on the only outcome that matters: people actually meeting.
+
+The first time we ran the numbers honestly, the streak system died. It had been live for two weeks of internal testing. DAU was up nine percent. Average session length was up. Message volume was up. Completed dates were flat. We pulled the feature the next day.
+
+This happens often enough that we've started using it as a recruiting story. The job of working on Chem IRL is killing the things that make every other dating app's dashboard look healthy.
+
+## Why does Chem IRL track completed dates instead of daily active users?
+
+Because daily active users is a measurement of how well the app holds your attention, not how well it does its job. A dating app's job is to put two people in a room together. Anything that doesn't ladder up to that — every clever notification, every streak, every "people near you right now" tile — is at best a leading indicator and at worst a distraction. The cleanest test of whether the app worked is: did the date happen?
+
+## What is "completed dates per matched pair"?
+
+It's a ratio. The numerator is in-person meetings that both people confirmed happened. The denominator is matches that successfully entered a chat. We don't grade ourselves on swipes (gameable by ad spend), or matches (inflated by low-quality profiles), or messages (inflated by anything that delays meetings). We grade ourselves on whether two strangers ended up in the same physical place.
+
+Two design choices follow.
+
+**The metric is per pair, not per user.** A user who's been on the app for six months and met four people is not "more successful" than a user who met one person on their first match and deleted. Both are wins. Per-pair counting prevents us from accidentally optimizing for the prolific dater at the expense of the user who came in, met someone, and left.
+
+**Confirmation has to be two-sided.** One person tapping "yes, we met" doesn't count. Both people, independently, do. If one person doesn't respond to the post-date prompt, the meeting goes uncounted — even if it happened. We'd rather under-count and stay honest than inflate the number with one-sided self-reports.
+
+The metric currently runs in our internal dashboards alongside time-to-first-date and second-date conversion. Of the three, it's the one we treat as definitive.
+
+## What does this metric actually change?
+
+The team kills features. That's the boring, important answer. A non-trivial slice of the standard dating-app playbook fails the completion test the moment you measure it.
+
+A streak system that lifted login frequency suppressed proposal rates — users started feeling rewarded for showing up rather than for committing to a time. We pulled it. A "matches near you right now" tile boosted swipe volume but flatlined dates; the urgency it created was urgency to swipe, not urgency to meet. We pulled that too. Read receipts on idle threads, in early testing, made dead conversations *feel* alive without making them produce anything. Same outcome.
+
+In every case, the engagement numbers were going up. None of those wins survived the question we now ask every two weeks: did this raise the share of matches that ended in a real meeting? When the answer is no, we don't keep the feature for "warmth" or "habit" reasons.
+
+## What does this look like for a user?
+
+The visible effect is what's missing. There's no streak counter on your home screen. There's no "you have 12 unread likes" pile. There are no daily login rewards. The app doesn't try to make itself feel like a slot machine, which is probably the most polite version of the contrast with [the slot-machine apps](/blog/dating-app-that-isnt-a-slot-machine).
+
+The other visible effect is the [72-hour rule](/blog/the-72-hour-rule). If you don't propose or accept within three days, the match ends. That's the metric punching out into product. A match that doesn't move toward a meeting is a match that's lowering our north star, and the cleanest way to protect the average is to expire matches that aren't going anywhere.
+
+## What we give up by grading ourselves this way
+
+Three things, named honestly.
+
+We give up the early-stage growth narrative that most dating apps tell. "DAU up 40% quarter over quarter" is a fundable sentence. "We killed three features that lifted DAU because they didn't lift dates" is not, at least not without a longer conversation. We end up explaining ourselves more often than competitors do.
+
+We give up the easy A/B test. Most product experiments at most apps run for a week or two and read the engagement curve. Ours have to wait long enough for actual dates to happen and get confirmed. That's slower, and slower is expensive.
+
+And we give up the option of optimizing for users who don't actually want to meet anyone. The DAU-maximizing version of any dating app spends a lot of energy keeping that user engaged. We don't, and never will. If your goal is scrolling, this is the wrong product.
+
+## What this means for you
+
+If you're picking a dating app, ask one question: what is this company being graded on? You can usually answer it from outside. If the app shows you a streak counter, runs win-back emails, and resurfaces dormant matches with fake urgency, it's being graded on time spent. If it expires matches, hides match counts, and doesn't notify you unless something real happened, it's being graded on something closer to outcomes.
+
+You don't have to take our word for which one we are. Watch what we ship. Watch what we kill.
+
+## Common questions
+
+### What is a "completed dates per matched pair" metric?
+
+It's the share of matches that end in a confirmed in-person meeting. We count a date as completed when both people, separately, confirm in-app that the meeting happened. The denominator is matched pairs, not users — so the number is hard to game by inflating signups. It's the cleanest read on whether the app is doing its actual job.
+
+### What features has Chem IRL killed because they didn't move date completion?
+
+Read receipts on idle threads (boosted message volume, not meetings). A streak system tied to consecutive login days (lifted DAU, suppressed proposals). A "matches near you right now" tile (raised swipe rates without changing date counts). Each one tested clean for engagement and flat for outcomes. The rule is simple: if it doesn't move the north star, it doesn't ship.
+
+### How does a dating app even measure whether a date happened?
+
+We ask both people, separately, after the proposed meeting time. Two taps each, no required text. Cross-confirmation is the bar — one-sided answers don't count. It's imperfect, but it's a real measurement of a real event, which is more than most apps attempt.
+
+### Why do most dating apps still report DAU as their main number?
+
+It's what investors are trained to read, and it's the easiest metric for an ad-supported business to monetize. DAU rewards the app for time spent, not outcomes — so any app graded primarily on DAU will quietly engineer for stickiness over completion, even when the team's stated goal is the opposite.
