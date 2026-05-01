@@ -75,8 +75,7 @@ export default function IrisInterviewScreen(): JSX.Element {
           Alert.alert(title, message);
           return;
         }
-        // iris_draft_used analytics event is added in PR 6 alongside the
-        // rest of the iris_* events. Calling it here would fail type-check.
+        trackEvent('iris_draft_used', { kind: 'bio', surface: 'interview' });
         setBioApplied(true);
         refreshProfile();
       } catch (err) {
