@@ -28,15 +28,22 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const imageOverride = post.image
     ? [{ url: post.image, width: 1200, height: 630, alt: post.title }]
     : undefined;
+  // AI engines (ChatGPT, Claude, Perplexity, Google AI Overviews) parse the
+  // <meta description> and og:description as the post's snippet. Prefer the
+  // direct-answer TLDR there. Twitter card stays on the hook-shaped excerpt
+  // since social previews favor a teaser, not an answer.
+  const aiDescription = post.tldr ?? post.excerpt;
+  const modifiedTime = (post.lastReviewed ?? post.date).toISOString();
   return {
     title: `${post.title} — Chem IRL Blog`,
-    description: post.excerpt,
+    description: aiDescription,
     openGraph: {
       title: post.title,
-      description: post.excerpt,
+      description: aiDescription,
       url: `https://chemirl.app/blog/${post.slug}`,
       type: 'article',
       publishedTime: post.date.toISOString(),
+      modifiedTime,
       authors: [post.authorData.name],
       ...(imageOverride ? { images: imageOverride } : {}),
     },
