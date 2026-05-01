@@ -38,7 +38,16 @@ export type AnalyticsEvent =
   | 'onboarding_personality_type_completed'
   | 'onboarding_astrology_completed'
   | 'onboarding_work_education_completed'
-  | 'onboarding_location_permission_completed';
+  | 'onboarding_location_permission_completed'
+  // Iris AI concierge events. Surface and reason are passed as
+  // properties (e.g. {surface: 'interview'}, {reason: 'never_subscribed'}).
+  | 'iris_session_started'
+  | 'iris_session_completed'
+  | 'iris_draft_used'
+  | 'iris_draft_dismissed'
+  | 'iris_paywall_shown'
+  | 'iris_trial_started'
+  | 'iris_subscription_purchased';
 
 export interface AnalyticsProperties {
   [key: string]: string | number | boolean | null | undefined;
