@@ -16,7 +16,7 @@ secondaryQuestions:
   - "Where does Chem IRL remove friction?"
   - "Is making bad behavior cost more a dark pattern?"
 entities:
-  - "Seriousness Score"
+  - "match-reactivation tokens"
   - "the 72-hour rule"
 tldr: "Sending a low-effort opener takes a beat. Repeated bad behavior costs visibility. But proposing a time, sharing your calendar, or actually meeting up? Frictionless. Chem IRL makes the right things easy and the wrong things expensive — by design. That's friction design, applied to dating, with the asymmetry pointing the way the user's stated goals point."
 excerpt: "Make the right things easy, the wrong things expensive. That's the friction-design rule Chem IRL ships across every screen."
@@ -24,7 +24,7 @@ faq:
   - question: "What is friction design in a product?"
     answer: "The deliberate choice of where to make a product easy to use and where to slow the user down. Most products try to remove friction everywhere; the better move is asymmetric — frictionless on the actions that align with the user's stated goal, costly on the actions that work against it. Done well, friction design pushes the user toward what they said they wanted."
   - question: "Where does Chem IRL add friction on purpose?"
-    answer: "Low-effort openers take a beat to send (a small content check). Repeated no-shows reduce visibility (the Seriousness Score does this quietly). Match reactivation requires a token (real cost, used rarely). Identity verification adds a couple of minutes at signup. Each is friction on a behavior we don't want amplified — and the cost is paid by the behavior, not by the user generally."
+    answer: "Low-effort openers take a beat to send (a small content check). Repeated no-shows mean matches expire (the 72-hour rule does this quietly). Match reactivation requires a token (real cost, used rarely). Photo verification adds a couple of minutes at signup. Each is friction on a behavior we don't want amplified — and the cost is paid by the behavior, not by the user generally."
   - question: "Where does Chem IRL remove friction?"
     answer: "Proposing a specific time inside chat: one tap. Sharing availability: one tap. Confirming a date happened: two taps. Blocking someone: long-press. Deleting your account: two screens, no win-back wall. Anything that pushes you toward a real meeting or a clean exit is built to be the easiest thing on the screen."
   - question: "Is making bad behavior cost more a dark pattern?"
@@ -49,7 +49,7 @@ The pattern is consistent across the surface area.
 
 **One-tap availability sharing.** Both people can opt into showing windows of free time. The app finds the overlap. Instead of seven-message ritual, you see a slot you both have free and pick it. Easy where it should be.
 
-**Two-tap post-date confirmation.** Did this happen? Yes/no. That's it. We don't make the user write a paragraph; we make the answer trivially cheap to give. (Read more in [the post on date confirmation](/blog/dating-app-that-confirms-dates).)
+**Two-tap post-date confirmation.** Did this happen? Yes/no. That's it. We don't make the user write a paragraph; we make the answer trivially cheap to give.
 
 **Long-press to block.** A single deliberate gesture, no confirmation dialogs, no win-back interstitials. The block is permanent and the path to it is short — because safety friction should be the lowest of any friction in the product. (Read more in [block means block](/blog/dating-app-where-block-means-block).)
 
@@ -61,9 +61,9 @@ These are the easy paths. They are easy because the user's stated goals run thro
 
 Where the action would cost the rest of the user base if it were free.
 
-**A beat before sending a low-effort opener.** Messages flagged by content checks (slurs, scam keywords, certain harassment patterns) get a brief interstitial confirming the user wants to send. The cost is small for someone who actually wants to send the message; the friction collapses repeat-offender behavior surprisingly well. (Read more in [the post on stopping unsolicited photos](/blog/dating-app-that-stops-unsolicited-photos).)
+**A beat before sending a low-effort opener.** Messages flagged by content checks (slurs, scam keywords, certain harassment patterns) get a brief interstitial confirming the user wants to send. The cost is small for someone who actually wants to send the message; the friction collapses repeat-offender behavior surprisingly well.
 
-**Visibility loss for flaking.** Cancellations inside the window, no-shows, ghosting active threads — each one moves the Seriousness Score downward. The cost is paid in matches the flaker doesn't see, not in punitive bans. (Read more in [the post on penalizing flaking](/blog/dating-app-that-penalizes-flaking).)
+**Match expiry for flaking.** Cancellations inside the window, no-shows, ghosting active threads — each one is a behavior the 72-hour clock catches first; we're designing future signal-throttling against it. The cost is paid in matches the flaker doesn't see, not in punitive bans.
 
 **Tokens for match reactivation.** If a match expired before either of you proposed, you can spend a token to bring it back. This is real cost; most active daters never use it. The friction exists to make reactivation a deliberate decision, not a default.
 

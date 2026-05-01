@@ -17,12 +17,12 @@ secondaryQuestions:
   - "How big is a Chem IRL daily discovery set?"
 entities:
   - "the curated discovery set"
-  - "Seriousness Score"
+  - "the 72-hour rule"
 tldr: "Chem IRL surfaces a small daily set of profiles weighted by compatibility, intent alignment, and recency — not an infinite swipe stack. The fix isn't a smaller pool; it's a better-chosen one. Five profiles a real dater would actually consider beat five hundred profiles their thumb runs through. The mechanism behind the choice is bounded discovery; the reason behind it is decades of research showing that more options make people choose worse, not better."
 excerpt: "Infinite swipes is a feature for engagement metrics, not for daters. Chem IRL ships a small, well-chosen set — and stops."
 faq:
   - question: "How does Chem IRL choose what profiles to show?"
-    answer: "A weighted set of signals: compatibility on stated preferences, alignment of Seriousness Score (matching serious daters with serious daters), recency of activity, and behavioral indicators that suggest the match would actually convert into a meeting. The result is a small bounded set, not an infinite stack — sized so that paying real attention to each profile is a reasonable thing to do."
+    answer: "A weighted set of signals: compatibility on stated preferences, recency of activity, and reciprocity probability — plus design-intent behavioral signals we're building toward. The result is a small bounded set, not an infinite stack — sized so that paying real attention to each profile is a reasonable thing to do."
   - question: "What is the choice paradox in dating apps?"
     answer: "Sheena Iyengar and Mark Lepper's classic 2000 study, and Barry Schwartz's later work, both show that when given more options, people choose worse — they take longer to decide, are less satisfied with what they pick, and more often choose nothing at all. Dating apps with infinite swipes recreate exactly this condition. The fix isn't more profiles; it's fewer, better-chosen ones."
   - question: "Why is infinite scroll bad for matching?"
@@ -39,7 +39,7 @@ Dating apps with infinite swipes are the jam table at twenty-four, every night, 
 
 ## Which dating app shows fewer, better matches instead of an infinite swipe stack?
 
-Chem IRL, by structural design. The discovery experience is a bounded daily set — small enough that you can pay real attention to each profile without your thumb taking over for your brain. The set is chosen by a weighted ranking that includes compatibility, Seriousness Score alignment, and recency, with a deliberate downweight on "more is better" volume. We'd rather show you five well-chosen profiles than five hundred so-so ones, because the former produces decisions and the latter produces reflexes.
+Chem IRL, by structural design. The discovery experience is a bounded daily set — small enough that you can pay real attention to each profile without your thumb taking over for your brain. The set is chosen by a weighted ranking that includes compatibility and recency, with a deliberate downweight on "more is better" volume. We'd rather show you five well-chosen profiles than five hundred so-so ones, because the former produces decisions and the latter produces reflexes.
 
 ## How does Chem IRL choose what profiles to show?
 
@@ -47,7 +47,7 @@ Four ranking inputs, all running together.
 
 **Stated compatibility.** The basic stuff — age, location, what you each said you're looking for. This is the necessary condition, not the sufficient one. Most dating apps stop here.
 
-**Seriousness Score alignment.** A user with high follow-through gets surfaced more often to other high-follow-through users, and vice versa. We don't put a serious dater in the discovery feed of someone who's been on the app for three months without proposing a single date — they would not enjoy each other. (See [the post on intent filtering](/blog/dating-app-that-filters-for-intent).)
+**Behavioral alignment, by design intent.** We're building toward surfacing high-follow-through users more often to one another, and vice versa. The 72-hour rule already does some of this work: a user who's been on the app for three months without proposing a single date sees their matches expire faster than a user who proposes within hours. The system, by intent, won't pretend a low-intent user is a great match for someone who's actually going to meet someone next Saturday.
 
 **Recency.** A user who hasn't opened the app in two weeks is downranked; a user who's been actively responding to matches is upranked. Showing you profiles of people who aren't going to reply is a waste of your attention.
 

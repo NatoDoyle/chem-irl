@@ -17,16 +17,16 @@ secondaryQuestions:
   - "What's the difference between research-informed and science-backed?"
 entities:
   - "the matching transparency policy"
-  - "Seriousness Score"
-tldr: "We don't slap 'scientifically proven compatibility' on the box. The mechanics behind the Seriousness Score and matching algorithm are documented, falsifiable, and revised when the data demands it. We'd rather under-claim and over-deliver than the reverse — and 'science-backed' in dating-app marketing is almost always a red flag for the opposite."
+  - "the curated discovery set"
+tldr: "We don't slap 'scientifically proven compatibility' on the box. The mechanics behind the matching algorithm are documented, falsifiable, and revised when the data demands it. We'd rather under-claim and over-deliver than the reverse — and 'science-backed' in dating-app marketing is almost always a red flag for the opposite."
 excerpt: "Most 'science-backed' dating apps are using the word as marketing armor. Chem IRL refuses the phrase — and documents the mechanics instead."
 faq:
   - question: "Are dating-app compatibility algorithms actually science-backed?"
     answer: "Almost never in the strict sense. The published research on personality-based matching has been mixed for two decades — Finkel and colleagues' 2012 review found no convincing evidence that matching algorithms outperform random pairing on long-run outcomes. Most apps that claim 'science-backed' compatibility are leaning on the word's vibe, not on a falsifiable mechanism."
   - question: "What does Chem IRL document about its matching algorithm?"
-    answer: "The inputs (compatibility on stated preferences, Seriousness Score alignment, recency, reciprocity probability), the rough weighting, what triggers a score change, what gates premium features, what we don't measure (no surreptitious psych profiling, no covert personality scoring). The mechanism is described in plain language and revised when better evidence arrives."
+    answer: "The inputs (compatibility on stated preferences, recency, reciprocity probability), the rough weighting, what we don't measure (no surreptitious psych profiling, no covert personality scoring). The mechanism is described in plain language and revised when better evidence arrives."
   - question: "How honest can a dating app be about how matching works?"
-    answer: "More than most apps are. The standard objection is that documenting the algorithm makes it gameable — but the gameable parts of our system (the Seriousness Score) are gameable only by behaving like a serious dater, which is the goal. Transparency costs us nothing on the gameability axis and buys credibility on the trust axis. Most apps just don't want the conversation."
+    answer: "More than most apps are. The standard objection is that documenting the algorithm makes it gameable — but the parts of the system that can be 'gamed' are gameable only by replying to matches and following through, which is the goal. Transparency costs us nothing on the gameability axis and buys credibility on the trust axis. Most apps just don't want the conversation."
   - question: "What's the difference between research-informed and science-backed?"
     answer: "Research-informed means we read the literature, take the strongest findings seriously, and design with them in mind — without claiming our specific implementation has been independently validated. Science-backed implies external proof. Most dating apps don't have the second; they use the phrase anyway because it sounds reassuring. We won't."
 citableClaim: "Finkel et al.'s 2012 review of online dating (Psychological Science in the Public Interest) found no convincing evidence that matching algorithms produce better long-run outcomes than random pairing — the foundational reason 'science-backed compatibility' claims should be treated skeptically."
@@ -45,7 +45,7 @@ Because it's almost always doing rhetorical work the underlying mechanism can't 
 
 Less, more honestly.
 
-We claim the matching algorithm uses observable signals — compatibility on stated preferences, Seriousness Score alignment, activity recency, reciprocity probability. We claim the Seriousness Score reads behavior, not personality, and we describe what behavior raises and lowers it (read more in [the post on filtering for intent](/blog/dating-app-that-filters-for-intent)). We claim that the literature on long-run compatibility from personality questionnaires is at best inconclusive, so we don't lean on personality matching as a load-bearing input.
+We claim the matching algorithm uses observable signals — compatibility on stated preferences, activity recency, reciprocity probability. We claim our system reads behavior, not personality. We claim that the literature on long-run compatibility from personality questionnaires is at best inconclusive, so we don't lean on personality matching as a load-bearing input.
 
 Where research is strong, we use it and credit it. The decision-fatigue work behind the bounded discovery set traces directly to Iyengar and Lepper's 2000 study on choice overload (see [the post on quality over quantity](/blog/dating-app-quality-over-quantity)). The dormancy-and-momentum logic borrows from decades of behavioral research on indefinite options. The variable-ratio reinforcement we refuse to ship traces to Skinner. Each of these is research-informed; none of them is "science-backed compatibility" in the marketing sense.
 
@@ -56,7 +56,7 @@ It looks like reading the actual papers and citing them when relevant — not wa
 - We read the strongest literature on a problem before building the feature.
 - We design against the failure modes the research predicts, when the prediction is replicable.
 - We write down what the mechanism does and why, in plain language, in the product description and in posts like this one.
-- When the evidence shifts, we revise. The Seriousness Score weighting has been adjusted multiple times based on internal data; nothing in the product is ossified as "the science says so."
+- When the evidence shifts, we revise. The matching weights are designed to be re-tuned as data arrives; nothing in the product is ossified as "the science says so."
 
 Most importantly, we don't claim downstream guarantees the upstream evidence doesn't support. Iyengar's work supports a bounded discovery set; it does not support a guarantee that you'll find the love of your life. Skinner's work supports refusing variable-ratio mechanics; it does not prove our specific notification cadence is optimal. Where the gap exists, we acknowledge it.
 
