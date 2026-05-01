@@ -34,10 +34,10 @@ type IrisInterviewScreenNavigationProp = NativeStackNavigationProp<
 
 const INTERVIEW_GREETING =
   "Hi — I'm Iris. I'd love to ask you a few things so we can write a profile " +
-  "that actually sounds like you. Mostly stories, no big philosophical questions. " +
-  "Ready when you are.";
+  'that actually sounds like you. Mostly stories, no big philosophical questions. ' +
+  'Ready when you are.';
 
-export default function IrisInterviewScreen(): JSX.Element {
+export default function IrisInterviewScreen() {
   const navigation = useNavigation<IrisInterviewScreenNavigationProp>();
   const refreshProfile = useProfileRefresh();
   const [savingBio, setSavingBio] = useState(false);
@@ -85,7 +85,7 @@ export default function IrisInterviewScreen(): JSX.Element {
         setSavingBio(false);
       }
     },
-    [savingBio, refreshProfile],
+    [savingBio, refreshProfile]
   );
 
   const handleFinish = useCallback(async () => {

@@ -8,15 +8,15 @@
  * the real client builds in the React Native runtime.
  */
 
+import { trialDaysRemaining } from '../subscription';
+import type { IrisEntitlement } from '../iris/types';
+
 jest.mock('../supabase/client', () => ({
   supabase: {
     auth: { getSession: jest.fn() },
     rpc: jest.fn(),
   },
 }));
-
-import { trialDaysRemaining } from '../subscription';
-import type { IrisEntitlement } from '../iris/types';
 
 const baseEntitlement: IrisEntitlement = {
   allowed: true,
@@ -43,7 +43,7 @@ describe('trialDaysRemaining', () => {
         ...baseEntitlement,
         reason: 'subscribed',
         trialEndsAt: new Date(NOW + 5 * 24 * 60 * 60 * 1000).toISOString(),
-      }),
+      })
     ).toBe(0);
   });
 
@@ -57,7 +57,7 @@ describe('trialDaysRemaining', () => {
         ...baseEntitlement,
         reason: 'trial',
         trialEndsAt: 'not-a-date',
-      }),
+      })
     ).toBe(0);
   });
 
@@ -67,7 +67,7 @@ describe('trialDaysRemaining', () => {
         ...baseEntitlement,
         reason: 'trial',
         trialEndsAt: new Date(NOW - 1).toISOString(),
-      }),
+      })
     ).toBe(0);
   });
 
@@ -77,7 +77,7 @@ describe('trialDaysRemaining', () => {
         ...baseEntitlement,
         reason: 'trial',
         trialEndsAt: new Date(NOW + 3 * 24 * 60 * 60 * 1000).toISOString(),
-      }),
+      })
     ).toBe(3);
   });
 
@@ -88,7 +88,7 @@ describe('trialDaysRemaining', () => {
         reason: 'trial',
         // 23h59m before expiry — still rounds up to 1 day
         trialEndsAt: new Date(NOW + 23 * 60 * 60 * 1000 + 59 * 60 * 1000).toISOString(),
-      }),
+      })
     ).toBe(1);
   });
 
@@ -99,7 +99,7 @@ describe('trialDaysRemaining', () => {
         ...baseEntitlement,
         reason: 'trial',
         trialEndsAt: new Date(NOW + Math.round(1.5 * 24 * 60 * 60 * 1000)).toISOString(),
-      }),
+      })
     ).toBe(2);
   });
 });

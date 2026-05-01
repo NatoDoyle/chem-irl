@@ -1,12 +1,5 @@
 import { useCallback, useState } from 'react';
-import {
-  ActivityIndicator,
-  Modal,
-  Pressable,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import { ActivityIndicator, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import { BRAND_COLORS, MIDNIGHT, TYPOGRAPHY, SPACING } from '../config/brand';
 import {
   IRIS_NAME,
@@ -33,7 +26,7 @@ export interface PaywallModalProps {
 
 type Pending = 'trial' | 'subscribe' | null;
 
-export default function PaywallModal(props: PaywallModalProps): JSX.Element {
+export default function PaywallModal(props: PaywallModalProps) {
   const { visible, onClose, onTrialStarted, onSubscriptionRequested } = props;
   const [pending, setPending] = useState<Pending>(null);
   const [error, setError] = useState<string | null>(null);

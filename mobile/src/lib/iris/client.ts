@@ -9,12 +9,7 @@
 // session — no separate API key needed.
 
 import { supabase } from '../supabase/client';
-import {
-  type IrisOp,
-  type IrisStreamEvent,
-  type IrisSurface,
-  IRIS_OPS,
-} from './types';
+import { type IrisOp, type IrisStreamEvent, type IrisSurface, IRIS_OPS } from './types';
 
 const FUNCTION_NAME = 'iris-chat';
 
@@ -58,11 +53,12 @@ export async function* streamIrisTurn(args: StreamTurnArgs): AsyncGenerator<Iris
     throw new IrisError(
       typeof errorPayload?.error === 'string' ? errorPayload.error : 'iris_chat_failed',
       response.status,
-      errorPayload,
+      errorPayload
     );
   }
 
-  const conversationId = response.headers.get('x-iris-conversation-id') ?? args.conversationId ?? '';
+  const conversationId =
+    response.headers.get('x-iris-conversation-id') ?? args.conversationId ?? '';
 
   const body$ = response.body;
   if (!body$) {
@@ -114,7 +110,9 @@ export async function* streamIrisTurn(args: StreamTurnArgs): AsyncGenerator<Iris
  * the conversation status='completed' server-side and returns the memory
  * patch (or null if the model didn't emit one).
  */
-export async function finalizeIris(conversationId: string): Promise<Record<string, unknown> | null> {
+export async function finalizeIris(
+  conversationId: string
+): Promise<Record<string, unknown> | null> {
   const url = await resolveFunctionUrl(FUNCTION_NAME);
   const accessToken = await resolveAccessToken();
 
@@ -135,7 +133,7 @@ export async function finalizeIris(conversationId: string): Promise<Record<strin
     throw new IrisError(
       typeof errorPayload?.error === 'string' ? errorPayload.error : 'iris_finalize_failed',
       response.status,
-      errorPayload,
+      errorPayload
     );
   }
 
@@ -213,7 +211,7 @@ function parseSseBlock(block: string): SseEvent | null {
 // shape. Returns 0..N events per upstream event.
 function interpretAnthropicEvent(
   evt: SseEvent,
-  toolBlocks: Map<number, { name: string; json: string }>,
+  toolBlocks: Map<number, { name: string; json: string }>
 ): IrisStreamEvent[] {
   const data = evt.data ?? {};
   const type = typeof data.type === 'string' ? data.type : '';
@@ -229,9 +227,7 @@ function interpretAnthropicEvent(
 
   if (type === 'content_block_delta') {
     const idx = (data.index as number | undefined) ?? -1;
-    const delta = data.delta as
-      | { type?: string; text?: string; partial_json?: string }
-      | undefined;
+    const delta = data.delta as { type?: string; text?: string; partial_json?: string } | undefined;
     if (delta?.type === 'text_delta' && typeof delta.text === 'string') {
       return [{ type: 'text', text: delta.text }];
     }

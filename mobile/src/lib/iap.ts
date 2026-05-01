@@ -62,13 +62,11 @@ export async function initIAP(): Promise<Product[]> {
   try {
     // The `type: 'subs'` option is supported on react-native-iap v14+. We
     // cast to `unknown` first because older type defs may not declare it.
-    const subResult: FetchProductsResult = await fetchProducts({
+    const subResult = await fetchProducts({
       skus: ALL_SUBSCRIPTION_IDS as unknown as string[],
       type: 'subs',
     } as Parameters<typeof fetchProducts>[0]);
-    subscriptions = (subResult ?? []).filter(
-      (item): item is Subscription => 'productId' in item,
-    ) as Subscription[];
+    subscriptions = (subResult ?? []) as unknown as Subscription[];
   } catch (err) {
     if (__DEV__) {
       // eslint-disable-next-line no-console
@@ -129,9 +127,7 @@ export function setupPurchaseListener(
     const receipt = purchase.purchaseToken;
     if (!receipt) return;
 
-    const isSubscription = (ALL_SUBSCRIPTION_IDS as readonly string[]).includes(
-      purchase.productId,
-    );
+    const isSubscription = (ALL_SUBSCRIPTION_IDS as readonly string[]).includes(purchase.productId);
 
     try {
       if (isSubscription) {

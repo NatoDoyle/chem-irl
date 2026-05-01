@@ -23,11 +23,7 @@ import {
   TOOL_TIME_WINDOW_USE,
   TOOL_REPLY_DRAFT_USE,
 } from '../lib/iris/persona';
-import {
-  streamIrisTurn,
-  finalizeIris,
-  IrisError,
-} from '../lib/iris/client';
+import { streamIrisTurn, finalizeIris, IrisError } from '../lib/iris/client';
 import type {
   IrisStreamEvent,
   IrisSurface,
@@ -60,7 +56,7 @@ interface ChatMessage {
   id: string;
   role: 'user' | 'assistant';
   text: string;
-  toolCalls?: Array<{ name: string; input: Record<string, unknown> }>;
+  toolCalls?: { name: string; input: Record<string, unknown> }[];
   streaming?: boolean;
 }
 
@@ -68,7 +64,7 @@ interface ChatMessage {
 // Component
 // ---------------------------------------------------------------------------
 
-export default function IrisChatModal(props: IrisChatModalProps): JSX.Element {
+export default function IrisChatModal(props: IrisChatModalProps) {
   const { visible, onClose, surface, matchId, initialGreeting, finalizeOnClose } = props;
 
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -84,9 +80,7 @@ export default function IrisChatModal(props: IrisChatModalProps): JSX.Element {
   useEffect(() => {
     if (visible) {
       setMessages(
-        initialGreeting
-          ? [{ id: 'greeting', role: 'assistant', text: initialGreeting }]
-          : [],
+        initialGreeting ? [{ id: 'greeting', role: 'assistant', text: initialGreeting }] : []
       );
       setInput('');
       setStreaming(false);
@@ -130,9 +124,7 @@ export default function IrisChatModal(props: IrisChatModalProps): JSX.Element {
       for await (const event of stream as AsyncGenerator<IrisStreamEvent>) {
         if (event.type === 'text') {
           setMessages((prev) =>
-            prev.map((m) =>
-              m.id === assistantId ? { ...m, text: m.text + event.text } : m,
-            ),
+            prev.map((m) => (m.id === assistantId ? { ...m, text: m.text + event.text } : m))
           );
         } else if (event.type === 'tool_use') {
           setMessages((prev) =>
@@ -140,18 +132,15 @@ export default function IrisChatModal(props: IrisChatModalProps): JSX.Element {
               m.id === assistantId
                 ? {
                     ...m,
-                    toolCalls: [
-                      ...(m.toolCalls ?? []),
-                      { name: event.name, input: event.input },
-                    ],
+                    toolCalls: [...(m.toolCalls ?? []), { name: event.name, input: event.input }],
                   }
-                : m,
-            ),
+                : m
+            )
           );
         } else if (event.type === 'done') {
           conversationIdRef.current = event.conversationId || conversationIdRef.current;
           setMessages((prev) =>
-            prev.map((m) => (m.id === assistantId ? { ...m, streaming: false } : m)),
+            prev.map((m) => (m.id === assistantId ? { ...m, streaming: false } : m))
           );
         } else if (event.type === 'warning') {
           // Non-fatal; we continue. Surface in dev only.
@@ -162,12 +151,9 @@ export default function IrisChatModal(props: IrisChatModalProps): JSX.Element {
         }
       }
     } catch (err) {
-      const message =
-        err instanceof IrisError ? mapIrisError(err) : IRIS_ERROR_GENERIC;
+      const message = err instanceof IrisError ? mapIrisError(err) : IRIS_ERROR_GENERIC;
       setError(message);
-      setMessages((prev) =>
-        prev.filter((m) => m.id !== assistantId || (m.text?.length ?? 0) > 0),
-      );
+      setMessages((prev) => prev.filter((m) => m.id !== assistantId || (m.text?.length ?? 0) > 0));
     } finally {
       setStreaming(false);
       abortRef.current = null;
@@ -293,19 +279,19 @@ interface MessageBubbleProps {
   onUsedDraft: () => void;
 }
 
-function MessageBubble(props: MessageBubbleProps): JSX.Element {
+function MessageBubble(props: MessageBubbleProps) {
   const { message, onBioDraft, onTimeWindow, onReplyDraft, onUsedDraft } = props;
   const isAssistant = message.role === 'assistant';
 
   return (
-    <View
-      style={[
-        styles.bubble,
-        isAssistant ? styles.bubbleAssistant : styles.bubbleUser,
-      ]}
-    >
+    <View style={[styles.bubble, isAssistant ? styles.bubbleAssistant : styles.bubbleUser]}>
       {message.text.length > 0 && (
-        <Text style={[styles.bubbleText, isAssistant ? styles.bubbleTextAssistant : styles.bubbleTextUser]}>
+        <Text
+          style={[
+            styles.bubbleText,
+            isAssistant ? styles.bubbleTextAssistant : styles.bubbleTextUser,
+          ]}
+        >
           {message.text}
         </Text>
       )}
@@ -333,7 +319,7 @@ interface ToolCallCardProps {
   onUsed: () => void;
 }
 
-function ToolCallCard(props: ToolCallCardProps): JSX.Element | null {
+function ToolCallCard(props: ToolCallCardProps) {
   const { name, input, onBioDraft, onTimeWindow, onReplyDraft, onUsed } = props;
 
   if (name === 'propose_bio_draft' && typeof input.bio === 'string') {

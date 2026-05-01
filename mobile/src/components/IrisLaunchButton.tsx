@@ -1,11 +1,5 @@
 import { useCallback, useState } from 'react';
-import {
-  ActivityIndicator,
-  Pressable,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 import { BRAND_COLORS, MIDNIGHT, TYPOGRAPHY, SPACING } from '../config/brand';
 import { IRIS_NAME } from '../lib/iris/persona';
 import { getEntitlement } from '../lib/subscription';
@@ -37,7 +31,7 @@ export interface IrisLaunchButtonProps {
   variant?: 'inline' | 'block';
 }
 
-export default function IrisLaunchButton(props: IrisLaunchButtonProps): JSX.Element {
+export default function IrisLaunchButton(props: IrisLaunchButtonProps) {
   const {
     surface,
     matchId,

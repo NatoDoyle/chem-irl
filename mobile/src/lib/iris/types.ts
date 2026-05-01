@@ -51,11 +51,7 @@ export interface IrisStreamWarning {
   message: string;
 }
 
-export type IrisStreamEvent =
-  | IrisTextDelta
-  | IrisToolCall
-  | IrisStreamDone
-  | IrisStreamWarning;
+export type IrisStreamEvent = IrisTextDelta | IrisToolCall | IrisStreamDone | IrisStreamWarning;
 
 // --- Entitlement (mirrors iris_can_use() in PR 1) -----------------------
 
@@ -114,7 +110,7 @@ export interface IrisMemoryPatch {
 
 export interface ProposeBioDraftInput {
   bio: string;
-  prompt_drafts: Array<{ question: string; answer: string }>;
+  prompt_drafts: { question: string; answer: string }[];
   signoff_text: string;
 }
 
@@ -126,5 +122,5 @@ export interface ProposeTimeWindowInput {
 }
 
 export interface ProposeReplyDraftInput {
-  drafts: Array<{ text: string; vibe: string }>;
+  drafts: { text: string; vibe: string }[];
 }
