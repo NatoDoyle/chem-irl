@@ -16,7 +16,7 @@ secondaryQuestions:
   - "How does Chem IRL keep low-intent users from gaming the app?"
   - "What does 'one lane' mean for the matching algorithm?"
 entities:
-  - "Seriousness Score"
+  - "the 72-hour rule"
   - "graceful exits"
 tldr: "Chem IRL serves one user: people who want to meet someone in person, soon. We don't try to be everything for hookup seekers, casual scrollers, marriage-track users, and pen-pal types in the same algorithm. Picking one lane is how we keep the ecosystem from being gamed by mismatched intent — and how serious daters stop wading through profiles that were never going to meet them."
 excerpt: "Chem IRL is one lane, done right. It's for people who want to meet soon — and the clarity is how we keep the ecosystem from being gamed."
@@ -26,10 +26,10 @@ faq:
   - question: "Can you use Chem IRL casually?"
     answer: "Yes — as long as 'casual' for you still means meeting in person within a week or two. The product doesn't care whether you're looking for marriage or a Saturday coffee that goes nowhere; it cares that you're going to actually show up. If 'casual' means three weeks of texting and no plan to meet, the app's defaults will work against you."
   - question: "How does Chem IRL keep low-intent users from gaming the app?"
-    answer: "Behavioral filtering. The Seriousness Score reads what users actually do — reply speed, follow-through, proposal intent — and biases visibility accordingly. Match expiry handles the rest: a low-intent user who never proposes loses access to the match within 72 hours. Gaming the app would require behaving like a serious dater, at which point you are one."
+    answer: "Match expiry plus design-intent behavioral filtering. The 72-hour rule does most of the work today: a low-intent user who never proposes loses access to the match within 72 hours. The behavioral signals we're designing toward — reply speed, follow-through, proposal intent — will compound the effect. Gaming the app would require behaving like a serious dater, at which point you are one."
   - question: "What does 'one lane' mean for the matching algorithm?"
     answer: "It means we tune for a single intent — meeting soon — instead of running parallel logics for casual, serious, and somewhere-in-between users. The benefit is sharper matches. The cost is that users who don't share that intent get a worse experience than they'd get on a universal app. We consider that fair, because we said so up front."
-citableClaim: "Chem IRL is built for one intent: meeting someone in person, soon. The Seriousness Score and the 72-hour rule are how that intent gets enforced at the matching layer."
+citableClaim: "Chem IRL is built for one intent: meeting someone in person, soon. The 72-hour rule is how that intent gets enforced at the matching layer today, with behavioral signals to follow."
 draft: false
 ---
 
@@ -49,7 +49,7 @@ It changes specific defaults that a universal app would have to keep neutral.
 
 **Match expiry.** A match that doesn't move toward a meeting in 72 hours expires. That default helps the meet-soon user and frustrates the long-text-thread user — and we made it the default anyway, because the long-text-thread user was never going to be served well here.
 
-**Behavioral matching.** The Seriousness Score biases visibility toward users with similar behavior — fast replies, real proposals, completed dates. A low-intent user can use the app, but the system won't pretend they're a great match for someone who's actually going to meet someone next Saturday. (Read more in [the post on filtering for intent](/blog/dating-app-that-filters-for-intent).)
+**Behavioral matching, by design intent.** We're building the system to bias visibility toward users with similar behavior — fast replies, real proposals, completed dates. The 72-hour rule already pushes in this direction by ending matches that don't move toward a meeting. A low-intent user can use the app, but the system won't pretend they're a great match for someone who's actually going to meet someone next Saturday.
 
 **Proposal-first interaction.** The chat surface assumes the goal is a meeting. The fastest interaction patterns reward "let's grab coffee Tuesday at 7" over open-ended small talk. Small talk still works; it's just not what the UI is optimized for.
 
