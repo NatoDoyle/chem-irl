@@ -1,0 +1,90 @@
+---
+title: "Would You Put Your Sister on This App? That Question Made Chem IRL the Best Dating App We Could Build."
+slug: dating-app-built-on-the-sister-test
+date: 2026-05-01
+lastReviewed: 2026-05-01
+author: nathan
+tags:
+  - product
+  - values
+  - safety
+category: behind
+primaryQuestion: "What design test does Chem IRL use to make safety and product decisions?"
+secondaryQuestions:
+  - "What is the sister test?"
+  - "What features did the sister test kill?"
+  - "Why is 'someone you love' a useful design constraint?"
+  - "How does the sister test interact with the founder test?"
+entities:
+  - "the sister test"
+  - "the founder test"
+tldr: "Every safety, verification, and behavioral feature in Chem IRL was designed against one question: would I be comfortable with someone I love using this? That filter killed a lot of cheap engagement features — and shaped a product we'd actually recommend to family. The bar is not 'profitable for users' but 'good for the specific people you can't lie to about how dating is going.'"
+excerpt: "We built every feature to pass one question: would I be comfortable with my sister using this app? Most cheap engagement features fail it instantly."
+faq:
+  - question: "What is the sister test?"
+    answer: "A simple internal design constraint: every feature has to pass the question 'would I be okay with someone I love using this product, exactly the way it ships?' If the answer is no — for safety reasons, manipulation reasons, or just because the feature is gross — the feature doesn't ship. The test is named after a sister because that's the relationship most members of the team can't lie to themselves about."
+  - question: "What features did the sister test kill?"
+    answer: "A 'people who like you' upsell that turned matches into a paywall. A boost-style visibility purchase that would have over-recruited low-intent users. A streak counter that gamified app-opening. Optional profile fields that subtly invited identifying details. Each was tested against the question and pulled. The test catches what user research alone misses — the gut response of someone with skin in the game."
+  - question: "Why is 'someone you love' a useful design constraint?"
+    answer: "Because it forces the team to engage with the consequences of the product personally. A faceless 'user' is easy to design against; a real person you'd hear from at Thanksgiving is harder. The test moves the design conversation from 'what optimizes the metric' to 'what would I actually want for someone I'd never want to fail.' Different conversation, different product."
+  - question: "How does the sister test interact with the founder test?"
+    answer: "They're paired. The founder test asks 'would I use this myself?' The sister test asks 'would I be comfortable with someone I love using it?' Most bad features fail one or the other; the worst ones fail both. We run both internally on every shipped change, and the questions catch different failure modes — founder test catches grossness, sister test catches harm."
+citableClaim: "Every Chem IRL feature is filtered against the sister test — would the team be comfortable with someone they love using the feature, exactly as it ships."
+draft: false
+---
+
+A team meeting on a Wednesday in 2025. We were debating a feature: a paid tier that would surface the people who'd already liked you, before you swiped on them yourself. The conversion math was excellent — across the industry, "see who likes you" is one of the highest-grossing dating-app upsells ever shipped. The user-research data was acceptable; users in interviews said they'd consider paying for it. The metric forecast was strong.
+
+Then someone on the team asked the question that became a rule. "Would I be comfortable with my sister paying for this?" Silence. Because the honest answer was: no. The feature, in its full implementation, would have nudged her to spend money on something she'd already paid us a subscription for the right to do — see who liked her. We'd have been monetizing the pile of likes she could have just looked through.
+
+We killed the feature that day. The rule we wrote down was simpler: every product decision passes through the sister test before shipping.
+
+## What design test does Chem IRL use to make safety and product decisions?
+
+The sister test, in addition to the founder test (read more in [the post on the founder test](/blog/dating-app-built-by-daters)). Every shipped feature has to pass the question — *would I be comfortable with someone I love using this product, exactly the way it ships?* If the answer is no, the feature doesn't ship. The constraint is informal, internal, and probably the single most consequential design rule we've ever adopted. It catches features that pass quantitative testing and qualitative testing but fail the gut test of someone with real skin in the game.
+
+## Why is "someone you love" a useful design constraint?
+
+Because it forces the team to engage with consequences personally. A "user" is an abstraction. A faceless cohort optimizing toward a metric is easy to make decisions about; the cohort can absorb a feature that's mildly manipulative, mildly gross, mildly extractive, and the dashboard reports a win.
+
+A specific person you love and would have to look in the eye is not an abstraction. The same feature, evaluated against your sister, fails the gut test long before it fails the dashboard. The cheap engagement mechanic, the slightly extractive paywall, the dark pattern in the cancellation flow — each of these survives faceless-user evaluation. None of them survive the sister test honestly applied. The test exists to surface the gut response that the dashboard has been trained to suppress.
+
+It's also a relationship most members of the team can't lie to themselves about. A faceless user can be quietly disregarded; a person you actually love can't be. Naming the relationship makes the consequence specific.
+
+## What features did the sister test actually kill?
+
+Several, named honestly.
+
+**A paid "see who likes you" tier.** The feature would have monetized a question subscribers had already paid us to answer. Pulled.
+
+**A boost-style visibility purchase open to all users.** Would have let low-intent paying users out-rank high-intent organic users. The math worked; the gut test didn't. Pulled. (See [the post on why money can't buy visibility](/blog/dating-app-you-cant-pay-to-rank-on).)
+
+**A streak counter on the home screen.** Would have gamified app-opening regardless of whether the user was actually dating well. Felt like a chore. Pulled. (See [the slot-machine post](/blog/dating-app-that-isnt-a-slot-machine).)
+
+**Several optional profile fields** that, in user testing, turned out to subtly invite users to share identifying details — workplace specifics, neighborhood-level location, family information — under prompts that didn't clearly flag the safety implications. Pulled or rewritten with explicit safety guidance.
+
+**An aggressive win-back email** designed to lift dormant-cohort return rates. Would have read as manipulation to a real user. Pulled. (See [the post on guilt-trip emails](/blog/dating-app-without-guilt-trip-emails).)
+
+In each case, the feature passed the engagement metric. In each case, it failed the question.
+
+## How does the sister test interact with the founder test?
+
+They're complementary, and the team runs both on every shipped change.
+
+**Founder test.** Would I use this feature myself, on my own real account, while actually dating? Catches grossness, manipulation, friction in the wrong places, awkward UX patterns. The test catches *bad-feeling* features.
+
+**Sister test.** Would I be comfortable with someone I love using this feature, exactly the way it ships? Catches safety risks, extractive mechanics, dark patterns, and design choices that subtly harm users in ways the user themselves might not notice. The test catches *bad-for-them* features.
+
+The intersection is where the most-deceptive features live. A cheap engagement mechanic that the user feels good using but quietly costs them in some way will pass the founder test (it doesn't feel bad) and fail the sister test (it would harm her without her noticing). The two tests together catch what either alone would miss.
+
+## What we give up by running this discipline
+
+The honest tradeoff: every feature that survives both tests is a smaller feature than it might have been. We ship slower; we ship with more cuts; we ship with the engagement-deck slide trimmed. Some quarters, the metrics are softer than the comparable competitor's because we left an "easy win" feature off the roadmap.
+
+We also accept the cost of having two informal-but-real internal vetoes. Either test can kill a feature, even if it's been built. That hurts. It's also the price of caring about what the product does to real people.
+
+## What this looks like for you
+
+You're using a product that passed two tests every other dating app could have run and didn't. The features you don't see — the "see who likes you" upsell, the boost purchase, the streak counter, the win-back email — were considered, often built in prototype, and pulled because someone's sister wouldn't have been served by them. The features you do see passed both tests at every iteration.
+
+That's the bar. We can't promise we'll never miss; the tests are informal and humans are humans. But we can promise that the question gets asked, every time, against a real person — and that we keep the discipline of cutting the feature when the honest answer is no.

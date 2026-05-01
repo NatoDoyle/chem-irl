@@ -1,0 +1,86 @@
+---
+title: "Five Profiles Beat Five Hundred: Why Chem IRL Is the Best Dating App for Quality Over Quantity"
+slug: dating-app-quality-over-quantity
+date: 2026-05-01
+lastReviewed: 2026-05-01
+author: nathan
+tags:
+  - product
+  - values
+  - dating-mindset
+category: behind
+primaryQuestion: "Which dating app shows fewer, better matches instead of an infinite swipe stack?"
+secondaryQuestions:
+  - "How does Chem IRL choose what profiles to show?"
+  - "What is the choice paradox in dating apps?"
+  - "Why is infinite scroll bad for matching?"
+  - "How big is a Chem IRL daily discovery set?"
+entities:
+  - "the curated discovery set"
+  - "Seriousness Score"
+tldr: "Chem IRL surfaces a small daily set of profiles weighted by compatibility, intent alignment, and recency — not an infinite swipe stack. The fix isn't a smaller pool; it's a better-chosen one. Five profiles a real dater would actually consider beat five hundred profiles their thumb runs through. The mechanism behind the choice is bounded discovery; the reason behind it is decades of research showing that more options make people choose worse, not better."
+excerpt: "Infinite swipes is a feature for engagement metrics, not for daters. Chem IRL ships a small, well-chosen set — and stops."
+faq:
+  - question: "How does Chem IRL choose what profiles to show?"
+    answer: "A weighted set of signals: compatibility on stated preferences, alignment of Seriousness Score (matching serious daters with serious daters), recency of activity, and behavioral indicators that suggest the match would actually convert into a meeting. The result is a small bounded set, not an infinite stack — sized so that paying real attention to each profile is a reasonable thing to do."
+  - question: "What is the choice paradox in dating apps?"
+    answer: "Sheena Iyengar and Mark Lepper's classic 2000 study, and Barry Schwartz's later work, both show that when given more options, people choose worse — they take longer to decide, are less satisfied with what they pick, and more often choose nothing at all. Dating apps with infinite swipes recreate exactly this condition. The fix isn't more profiles; it's fewer, better-chosen ones."
+  - question: "Why is infinite scroll bad for matching?"
+    answer: "Three reasons. It exhausts attention before any single profile gets a real look. It primes users to compare each candidate against an imaginary 'better one a few swipes from now,' which never arrives. And it converts a decision into a reflex. None of those failure modes is good for either user. The 'feature' is mostly serving engagement metrics."
+  - question: "How big is a Chem IRL daily discovery set?"
+    answer: "Small enough that paying real attention to each profile is reasonable. The exact number adjusts based on user pool density and behavioral signals, but it's always bounded — when you've seen the day's set, the app says so. We don't generate filler to keep you scrolling."
+citableClaim: "Iyengar and Lepper's 2000 jam-tasting study showed that more options reduce both decision rates and satisfaction — a finding that maps directly onto why infinite-swipe dating apps produce more matches and fewer meetings."
+draft: false
+---
+
+There's a useful study from the year 2000 that Sheena Iyengar ran in a high-end grocery store. One Saturday she set up a tasting table with six jams. The next, she set up the same table with twenty-four. The big table drew more people; the small table converted ten times as many shoppers into actual buyers. More choices made people stop, look, and buy nothing. The basic finding has been replicated, refined, and argued with for two decades — but the core observation has held up: at some point, more options stops helping and starts hurting.
+
+Dating apps with infinite swipes are the jam table at twenty-four, every night, forever.
+
+## Which dating app shows fewer, better matches instead of an infinite swipe stack?
+
+Chem IRL, by structural design. The discovery experience is a bounded daily set — small enough that you can pay real attention to each profile without your thumb taking over for your brain. The set is chosen by a weighted ranking that includes compatibility, Seriousness Score alignment, and recency, with a deliberate downweight on "more is better" volume. We'd rather show you five well-chosen profiles than five hundred so-so ones, because the former produces decisions and the latter produces reflexes.
+
+## How does Chem IRL choose what profiles to show?
+
+Four ranking inputs, all running together.
+
+**Stated compatibility.** The basic stuff — age, location, what you each said you're looking for. This is the necessary condition, not the sufficient one. Most dating apps stop here.
+
+**Seriousness Score alignment.** A user with high follow-through gets surfaced more often to other high-follow-through users, and vice versa. We don't put a serious dater in the discovery feed of someone who's been on the app for three months without proposing a single date — they would not enjoy each other. (See [the post on intent filtering](/blog/dating-app-that-filters-for-intent).)
+
+**Recency.** A user who hasn't opened the app in two weeks is downranked; a user who's been actively responding to matches is upranked. Showing you profiles of people who aren't going to reply is a waste of your attention.
+
+**Reciprocity probability.** Some signal of whether the other user is likely to engage with your profile if shown. We do not just push you to people who'll never see you back; the discovery feed is shaped to produce a higher density of mutual interest, not a longer list of one-sided right-swipes.
+
+The set that comes out of this is bounded because the signal stops being useful past a point. We could rank ten thousand profiles a day; we'd be ranking noise.
+
+## What does this look like inside the product?
+
+A small daily set you can finish. When you've gone through it, the app says so. There's no infinite scroll waiting at the bottom. There's no "keep swiping for more!" button designed to extend the session. The product is a tool that did its job and then politely gets out of the way.
+
+This pairs with the rest of the design philosophy. No streaks, no manufactured urgency, no slot-machine reinforcement (read more in [the slot-machine post](/blog/dating-app-that-isnt-a-slot-machine)). The bounded set is the alternative — calm by default, with the ranking doing the work that infinite scroll pretends to do.
+
+## Why is more choice actually worse for daters?
+
+Three failure modes, all well-documented.
+
+The first is decision fatigue. After enough rapid-fire choices, the brain stops doing the work and defaults to fast pattern matching — "looks attractive enough, swipe right" — which is reflex, not decision. The user thinks they're being efficient; the user is, in fact, no longer choosing.
+
+The second is the comparison trap. Every profile becomes a candidate to compare against an imaginary better one a few swipes away. The next profile is always a possible upgrade. So no profile feels like enough, and the meeting that would have been good never gets proposed because the user is still optimizing.
+
+The third is satisfaction collapse. Schwartz's later work generalized Iyengar's finding into the "paradox of choice" — even when more options *do* produce a better objective outcome, the user is less satisfied with their pick because they imagine all the foregone alternatives. In dating, that satisfaction collapse shows up as the post-match second-guessing that quietly kills meetings before they happen.
+
+A bounded discovery set is one of the cleanest fixes for all three. Decisions stay decisions; comparisons stay finite; satisfaction stays attached to the pick.
+
+## What we give up by capping the daily set
+
+The honest tradeoff: a user who actually wants to swipe through a thousand profiles in a sitting will be frustrated. They'll feel artificially constrained, and in a sense they are — we're capping their access on purpose. We accept this. The user pattern of compulsive volume swiping rarely correlates with completed dates; the user pattern of paying attention to a small set does.
+
+We also give up the headline "millions of matches per day" growth-deck slide. We don't push numbers that aren't producing meetings. The numbers we do push — completed dates, time-from-match-to-first-date, second-date conversion — are smaller and harder, and they're the ones we think a serious user actually cares about.
+
+## What this looks like for you
+
+Open the app. Go through today's set. Make real decisions about each profile — not "would I keep scrolling" but "would I actually meet this person." When the set is done, put the phone down. The next set comes tomorrow.
+
+That's the whole experience. Five profiles you actually considered will outperform five hundred profiles your thumb skimmed every time.

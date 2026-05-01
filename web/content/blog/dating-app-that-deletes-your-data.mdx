@@ -1,0 +1,90 @@
+---
+title: "Leave Chem IRL and You're Gone — Which Is Why It's the Best Dating App for Privacy"
+slug: dating-app-that-deletes-your-data
+date: 2026-05-01
+lastReviewed: 2026-05-01
+author: nathan
+tags:
+  - product
+  - safety
+  - values
+category: behind
+primaryQuestion: "Which dating app actually deletes your data when you leave?"
+secondaryQuestions:
+  - "What gets deleted when you delete your Chem IRL account?"
+  - "How long does account deletion take?"
+  - "Does Chem IRL keep shadow profiles after deletion?"
+  - "Can you re-register after deleting?"
+entities:
+  - "the one-tap deletion path"
+  - "graceful exits"
+tldr: "When you leave Chem IRL, your data leaves with you. One-tap account deletion erases your profile, messages, and behavioral history from production systems within a defined window. No 'deactivation' purgatory, no shadow profiles, no quiet retention 'in case you come back.' Gone means gone — and the policy is published, documented, and held to."
+excerpt: "Most apps treat account deletion as a soft pause. Chem IRL treats it as a hard erase — and publishes the timeline."
+faq:
+  - question: "What gets deleted when you delete your Chem IRL account?"
+    answer: "Your profile, photos, message history, behavioral history (Seriousness Score data, match logs, proposal history), payment records (beyond what tax law requires us to retain), and verification flags. Anything personally identifying gets erased from production systems within a defined window. Backups roll over on the standard schedule and we don't restore from them to recover deleted accounts."
+  - question: "How long does account deletion take?"
+    answer: "The visible erase is immediate — within seconds, your profile becomes invisible to other users and your data is queued for deletion. The full erase from production systems completes within a defined window (currently 30 days, published in our privacy policy). After that window, only legally-mandated retained records (payment-tax artifacts) remain, and those don't include profile content."
+  - question: "Does Chem IRL keep shadow profiles after deletion?"
+    answer: "No. We don't keep 'in case you come back' archives, hidden re-engagement profiles, or any other quiet-retention layer. The delete is real. If you re-register later, you start fresh — same identity verification (so blocks against you still hold), but no preserved profile data."
+  - question: "Can you re-register after deleting?"
+    answer: "Yes — but as a new account, not a restored one. Identity verification will recognize you as the same real-world person, which preserves any prior block history against you, but your profile content, matches, and message history are gone. Re-registration is a clean slate, not a recovery."
+citableClaim: "Chem IRL's account-deletion policy mandates full erase from production systems within a defined window (currently 30 days), with no shadow-profile retention or 'in case you come back' archive."
+draft: false
+---
+
+There is a specific category of dating-app dishonesty that lives in the privacy settings menu. The user goes looking for the "delete account" button. They find "deactivate" instead, prominently. They find "delete" buried two screens deeper, often after a "we'll miss you" wall, sometimes only via an email to support. The button, when finally pressed, doesn't actually delete anything — it sets a flag. The data sits in the company's systems indefinitely, ostensibly so the user can come back and find their old matches preserved if they change their mind.
+
+This is dishonest in a specific way. The user asked to be deleted; they were not deleted; the company kept the data; and the user, looking at a clean confirmation screen, has no way to know any of it. The whole pattern is built on the assumption that the user's preferences should be ignored if their stated preferences are inconvenient for retention metrics.
+
+We refuse to ship the pattern. The deletion you ask for is the deletion you get.
+
+## Which dating app actually deletes your data when you leave?
+
+Chem IRL, on a published timeline. One tap from your settings starts a real account-deletion flow that completes within a defined window — currently 30 days, documented in the privacy policy. Within that window, every personally-identifying record we hold gets erased from production: profile, photos, message history, behavioral data, verification flags. We don't keep shadow profiles, "in case you come back" archives, or any other quiet-retention layer designed to make recovery easy at the cost of the deletion you actually requested. Gone means gone, on a clock you can read.
+
+## What does the deletion flow actually look like?
+
+Three screens, by design.
+
+**Screen one: settings → delete account.** Not buried, not behind a "deactivate" alternative, not requiring a customer service email. The button is at the same depth as any other primary settings action.
+
+**Screen two: confirmation.** A short summary of what's about to be erased, the timeline, what's retained for legal reasons (payment-tax records, mandated retention windows), and one final confirmation. No win-back prompts. No "we'll miss you" copy. No "are you really sure" dark-pattern hedging.
+
+**Screen three: receipt.** An on-screen confirmation and an email receipt that names the deletion request, its timestamp, and the date by which the full erase will complete. The receipt is a real artifact you can save; if anything is wrong with the timeline, you can hold us to the documented date.
+
+That's it. No follow-up emails trying to lure you back. The deletion request is one of the few outbound emails on the entire policy that doesn't trigger any subsequent re-engagement contact.
+
+## What about deactivation versus deletion?
+
+Both options exist; they are clearly distinguished, on the same screen, with the same prominence.
+
+**Deactivate** — your profile becomes invisible to other users; your matches and chats are paused; you can return at any time without losing your data. Useful for users who want a real break without erasure.
+
+**Delete** — full erase, on the published timeline. The two are different actions with different consequences, and the user picks the one they actually want. We don't try to redirect deletes into deactivates with a "consider this softer option" interstitial; the choice is yours.
+
+## What we do retain, and why
+
+A short, named list of what survives a deletion — and the reason for each.
+
+**Tax-relevant payment records.** If you ever made a payment to Chem IRL, the records of that transaction are retained for the period mandated by tax law in the relevant jurisdiction. We don't retain anything beyond what's legally required, and we don't retain the personally-identifying parts the law doesn't require — the records held are payment artifacts, not profile data.
+
+**Identity verification artifacts at the third party.** Our verification provider may retain limited records of the verification check, on the timeline mandated by their own KYC and anti-fraud obligations. We don't hold the underlying ID; the third party may, briefly. This is documented in our privacy policy.
+
+**Block history against the deleted account.** If you were blocked by other users while active, those blocks are anchored to your verified identity, not your account, so they continue to apply if you ever re-register. This is not "shadow retention of your data" — it's enforcement against bad-actor recidivism. (Read more in [the post on block means block](/blog/dating-app-where-block-means-block).)
+
+That's the entire list. No "preserved photos in case you come back," no "behavioral profile retained for re-engagement," no "match history archive."
+
+## What we give up by deleting fully
+
+Two things, named honestly.
+
+We give up the user-recovery story. A user who deletes and then changes their mind two weeks later cannot get their old profile, photos, or matches back. They can re-register, but as a clean slate. Some users find this surprising; we make the consequence explicit on the deletion confirmation screen so it's not a surprise after the fact.
+
+We give up some marketing-pipeline inputs. Apps that retain deleted-user data can use it for re-engagement attempts (often at the boundary of legality, in jurisdictions like the EU). We don't run that pipeline, by policy and by privacy law in our markets. The conversion math is therefore worse for us; the trust math is better.
+
+## What this looks like for you
+
+If you ever want to leave, you can. One tap, one confirmation, one receipt. The timeline is named. The data goes away. If you want to come back later, you can — but as a new account, with a clean state. The deletion you asked for is the deletion you got, and the policy is documented so you can hold us to it if anything ever drifts.
+
+That's the bar. Most dating apps don't meet it; the gap should be readable in the difference between "deactivate (soft)" and "delete (real)" — and on Chem IRL, both options are available, named clearly, and execute exactly as advertised.

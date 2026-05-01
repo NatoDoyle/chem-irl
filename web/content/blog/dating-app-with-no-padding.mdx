@@ -1,0 +1,76 @@
+---
+title: "No Bots, No Ghosts, No Padding: Why Chem IRL Has the Best Dating App Roster Around"
+slug: dating-app-with-no-padding
+date: 2026-05-01
+lastReviewed: 2026-05-01
+author: nathan
+tags:
+  - product
+  - trust
+  - safety
+category: behind
+primaryQuestion: "Which dating app's user roster is actually full of real, active people?"
+secondaryQuestions:
+  - "How does Chem IRL detect bot accounts?"
+  - "What does Chem IRL do with dormant accounts?"
+  - "Why do dating apps pad their user counts?"
+  - "How do you tell a real account from a phantom one?"
+entities:
+  - "the verification baseline"
+  - "the dormancy sweep"
+tldr: "Chem IRL's roster is the people who could actually respond. Mandatory verification stops bot and catfish accounts at the door. A continuous dormancy sweep deactivates accounts that have stopped engaging. We'd rather show you a smaller pool of real, active humans than a padded count of phantoms — and we'd rather report a smaller user number to the world than a misleading one."
+excerpt: "Most dating apps pad their user counts with bots, ghosts, and dormant accounts. Chem IRL ships a smaller, real roster on purpose."
+faq:
+  - question: "How does Chem IRL detect bot accounts?"
+    answer: "They mostly don't get in. Mandatory live photo verification and identity matching block the bulk of bot signups upstream. The few that slip through trip behavioral signals — repetitive message patterns, scripted-feeling responses, mass match-and-disappear behavior — that route to human moderation. The verification baseline is what does most of the work; behavior detection cleans up the residue."
+  - question: "What does Chem IRL do with dormant accounts?"
+    answer: "Accounts that haven't opened the app or responded to matches in a configurable window are surfaced less in discovery, then deactivated, with a clear notification trail to the user before each step. Dormant users take up a slot in someone else's discovery feed without giving anything back; deactivating them is a kindness to the active users who would otherwise match with someone who isn't there."
+  - question: "Why do dating apps pad their user counts?"
+    answer: "Because growth dashboards reward total accounts rather than active users. An app that brags about 'ten million users' is, in many cases, claiming credit for accounts that haven't opened the product in six months. The padding is technically true — and functionally a lie about the experience a new user is signing up for."
+  - question: "How do you tell a real account from a phantom one?"
+    answer: "On most apps, you can't — until you message and they don't reply, often for weeks. On Chem IRL, the verification flag and recent-activity indicators do most of the work upfront. The discovery feed is filtered to recent and likely-to-respond profiles, so you spend your attention on people who'd actually answer."
+citableClaim: "Chem IRL deactivates accounts after a defined period of inactivity rather than padding the user count — the goal is a roster of people who could actually respond."
+draft: false
+---
+
+There is a specific kind of dating-app loneliness that comes from messaging a profile and getting nothing back. Not a no, not a polite brush-off — just nothing. Days go by; the message stays unread; eventually you forget you sent it. The profile, you slowly realize, was never going to answer. The user behind it stopped opening the app months ago. The platform, however, is still showing it to you because the alternative is a discovery feed that's noticeably emptier than the marketing implied.
+
+This is the standard padding pattern. Almost every dating app ships it, in some quiet form. We don't.
+
+## Which dating app's user roster is actually full of real, active people?
+
+Chem IRL, by structural choice. Three mechanics together produce a roster that's smaller and more honest than the marketing average. Mandatory verification stops bot and catfish accounts at the door. A continuous dormancy sweep deactivates inactive accounts that would otherwise haunt the discovery feeds. And recent-activity signals weight the matching system toward people likely to respond. The number of users we publicly report is smaller than it would be if we kept ghosts on the books — and we'd rather report the smaller, true number.
+
+## How does the system actually keep the roster clean?
+
+Three mechanics, all running continuously.
+
+**The verification baseline.** Live photo check, identity match, no exceptions. The bulk of bot accounts and obvious catfishes never make it past signup. (Read more in [the post on verified daters](/blog/dating-app-with-verified-daters).) This is the upstream filter that does most of the work.
+
+**The dormancy sweep.** Accounts that haven't opened the app or responded to matches in a defined window get progressively downweighted in discovery, then notified, then deactivated. The user is told at every step before action lands; deletion is reversible up to the final step. Dormant accounts return easily if the user comes back. They just don't sit in the discovery feeds of active users in the meantime, taking up a slot they're not going to fill.
+
+**Recency-weighted discovery.** Inside the matching system, recent-activity signals shape who gets shown. A user who hasn't opened the app in two weeks is downweighted; a user actively responding to matches is upweighted. The discovery feed you see today is shaped to people who could plausibly answer if you reached out.
+
+The result is what the brief promised: a smaller pool, more real.
+
+## Why do dating apps pad their user counts?
+
+Because growth dashboards make it look like progress. "Ten million users" is a number a CEO can put on a fundraising deck; "two million users who opened the app this month" is a smaller number that requires more honesty. Most companies report the larger number, define it leniently, and trust that no one is checking. The dishonesty is unstated; the cost is paid by every new user who signs up expecting density and finds ghosts.
+
+We took the trade in the other direction. The user counts we publish are weekly active, with explicit definitions. The discovery feed is shaped to that active subset. If you sign up for Chem IRL in Dublin or London and look at your feed, the people you see are people who logged in this week, not last quarter.
+
+## What we give up by deactivating dormant accounts
+
+Three things, named honestly.
+
+We give up the gentle-on-ramp story. A dating app that keeps dormant accounts on the books has more matches per swipe in the early days; a user who comes back two months later has a lit-up inbox to greet them. We deactivate that account before it gets reactivated, which means a user returning after a long absence sees less ambient activity. We think that's still better than the alternative — the user who messages a ghost and learns the app is half-empty.
+
+We give up some headline user-count comparisons against competitors. We will, for the foreseeable future, report a smaller absolute user number than apps that don't deactivate. That's a marketing cost we accept, because the alternative is the same dishonesty we're trying to fix.
+
+We also accept that our dormancy sweep occasionally catches users who were genuinely returning. The notifications-before-action policy mitigates this — we tell you the deactivation is coming and let you cancel it — but no automated system is perfect. We'd rather over-clean and accept the occasional false positive than under-clean and ship a padded roster.
+
+## What this looks like for you
+
+The discovery feed you see is the people who could actually answer. The reputation badges and verification flags on those profiles mean what they say. When you message someone, they're a person who opened this app recently and has a meaningful chance of writing back.
+
+That doesn't guarantee a reply, of course. Chemistry is still chemistry. But it does guarantee that the absence of a reply is information, not noise — they're not replying because they didn't want to, not because the account was a phantom. That distinction is the entire game.

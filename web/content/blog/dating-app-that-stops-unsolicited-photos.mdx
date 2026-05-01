@@ -1,0 +1,82 @@
+---
+title: "Stopping Unsolicited Photos Before They Land: Why Chem IRL Is the Best Dating App for Inbox Safety"
+slug: dating-app-that-stops-unsolicited-photos
+date: 2026-05-01
+lastReviewed: 2026-05-01
+author: nathan
+tags:
+  - product
+  - safety
+  - photo-verification
+category: behind
+primaryQuestion: "Which dating app blocks unsolicited explicit photos before they reach an inbox?"
+secondaryQuestions:
+  - "How does Chem IRL detect explicit images?"
+  - "What happens to a sender who sends explicit content?"
+  - "Is on-device classification a privacy concern?"
+  - "Why don't more dating apps screen images?"
+entities:
+  - "the on-device classifier"
+  - "Seriousness Score"
+tldr: "On-device image classification screens explicit content before it ever reaches an inbox. Senders are flagged and lose Seriousness Score immediately. Recipients never have to see what they didn't ask for — full stop, no debate. The classifier runs locally on the sender's device, so the image is never uploaded to our servers for moderation; the harm is stopped at the source, not after the fact."
+excerpt: "Most apps process unsolicited photos after the recipient has already seen them. Chem IRL stops them at the sender's device, before they're sent."
+faq:
+  - question: "How does Chem IRL detect explicit images?"
+    answer: "An on-device classifier runs on every image at the moment of sending. It detects nudity and explicit content using a small model that lives in the app and never leaves the sender's phone. If the classifier flags the image and the sender hasn't been explicitly asked to send one, the message is held and the sender gets a clear interstitial. The recipient doesn't see the image at all in those cases."
+  - question: "What happens to a sender who sends explicit content?"
+    answer: "First flag: a clear interstitial explaining the policy and the cost. Second flag: a sharper warning and an immediate hit to the Seriousness Score, reducing visibility. Repeat patterns: account suspension and human-moderator review. We do not gradually escalate enforcement over weeks; the consequences are visible to the sender on the first attempted send."
+  - question: "Is on-device classification a privacy concern?"
+    answer: "It's the opposite. On-device classification means the image never leaves the sender's phone — we don't upload it to our servers to inspect, we don't store it, we don't see it. The classifier is a small model that runs locally and returns a yes/no flag. This is meaningfully more privacy-preserving than the alternative of cloud-side moderation."
+  - question: "Why don't more dating apps screen images?"
+    answer: "Because building the on-device classification path is technical work, and most apps default to either not screening at all or screening cloud-side after the recipient has already received the image. The on-device approach requires shipping a model in the client, calibrating it carefully, and accepting some classifier load on the device — costs most teams skip."
+citableClaim: "Chem IRL screens images on the sender's device before transmission — explicit content is intercepted at the source rather than processed cloud-side after the recipient has already seen it."
+draft: false
+---
+
+The standard cycle on most dating apps is the one most users have been through at least once. The image arrives. You see it before you can stop yourself. You report it; you block the sender; the report sits in a queue for hours or days. The harm — the seeing — already happened. The remediation, when it comes, is a quiet email about an account being suspended. The sender, often, has already moved on to the next person.
+
+The whole sequence is designed around the assumption that unsolicited explicit images are a thing that happens, gets reported, and gets reviewed afterward. We rejected the assumption. The harm is the receiving; we built the system to stop the receiving, not to clean up after it.
+
+## Which dating app blocks unsolicited explicit photos before they reach an inbox?
+
+Chem IRL, by an on-device classification step that runs at the moment of sending, on the sender's phone. If the classifier flags the image as explicit, the message is held — not delivered — and the sender gets an immediate interstitial explaining the policy and the cost. The recipient sees nothing. Repeat attempts produce escalating consequences against the sender's Seriousness Score and account, all on the first try; we do not gradually escalate harm exposure over weeks.
+
+## How does the on-device classifier work?
+
+A small image-classification model lives inside the app on the sender's phone. When the sender attaches an image to a chat message, the model runs locally — entirely on the device — and returns a yes/no signal on whether the image is likely explicit. The flagged-image path is held for sender review (and Seriousness Score consequence); the clean-image path delivers normally. The image itself never leaves the sender's device for moderation; we do not upload it to our servers to inspect.
+
+This is meaningfully more privacy-preserving than the alternative architectures. Cloud-side moderation requires sending the image to a server for inspection, which means the platform sees and (usually) stores it. On-device classification keeps the image on the sender's phone unless and until the recipient has consented to receive it. We did the on-device work because it was the only architecture that met both the safety and privacy bars at once.
+
+## What happens to a sender who sends explicit content?
+
+The escalation is fast and explicit, on the first attempted send.
+
+**First flag.** Clear interstitial: *"This image appears to contain explicit content. The recipient did not ask for it. Sending it will cost you account standing. Are you sure?"* The image is held. If the sender confirms, it's logged and the score drops; if they cancel, the image is discarded.
+
+**Second flag in the same account.** A sharper warning and a larger Seriousness Score hit. Discovery visibility falls noticeably. The flag goes into the moderation queue for human review.
+
+**Repeat patterns.** Account suspension. The verification baseline (read more in [the post on verified daters](/blog/dating-app-with-verified-daters)) means a suspended user cannot trivially create a new account to start over.
+
+The consequences are not graduated over weeks of bad behavior. They land the first time the sender tries to do this thing. The asymmetry is intentional — the cost of one missed catch is borne by a recipient, and we'd rather over-warn the sender than under-protect the recipient.
+
+## What about cases where photos are mutually wanted?
+
+The system is built to recognize consent at the explicit message level. If two users have explicitly agreed to share certain images and the system has read the consent — through specific in-app actions, not vague NLP guesses — the flag still appears for the sender (so they're aware) but the message is delivered. We err heavily on the side of "did the recipient affirmatively agree to receive this." Implicit-consent inferences are not enough; we want a recorded, intentional yes.
+
+The default is no. The exception requires evidence.
+
+## What we give up to do this
+
+Three things, named honestly.
+
+We give up the simplicity of cloud-side-only moderation. On-device classification means shipping a model in the client, keeping it updated, calibrating it across image types, and accepting some on-device compute cost. It's meaningfully more engineering work than the standard server-side path. We did the work because the privacy and speed benefits matter; we'll continue paying that cost.
+
+We give up some classifier accuracy at the edges. On-device models are smaller than cloud models and miss edge cases the cloud classifier might catch. We mitigate this by tuning the model toward false positives over false negatives — better to ask the sender "are you sure?" on a borderline image and be wrong than to deliver an explicit image to an unwilling recipient.
+
+We accept the cost of building consent flows that are robust enough to read. A simpler product would just block all flagged images forever; we wanted to allow consent because mature users sometimes do consent, and the right product respects that. Building consent infrastructure that's hard to game is the work.
+
+## What this looks like for you
+
+If someone tries to send you an unsolicited explicit image on Chem IRL, you don't see it. The system catches the image on the sender's device, holds it, and confronts the sender with the cost. The image either gets canceled or — if the sender chooses to push through — gets logged against their account and produces immediate consequences. Either way, your inbox stays clean.
+
+If you ever consider sending an explicit image yourself, you'll get the same flag, with the same warning. The system won't help you guess what the recipient wants; it will ask them, in a recordable way, before delivery. That's the bar.
