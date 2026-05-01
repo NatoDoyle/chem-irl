@@ -20,6 +20,7 @@ import ProfileSetupScreen from '../screens/onboarding/ProfileSetupScreen';
 import PhotosScreen from '../screens/onboarding/PhotosScreen';
 import LocationPermissionScreen from '../screens/onboarding/LocationPermissionScreen';
 import ProfileReviewScreen from '../screens/onboarding/ProfileReviewScreen';
+import IrisInterviewScreen from '../screens/iris/IrisInterviewScreen';
 
 export type OnboardingStackParamList = {
   GenderIdentity: undefined;
@@ -39,6 +40,9 @@ export type OnboardingStackParamList = {
   Photos: undefined;
   LocationPermission: undefined;
   ProfileReview: undefined;
+  // Iris is an off-track optional screen reachable from ProfileReview.
+  // Deliberately not in SCREEN_ORDER so the step counter stays at 17.
+  IrisInterview: undefined;
 };
 
 const SCREEN_ORDER: (keyof OnboardingStackParamList)[] = [
@@ -110,6 +114,11 @@ export default function OnboardingNavigator() {
       <Stack.Screen name="Photos" component={PhotosScreen} />
       <Stack.Screen name="LocationPermission" component={LocationPermissionScreen} />
       <Stack.Screen name="ProfileReview" component={ProfileReviewScreen} />
+      <Stack.Screen
+        name="IrisInterview"
+        component={IrisInterviewScreen}
+        options={{ headerShown: false }}
+      />
     </Stack.Navigator>
   );
 }

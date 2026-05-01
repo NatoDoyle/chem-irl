@@ -201,6 +201,17 @@ export default function ProfileReviewScreen() {
           )}
         </TouchableOpacity>
       </View>
+
+      {/* Optional Iris interview path. Existing Complete & Enter App above
+          stays the canonical finishing flow; tapping below diverts to a
+          skippable extra step. */}
+      <TouchableOpacity
+        style={styles.irisLink}
+        onPress={() => navigation.navigate('IrisInterview')}
+        disabled={saving}
+      >
+        <Text style={styles.irisLinkText}>Want a hand? Talk to Iris first →</Text>
+      </TouchableOpacity>
     </ScrollView>
   );
 }
@@ -290,5 +301,15 @@ const styles = StyleSheet.create({
     color: BRAND_COLORS.onPrimary,
     fontSize: 18,
     fontFamily: TYPOGRAPHY.fontFamily.semibold,
+  },
+  irisLink: {
+    marginTop: 16,
+    paddingVertical: 12,
+    alignItems: 'center',
+  },
+  irisLinkText: {
+    color: BRAND_COLORS.aqua[300],
+    fontSize: 14,
+    fontFamily: TYPOGRAPHY.fontFamily.medium,
   },
 });

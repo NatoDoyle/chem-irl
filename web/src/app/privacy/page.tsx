@@ -117,6 +117,30 @@ export default function PrivacyPage() {
                   services for hosting, analytics, and notifications.
                 </li>
                 <li>
+                  <strong>AI sub-processor (Iris feature, opt-in):</strong> If
+                  you choose to use the Iris AI concierge, the contents of your
+                  conversations with Iris and a structured summary of what you
+                  share are processed by Anthropic, PBC (Claude API). Anthropic
+                  retains API request data for up to 30 days for trust and
+                  safety review per its{' '}
+                  <a
+                    href="https://www.anthropic.com/legal/privacy"
+                    className="underline"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    privacy policy
+                  </a>
+                  ; we do not authorize Anthropic to use your data to train
+                  models. Your matches are not informed when you use Iris, and
+                  the matched user&apos;s data is never sent to Anthropic on
+                  your behalf. You can decline Iris at signup, stop using it
+                  at any time, and request erasure of your Iris conversations
+                  and memory through Profile &rarr; Iris &rarr; &ldquo;Delete
+                  my Iris data.&rdquo; Doing so does not affect any other
+                  Chem IRL feature.
+                </li>
+                <li>
                   <strong>Legal requirements:</strong> We may share information
                   if required by law or to protect safety.
                 </li>
