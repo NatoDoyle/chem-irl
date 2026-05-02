@@ -1,20 +1,49 @@
+import Constants, { ExecutionEnvironment } from 'expo-constants';
 import { Platform } from 'react-native';
-import {
-  initConnection,
-  endConnection,
-  fetchProducts,
-  requestPurchase,
-  purchaseUpdatedListener,
-  purchaseErrorListener,
-  finishTransaction,
-  type Purchase,
-  type PurchaseError,
-  type Product,
-  type Subscription,
-  type EventSubscription,
-  type FetchProductsResult,
+import type {
+  Purchase,
+  PurchaseError,
+  Product,
+  Subscription,
+  EventSubscription,
+  FetchProductsResult,
 } from 'react-native-iap';
 import { supabase } from './supabase/client';
+
+// --- Errors ---
+
+/**
+ * Thrown when IAP is invoked while running inside Expo Go. The
+ * react-native-iap v14 native module is built on Margelo's NitroModules
+ * framework, which is not part of the Expo Go prebuilt runtime. To exercise
+ * purchase flows, run a development build (`eas build --profile development`)
+ * and install the dev client.
+ */
+export class IAPUnavailableInExpoGoError extends Error {
+  readonly code = 'iap-expo-go' as const;
+  constructor() {
+    super(
+      'In-app purchases require a development build. Run `eas build --profile development` and install the dev client to test purchases.'
+    );
+    this.name = 'IAPUnavailableInExpoGoError';
+  }
+}
+
+// --- Lazy loader ---
+
+type IAPModule = typeof import('react-native-iap');
+
+// Why: react-native-iap@14 is built on NitroModules, which Expo Go's
+// prebuilt JS engine cannot load. Requiring it lazily means importing iap.ts
+// (e.g. from PaywallModal) does not crash the app at boot in Expo Go; the
+// error only surfaces if a purchase function is actually called.
+function loadIAP(): IAPModule {
+  if (Constants.executionEnvironment === ExecutionEnvironment.StoreClient) {
+    throw new IAPUnavailableInExpoGoError();
+  }
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  return require('react-native-iap') as IAPModule;
+}
 
 // --- Product IDs ---
 
@@ -50,6 +79,7 @@ let purchaseErrorSubscription: EventSubscription | null = null;
 
 /** Initialize IAP connection and fetch product info from the store */
 export async function initIAP(): Promise<Product[]> {
+  const { initConnection, fetchProducts } = loadIAP();
   await initConnection();
   const result: FetchProductsResult = await fetchProducts({ skus: ALL_PRODUCT_IDS });
   // fetchProducts can return mixed Product/Subscription arrays or null;
@@ -90,6 +120,7 @@ export function getLoadedSubscriptions(): Subscription[] {
 
 /** Request a purchase for a given token pack */
 export async function purchaseTokens(productId: TokenProductId): Promise<void> {
+  const { requestPurchase } = loadIAP();
   await requestPurchase({
     type: 'in-app',
     request: {
@@ -101,6 +132,7 @@ export async function purchaseTokens(productId: TokenProductId): Promise<void> {
 
 /** Request a Chem Plus subscription purchase */
 export async function purchaseChemPlus(): Promise<void> {
+  const { requestPurchase } = loadIAP();
   await requestPurchase({
     type: 'subs',
     request: {
@@ -119,6 +151,8 @@ export function setupPurchaseListener(
   onSuccess: (purchase: Purchase) => void,
   onError: (error: PurchaseError) => void
 ): () => void {
+  const { purchaseUpdatedListener, purchaseErrorListener, finishTransaction } = loadIAP();
+
   // Remove any existing listeners before attaching new ones
   teardownPurchaseListeners();
 
@@ -189,6 +223,7 @@ export function setupPurchaseListener(
 
 /** Clean up IAP connection and listeners */
 export async function endIAP(): Promise<void> {
+  const { endConnection } = loadIAP();
   teardownPurchaseListeners();
   await endConnection();
   products = [];
