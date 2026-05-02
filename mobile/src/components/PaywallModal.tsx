@@ -10,7 +10,7 @@ import {
   PAYWALL_DISMISS_CTA,
 } from '../lib/iris/persona';
 import { startTrial } from '../lib/subscription';
-import { purchaseChemPlus } from '../lib/iap';
+import { IAPUnavailableInExpoGoError, purchaseChemPlus } from '../lib/iap';
 
 export interface PaywallModalProps {
   visible: boolean;
@@ -62,7 +62,11 @@ export default function PaywallModal(props: PaywallModalProps) {
       // the parent screen should re-check entitlement when the user returns.
       onClose();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Purchase did not start.');
+      if (err instanceof IAPUnavailableInExpoGoError) {
+        setError(err.message);
+      } else {
+        setError(err instanceof Error ? err.message : 'Purchase did not start.');
+      }
     } finally {
       setPending(null);
     }

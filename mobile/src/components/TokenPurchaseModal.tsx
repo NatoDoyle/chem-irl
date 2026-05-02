@@ -2,7 +2,12 @@ import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Modal, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { BRAND_COLORS, GOLD, MIDNIGHT, TYPOGRAPHY, SPACING } from '../config/brand';
 import { getTokenBalance } from '../lib/tokens';
-import { purchaseTokens, TOKEN_PRODUCTS, type TokenProductId } from '../lib/iap';
+import {
+  IAPUnavailableInExpoGoError,
+  purchaseTokens,
+  TOKEN_PRODUCTS,
+  type TokenProductId,
+} from '../lib/iap';
 
 // --- Types ---
 
@@ -66,7 +71,11 @@ export default function TokenPurchaseModal({
         setSuccess(true);
         onPurchaseComplete();
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Purchase failed. Please try again.');
+        if (err instanceof IAPUnavailableInExpoGoError) {
+          setError(err.message);
+        } else {
+          setError(err instanceof Error ? err.message : 'Purchase failed. Please try again.');
+        }
       } finally {
         setPurchasing(null);
       }
