@@ -16,7 +16,7 @@ secondaryQuestions:
   - "Does being selective hurt your reach on Chem IRL?"
   - "What's the difference between selectivity and avoidance?"
 entities:
-  - "Seriousness Score"
+  - "post-match behavior weighting"
   - "the selectivity-disengagement distinction"
 tldr: "Apps that throttle visibility for users with low match rates quietly pressure people to lower their standards. Chem IRL's algorithm separates selectivity from disengagement — being choosy doesn't hurt your reach, as long as you're showing up when matches happen. Selectivity is what good dating looks like; disengagement is the actual problem. Most apps conflate the two on purpose."
 excerpt: "Most apps quietly punish picky users. Chem IRL separates 'choosy' from 'absent' — and the algorithm rewards the first."
@@ -24,13 +24,13 @@ faq:
   - question: "Why do dating-app algorithms punish low match rates?"
     answer: "Because most matching algorithms confuse low match rate (a sign of selectivity) with low engagement (a sign of dropping off). The algorithm reads both as 'this user isn't producing matches,' downweights the user's visibility, and the picky user gets buried alongside the dormant one. The fix is reading what the user actually does after a match — not just the swipe-to-match ratio."
   - question: "How does Chem IRL distinguish picky from disengaged?"
-    answer: "By post-match behavior, not match rate. A user who right-swipes selectively but engages fully with the matches they do get — replying, proposing, following through — is read as picky. A user who matches at any rate but then ghosts, never proposes, or doesn't respond is read as disengaged. The Seriousness Score weights post-match behavior heavily and match rate barely at all."
+    answer: "By post-match behavior, not match rate. A user who right-swipes selectively but engages fully with the matches they do get — replying, proposing, following through — is read as picky. A user who matches at any rate but then ghosts, never proposes, or doesn't respond is read as disengaged. The algorithm weights post-match behavior heavily and match rate barely at all."
   - question: "Does being selective hurt your reach on Chem IRL?"
     answer: "No. As long as you're showing up when matches happen — replying within reasonable windows, proposing real times, following through — selectivity doesn't cost visibility. We do not gate your reach behind a high swipe-to-match ratio. Being honest about who you'd actually like to meet is the right behavior, and we don't penalize it."
   - question: "What's the difference between selectivity and avoidance?"
     answer: "Selectivity is right-swiping less but engaging fully when you match. Avoidance is right-swiping more (or less) but consistently failing to follow through after a match — ghosting threads, missing proposals, no-showing dates. Selectivity is the behavior of someone who knows what they want; avoidance is the behavior of someone who doesn't actually want to meet anyone. The two need to be measured differently."
-citableClaim: "Chem IRL's Seriousness Score weights post-match behavior — replies, proposals, follow-through — far more heavily than swipe-to-match ratio, on purpose."
-draft: true
+citableClaim: "Chem IRL's discovery algorithm weights post-match behavior — replies, proposals, follow-through — far more heavily than swipe-to-match ratio, on purpose."
+draft: false
 ---
 
 The discovery feed felt narrower last week. Fewer profiles, lower variance, fewer of the kind of people you'd actually want to meet. You couldn't pin down what changed, but you'd been more discerning lately — right-swiping only when something genuinely caught your eye, ignoring the close-but-not-quite profiles you used to give a chance. The app, in response, had quietly throttled your reach. The match rate it cared about — swipes-in versus matches-out — had dropped, and the algorithm read it as you being broken.
@@ -53,15 +53,15 @@ Because they're optimizing for the wrong thing. Most matching systems treat matc
 
 These five user states are entirely different in what they imply about the user's value to the platform. The first is the most-valued user on the platform. The fifth is the user we'd want to deactivate gracefully. Lumping all five together under "low match rate = throttle" is sloppy at best and corrosive at worst.
 
-We unbundle. (Read more about how the Seriousness Score reads behavior in [the post on filtering for intent](/blog/dating-app-that-filters-for-intent).)
+We unbundle.
 
 ## How does Chem IRL distinguish picky from disengaged?
 
 By looking at what happens after a match, not at how often matches happen.
 
-A user who right-swipes 5% of profiles but, when matched, replies within hours, proposes specific times, and follows through on dates — that's the picky-but-engaged user. The Seriousness Score reads them clearly: post-match behavior is exemplary; the system rewards them with sharper discovery and more visibility, even though the raw match rate is low.
+A user who right-swipes 5% of profiles but, when matched, replies within hours, proposes specific times, and follows through on dates — that's the picky-but-engaged user. The system reads them clearly: post-match behavior is exemplary; the algorithm rewards them with sharper discovery and more visibility, even though the raw match rate is low.
 
-A user who right-swipes 30% of profiles but ghosts active threads, never proposes, and consistently fails to show up — that's the disengaged user. The Seriousness Score reads them clearly too: post-match behavior is poor; the system reduces their visibility, regardless of the high match rate.
+A user who right-swipes 30% of profiles but ghosts active threads, never proposes, and consistently fails to show up — that's the disengaged user. The system reads them clearly too: post-match behavior is poor; visibility goes down, regardless of the high match rate.
 
 The two users would be treated identically by a swipe-rate-driven algorithm. They are treated very differently by ours, on purpose. The behavior after the match is what matters; the swipe before it is incidental.
 
@@ -69,7 +69,7 @@ The two users would be treated identically by a swipe-rate-driven algorithm. The
 
 Three things, all good news.
 
-**Selectivity is rewarded, not punished.** Right-swiping carefully and engaging fully when matches happen is the highest-trust behavior on the platform. The Seriousness Score reflects it. Visibility goes up, not down.
+**Selectivity is rewarded, not punished.** Right-swiping carefully and engaging fully when matches happen is the highest-trust behavior on the platform. The algorithm reflects it. Visibility goes up, not down.
 
 **Standards are protected.** A user who's been deliberately deciding not to settle isn't being subtly trained into lower standards by the algorithm. The fastest way to "fix" your discovery feed isn't to swipe right on more people; it's to keep showing up well after the matches you do make.
 

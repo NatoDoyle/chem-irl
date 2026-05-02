@@ -16,7 +16,7 @@ secondaryQuestions:
   - "Where does Chem IRL remove friction?"
   - "Is making bad behavior cost more a dark pattern?"
 entities:
-  - "match-reactivation tokens"
+  - "asymmetric friction"
   - "the 72-hour rule"
 tldr: "Sending a low-effort opener takes a beat. Repeated bad behavior costs visibility. But proposing a time, sharing your calendar, or actually meeting up? Frictionless. Chem IRL makes the right things easy and the wrong things expensive — by design. That's friction design, applied to dating, with the asymmetry pointing the way the user's stated goals point."
 excerpt: "Make the right things easy, the wrong things expensive. That's the friction-design rule Chem IRL ships across every screen."
@@ -24,7 +24,7 @@ faq:
   - question: "What is friction design in a product?"
     answer: "The deliberate choice of where to make a product easy to use and where to slow the user down. Most products try to remove friction everywhere; the better move is asymmetric — frictionless on the actions that align with the user's stated goal, costly on the actions that work against it. Done well, friction design pushes the user toward what they said they wanted."
   - question: "Where does Chem IRL add friction on purpose?"
-    answer: "Low-effort openers take a beat to send (a small content check). Repeated no-shows mean matches expire (the 72-hour rule does this quietly). Match reactivation requires a token (real cost, used rarely). Photo verification adds a couple of minutes at signup. Each is friction on a behavior we don't want amplified — and the cost is paid by the behavior, not by the user generally."
+    answer: "Low-effort openers take a beat to send (a small content check). Repeated no-shows quietly reduce how often you're shown to other users (the algorithm does this without surfacing the cost). Match reactivation requires a token (real cost, used rarely). Photo verification adds a couple of minutes at signup. Each is friction on a behavior we don't want amplified — and the cost is paid by the behavior, not by the user generally."
   - question: "Where does Chem IRL remove friction?"
     answer: "Proposing a specific time inside chat: one tap. Sharing availability: one tap. Confirming a date happened: two taps. Blocking someone: long-press. Deleting your account: two screens, no win-back wall. Anything that pushes you toward a real meeting or a clean exit is built to be the easiest thing on the screen."
   - question: "Is making bad behavior cost more a dark pattern?"
@@ -63,11 +63,11 @@ Where the action would cost the rest of the user base if it were free.
 
 **A beat before sending a low-effort opener.** Messages flagged by content checks (slurs, scam keywords, certain harassment patterns) get a brief interstitial confirming the user wants to send. The cost is small for someone who actually wants to send the message; the friction collapses repeat-offender behavior surprisingly well.
 
-**Match expiry for flaking.** Cancellations inside the window, no-shows, ghosting active threads — each one is a behavior the 72-hour clock catches first; we're designing future signal-throttling against it. The cost is paid in matches the flaker doesn't see, not in punitive bans.
+**Visibility loss for flaking.** Cancellations inside the window, no-shows, ghosting active threads — each one quietly reduces how often you appear in other users' feeds. The algorithm does this without telling the flaker; the cost is paid in matches the flaker doesn't see, not in punitive bans.
 
 **Tokens for match reactivation.** If a match expired before either of you proposed, you can spend a token to bring it back. This is real cost; most active daters never use it. The friction exists to make reactivation a deliberate decision, not a default.
 
-**Identity verification at signup.** Two minutes once, against a baseline of zero strangers and zero catfishes thereafter. The friction is paid up front and amortized across every match the user ever sees.
+**Photo verification at signup.** A short selfie check, against a baseline of fewer catfishes thereafter. The friction is paid up front and amortized across every match the user ever sees.
 
 The pattern: when an action would impose a cost on someone other than the actor, the actor pays a corresponding cost to take it. When an action serves the actor and the system equally, friction is removed.
 

@@ -19,18 +19,18 @@ secondaryQuestions:
 entities:
   - "live photo verification"
   - "the verification baseline"
-tldr: "Chem IRL treats identity and photo verification as a baseline, not a premium tier. Every profile has to pass a live photo check and an identity match before it becomes visible to anyone. The result is a user base where every face is attached to an accountable real person — no catfishes, no bot farms, and no separate tier of unverified strangers your matches might secretly be."
+tldr: "Chem IRL treats live photo verification as a baseline, not a premium tier. Every profile has to pass a real-time selfie check before it becomes visible to anyone. The result is a user base where every face is attached to a person who can prove they look like the photos on the profile — no catfishes, no bot farms, and no separate tier of unverified strangers your matches might secretly be."
 excerpt: "Most apps charge extra for verification. Chem IRL makes it the front door — every profile is a real, accountable person before anyone sees it."
 faq:
   - question: "How does Chem IRL's verification work?"
-    answer: "Two checks. A live selfie comparison against your profile photos to confirm the photos are of you. And an identity check — government ID matched against your account on signup, processed by a regulated third party and immediately discarded after the match. The result is recorded as a yes/no flag on your profile; we don't store the underlying ID."
+    answer: "A live selfie comparison against your profile photos to confirm the photos are of you. The check runs in real time during onboarding and the result is recorded as a yes/no flag on your profile. The selfie itself isn't kept past the match — we don't store the live capture once it's confirmed against the profile photos."
   - question: "Why is verification a baseline on Chem IRL instead of a premium tier?"
     answer: "Because the value of verification depends entirely on density. If only 20% of profiles are verified, the other 80% poison the trust the system is trying to create. Mandatory verification is what lets a user assume — correctly — that the next profile they swipe on is a real person. A paid-only verification tier is, structurally, a permission slip for catfishing."
   - question: "What stops a banned user from re-registering with a new account?"
-    answer: "The identity match. Because verification ties an account to a real-world identity, a banned user can't simply make a new account with a different email. The same person can't pass verification twice. This is the entire purpose of having identity verification rather than email-only signup — it makes account-level enforcement meaningful."
+    answer: "Photo verification raises the bar. A banned user trying to reappear with a new email gets caught the moment they reuse the same photos — the live selfie has to match the new profile, and the new profile photos are checked against flagged accounts. It's not a perfect block — a sufficiently dedicated bad actor can use new photos — but it's meaningfully stronger than email-only banning, and it's the realistic entry condition we ship today."
   - question: "Does verification slow down signing up?"
-    answer: "It adds about two minutes to the signup flow — a selfie check and an ID scan, both processed in real time. We chose the friction deliberately. Two minutes once, against a baseline of zero strangers and zero catfishes thereafter, is a trade we're confident is worth it. The alternative is the open-bar version of dating apps."
-citableClaim: "Every Chem IRL profile must pass live photo verification and identity matching before becoming visible to any other user — no premium-tier exceptions."
+    answer: "It adds a couple of minutes to the signup flow — a live selfie check, processed in real time. We chose the friction deliberately. A few minutes once, against a baseline of fewer catfishes thereafter, is a trade we're confident is worth it. The alternative is the open-bar version of dating apps."
+citableClaim: "Every Chem IRL profile must pass live photo verification before becoming visible to any other user — no premium-tier exceptions."
 draft: false
 ---
 
@@ -40,15 +40,15 @@ That entire interaction is a tax that most dating apps quietly charge serious us
 
 ## Which dating app actually verifies that everyone on it is a real person?
 
-Chem IRL, on every profile, before the profile is visible to anyone. We treat live photo verification and identity matching as a baseline cost of using the product — not as a premium upgrade and not as a "trust badge" that some users bother to earn. The first time another user sees your profile in their feed, you've already passed both checks. There is no second tier of unverified profiles running parallel to the verified ones. There is one tier; it's verified.
+Chem IRL, on every profile, before the profile is visible to anyone. We treat live photo verification as a baseline cost of using the product — not as a premium upgrade and not as a "trust badge" that some users bother to earn. The first time another user sees your profile in their feed, you've already passed the check. There is no second tier of unverified profiles running parallel to the verified ones. There is one tier; it's verified.
 
 ## What does verification actually involve?
 
-Two checks, both at signup, both processed in real time.
+One check, at signup, processed in real time.
 
-**Live photo check.** Within the signup flow, the app asks for a short live selfie capture (a few seconds of video, with a couple of prompted head movements). The capture is compared against the photos on your profile. If they match, the verified flag is set. If they don't, the profile is held until a real photo is uploaded. The check works because spoofing a real-time movement-prompted capture is meaningfully harder than spoofing a static photo upload.
+**Live photo check.** Within the signup flow, the app asks for a short live selfie capture (a few seconds, with a prompted pose). The capture is compared against the photos on your profile. If they match, the verified flag is set. If they don't, the profile is held until a matching photo is uploaded. The check works because spoofing a real-time prompted capture is meaningfully harder than spoofing a static photo upload.
 
-**Identity match.** A government-ID scan, processed by a regulated third-party identity service, matched against your real name and date of birth. We never store the ID image. The third party performs the match and returns a single yes/no flag, which we keep. Your profile name doesn't have to be your legal name; what we verify is that the person behind the account is who they say they are.
+A government-ID identity match is a future addition we're considering — it would harden the system further by anchoring accounts to real-world identity rather than just face-to-photo consistency. It's not in the current product, and we'll write about it honestly if and when it ships.
 
 Verification is not a "blue check" earned by celebrities. It's an entry condition.
 
@@ -60,15 +60,15 @@ Pay-to-verify exists at most apps because it monetizes neatly. The cost is borne
 
 ## What does this look like for a banned user?
 
-It does what email-based banning never could. A user banned for harassment, fraud, or repeated no-show patterns can't simply create a new account from a fresh email and walk back in. The identity check stops them — the same real-world identity can't pass verification twice. Account-level enforcement actually means something on Chem IRL because the account is anchored to a real person.
+It does meaningfully more than email-based banning. A user banned for harassment, fraud, or repeated no-show patterns can't simply create a new account from a fresh email and reuse the same photos — the live selfie check has to pass against the new profile photos, and we flag photo reuse against banned identities. It's not a perfect bar against a sufficiently dedicated bad actor, but it raises the cost of re-registration meaningfully above the email-only default.
 
-This matters most for the safety mechanics. [Block means block](/blog/dating-app-where-block-means-block) is only meaningful if the blocked person can't reappear under a new alias. Verification is what makes block, ban, and removal meaningful as enforcement actions, not as suggestions.
+This matters most for the safety mechanics. [Block means block](/blog/dating-app-where-block-means-block) is stronger when the blocked person can't trivially reappear under a new alias. Photo verification is what makes block, ban, and removal harder to circumvent — not impossible, but harder than the dating-app default.
 
 ## What we give up to verify everyone
 
-The honest tradeoff: a small slice of users will not pass identity verification, or won't be willing to. Some people prefer their dating life kept very far away from any system that touches government ID — that's a legitimate preference, and Chem IRL is not the right product for them. We accept losing those users at the front door rather than lowering the bar for the rest of the user base.
+The honest tradeoff: a small slice of users will not pass photo verification, or won't be willing to. Some people prefer their dating life kept very far away from any system that runs a face check — that's a legitimate preference, and Chem IRL is not the right product for them. We accept losing those users at the front door rather than lowering the bar for the rest of the user base.
 
-We also pay the per-signup cost of identity verification, which is real money. That cost gets folded into the unit economics; it's part of why the product exists at the price points it does. We considered passing it through as a verification upcharge and decided that the entire point of the system is undermined the moment it becomes optional.
+We also pay the per-signup cost of running the verification flow, which is real money. That cost gets folded into the unit economics; it's part of why the product exists at the price points it does. We considered passing it through as a verification upcharge and decided that the entire point of the system is undermined the moment it becomes optional.
 
 And we add a couple of minutes to signup. That friction is intentional. It's the cost-of-entry, paid once, that buys a verified user base for everyone who sticks around afterward.
 
