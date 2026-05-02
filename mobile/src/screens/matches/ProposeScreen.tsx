@@ -1,6 +1,5 @@
-import { useState, useRef, useMemo, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TextInput, Alert, Platform } from 'react-native';
-import DateTimePicker from '@react-native-community/datetimepicker';
+import { useState, useRef, useEffect } from 'react';
+import { View, Text, StyleSheet, ScrollView, TextInput, Alert, Pressable } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -9,6 +8,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { supabase } from '../../lib/supabase/client';
 import { BRAND_COLORS, MIDNIGHT, GOLD, TYPOGRAPHY, SPACING } from '../../config/brand';
 import AnimatedPressable from '../../components/ui/AnimatedPressable';
+import TimePickerSheet from '../../components/TimePickerSheet';
 import { getErrorAlert, isRecoverableError } from '../../lib/errors';
 import { enqueue, processQueue, QueuedProposal } from '../../lib/offlineQueue';
 import { createThrottle } from '../../lib/throttle';
@@ -18,11 +18,11 @@ import { trackEvent } from '../../lib/analytics';
 import {
   localDateToUTC,
   isWithinSevenDays,
-  isValidTimeWindow,
   formatProposalDate,
   formatProposalTimeOnly,
 } from '../../lib/timezone';
 import { weeklySlotsToPrefillWindows } from '../../lib/availability';
+import type { TimeWindow } from '../../lib/timeWindow';
 import type { WeeklySlot } from '../../lib/types';
 
 type ProposeRouteParams = {
@@ -34,24 +34,7 @@ type ProposeNavigationProp = NativeStackNavigationProp<any, 'Propose'>;
 
 const DATE_TYPES = ['Coffee', 'Drinks', 'Dinner', 'Walk', 'Activity', 'Other'];
 
-type PickerMode = 'date' | 'start-time' | 'end-time' | null;
-
-function hasWindowOverlap(
-  existingWindows: { start: string; end: string }[],
-  newWindow: { start: string; end: string }
-): boolean {
-  return existingWindows.some((window) => {
-    const wStart = new Date(window.start);
-    const wEnd = new Date(window.end);
-    const nStart = new Date(newWindow.start);
-    const nEnd = new Date(newWindow.end);
-    return (
-      (nStart >= wStart && nStart < wEnd) ||
-      (nEnd > wStart && nEnd <= wEnd) ||
-      (nStart <= wStart && nEnd >= wEnd)
-    );
-  });
-}
+type SheetState = { kind: 'closed' } | { kind: 'create' } | { kind: 'edit'; index: number };
 
 export default function ProposeScreen() {
   const insets = useSafeAreaInsets();
@@ -59,25 +42,41 @@ export default function ProposeScreen() {
   const navigation = useNavigation<ProposeNavigationProp>();
   const { matchId } = route.params as ProposeRouteParams;
 
-  const [selectedWindows, setSelectedWindows] = useState<{ start: string; end: string }[]>([]);
+  const [selectedWindows, setSelectedWindows] = useState<TimeWindow[]>([]);
   const [selectedDateTypes, setSelectedDateTypes] = useState<string[]>([]);
   const [note, setNote] = useState('');
   const [loading, setLoading] = useState(false);
-  const [pickerMode, setPickerMode] = useState<PickerMode>(null);
+  const [sheet, setSheet] = useState<SheetState>({ kind: 'closed' });
   const [isPrefilled, setIsPrefilled] = useState(false);
-  // Throttle proposal submission to prevent spam (min 2 seconds between proposals)
   const submitThrottleRef = useRef(createThrottle(() => {}, 2000));
-  const [tempWindow, setTempWindow] = useState<{
-    date: Date;
-    startTime: Date;
-    endTime: Date;
-  } | null>(null);
 
-  const maximumDate = useMemo(() => {
-    const max = new Date();
-    max.setDate(max.getDate() + 7);
-    return max;
-  }, []);
+  const openCreate = () => {
+    if (selectedWindows.length >= 3) {
+      Alert.alert('Limit', 'You can only propose 2-3 time windows');
+      return;
+    }
+    setIsPrefilled(false);
+    setSheet({ kind: 'create' });
+  };
+
+  const openEdit = (index: number) => {
+    setIsPrefilled(false);
+    setSheet({ kind: 'edit', index });
+  };
+
+  const closeSheet = () => setSheet({ kind: 'closed' });
+
+  const handleSheetSave = (window: TimeWindow) => {
+    setSelectedWindows((prev) => {
+      if (sheet.kind === 'edit') {
+        const next = [...prev];
+        next[sheet.index] = window;
+        return next;
+      }
+      return [...prev, window];
+    });
+    closeSheet();
+  };
 
   // Pre-fill time windows from saved weekly availability
   useEffect(() => {
@@ -111,187 +110,6 @@ export default function ProposeScreen() {
 
     prefillFromAvailability();
   }, []);
-
-  const addTimeWindow = () => {
-    setIsPrefilled(false);
-    if (selectedWindows.length >= 3) {
-      Alert.alert('Limit', 'You can only propose 2-3 time windows');
-      return;
-    }
-
-    const now = new Date();
-    const defaultDate = new Date(now);
-    defaultDate.setDate(defaultDate.getDate() + 1);
-    defaultDate.setHours(0, 0, 0, 0);
-
-    const defaultStartTime = new Date(defaultDate);
-    defaultStartTime.setHours(18, 0, 0);
-
-    const defaultEndTime = new Date(defaultDate);
-    defaultEndTime.setHours(20, 0, 0);
-
-    setTempWindow({
-      date: defaultDate,
-      startTime: defaultStartTime,
-      endTime: defaultEndTime,
-    });
-    setPickerMode('date');
-  };
-
-  const handleDateChange = (event: any, selectedDate?: Date) => {
-    if (Platform.OS === 'android') {
-      setPickerMode(null);
-    }
-
-    if (event.type === 'set' && selectedDate && tempWindow) {
-      const newDate = new Date(selectedDate);
-      newDate.setHours(0, 0, 0, 0);
-
-      const updatedStartTime = new Date(tempWindow.startTime);
-      updatedStartTime.setFullYear(newDate.getFullYear());
-      updatedStartTime.setMonth(newDate.getMonth());
-      updatedStartTime.setDate(newDate.getDate());
-
-      const updatedEndTime = new Date(tempWindow.endTime);
-      updatedEndTime.setFullYear(newDate.getFullYear());
-      updatedEndTime.setMonth(newDate.getMonth());
-      updatedEndTime.setDate(newDate.getDate());
-
-      setTempWindow({
-        date: newDate,
-        startTime: updatedStartTime,
-        endTime: updatedEndTime,
-      });
-
-      if (Platform.OS === 'ios') {
-        setPickerMode('start-time');
-      } else {
-        // Android: continue to start time
-        setTimeout(() => setPickerMode('start-time'), 100);
-      }
-    } else if (event.type === 'dismissed') {
-      setPickerMode(null);
-      setTempWindow(null);
-    }
-  };
-
-  const handleTimeChange = (event: any, selectedTime?: Date, type: 'start' | 'end' = 'start') => {
-    if (Platform.OS === 'android') {
-      setPickerMode(null);
-    }
-
-    if (event.type === 'set' && selectedTime && tempWindow) {
-      if (type === 'start') {
-        const updatedStartTime = new Date(selectedTime);
-        updatedStartTime.setFullYear(tempWindow.date.getFullYear());
-        updatedStartTime.setMonth(tempWindow.date.getMonth());
-        updatedStartTime.setDate(tempWindow.date.getDate());
-
-        setTempWindow({
-          ...tempWindow,
-          startTime: updatedStartTime,
-        });
-
-        if (Platform.OS === 'ios') {
-          setPickerMode('end-time');
-        } else {
-          setTimeout(() => setPickerMode('end-time'), 100);
-        }
-      } else {
-        const updatedEndTime = new Date(selectedTime);
-        updatedEndTime.setFullYear(tempWindow.date.getFullYear());
-        updatedEndTime.setMonth(tempWindow.date.getMonth());
-        updatedEndTime.setDate(tempWindow.date.getDate());
-
-        const finalStartTime = tempWindow.startTime;
-        const finalEndTime = updatedEndTime;
-
-        // Validate: start < end
-        if (finalStartTime >= finalEndTime) {
-          Alert.alert('Error', 'End time must be after start time');
-          setPickerMode(null);
-          setTempWindow(null);
-          return;
-        }
-
-        // Validate: within 7 days
-        const now = new Date();
-        const sevenDaysFromNow = new Date(now);
-        sevenDaysFromNow.setDate(sevenDaysFromNow.getDate() + 7);
-
-        if (finalStartTime > sevenDaysFromNow || finalStartTime < now) {
-          Alert.alert('Error', 'All time windows must be within the next 7 days');
-          setPickerMode(null);
-          setTempWindow(null);
-          return;
-        }
-
-        // Check for overlapping windows
-        const newWindow = {
-          start: finalStartTime.toISOString(),
-          end: finalEndTime.toISOString(),
-        };
-
-        if (hasWindowOverlap(selectedWindows, newWindow)) {
-          Alert.alert('Error', 'Time windows cannot overlap');
-          setPickerMode(null);
-          setTempWindow(null);
-          return;
-        }
-
-        setSelectedWindows([...selectedWindows, newWindow]);
-        setPickerMode(null);
-        setTempWindow(null);
-      }
-    } else if (event.type === 'dismissed') {
-      setPickerMode(null);
-      setTempWindow(null);
-    }
-  };
-
-  const confirmTimeWindow = () => {
-    if (!tempWindow) return;
-
-    const finalStartTime = tempWindow.startTime;
-    const finalEndTime = tempWindow.endTime;
-
-    // Convert to UTC ISO strings for storage
-    const startUTC = localDateToUTC(finalStartTime);
-    const endUTC = localDateToUTC(finalEndTime);
-
-    // Validate: start < end (using timezone-aware validation)
-    if (!isValidTimeWindow(startUTC, endUTC)) {
-      Alert.alert('Error', 'End time must be after start time');
-      setPickerMode(null);
-      setTempWindow(null);
-      return;
-    }
-
-    // Validate: within 7 days (using timezone-aware validation)
-    if (!isWithinSevenDays(startUTC)) {
-      Alert.alert('Error', 'All time windows must be within the next 7 days');
-      setPickerMode(null);
-      setTempWindow(null);
-      return;
-    }
-
-    // Check for overlapping windows
-    const newWindow = {
-      start: startUTC,
-      end: endUTC,
-    };
-
-    if (hasWindowOverlap(selectedWindows, newWindow)) {
-      Alert.alert('Error', 'Time windows cannot overlap');
-      setPickerMode(null);
-      setTempWindow(null);
-      return;
-    }
-
-    setSelectedWindows([...selectedWindows, newWindow]);
-    setPickerMode(null);
-    setTempWindow(null);
-  };
 
   const removeTimeWindow = (index: number) => {
     setIsPrefilled(false);
@@ -515,7 +333,13 @@ export default function ProposeScreen() {
           )}
 
           {selectedWindows.map((window, index) => (
-            <View key={index} style={styles.windowCard}>
+            <AnimatedPressable
+              key={index}
+              style={styles.windowCard}
+              onPress={() => openEdit(index)}
+              haptic={false}
+              accessibilityLabel={`Edit time window ${index + 1}`}
+            >
               {/* Date Row */}
               <View style={styles.windowRow}>
                 <View style={styles.windowIconBox}>
@@ -525,13 +349,9 @@ export default function ProposeScreen() {
                   <Text style={styles.windowLabel}>DATE</Text>
                   <Text style={styles.windowValue}>{formatProposalDate(window.start)}</Text>
                 </View>
-                <AnimatedPressable
-                  onPress={() => removeTimeWindow(index)}
-                  haptic={false}
-                  style={styles.windowAction}
-                >
+                <View style={styles.windowAction}>
                   <Ionicons name="create-outline" size={20} color={BRAND_COLORS.text[500]} />
-                </AnimatedPressable>
+                </View>
               </View>
               {/* Divider */}
               <View style={styles.windowDivider} />
@@ -546,80 +366,24 @@ export default function ProposeScreen() {
                     {formatProposalTimeOnly(window.start)} - {formatProposalTimeOnly(window.end)}
                   </Text>
                 </View>
-                <View style={styles.windowAction}>
-                  <Ionicons name="chevron-down" size={20} color={BRAND_COLORS.text[500]} />
-                </View>
+                <Pressable
+                  onPress={() => removeTimeWindow(index)}
+                  hitSlop={8}
+                  style={styles.windowAction}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Remove time window ${index + 1}`}
+                >
+                  <Ionicons name="close-circle-outline" size={22} color={BRAND_COLORS.text[500]} />
+                </Pressable>
               </View>
-            </View>
+            </AnimatedPressable>
           ))}
 
           {selectedWindows.length < 3 && (
-            <AnimatedPressable style={styles.addButton} onPress={addTimeWindow}>
+            <AnimatedPressable style={styles.addButton} onPress={openCreate}>
               <Ionicons name="add-circle-outline" size={30} color={BRAND_COLORS.text[500]} />
               <Text style={styles.addButtonText}>Add another option</Text>
             </AnimatedPressable>
-          )}
-
-          {pickerMode && tempWindow && (
-            <View style={styles.pickerContainer}>
-              {pickerMode === 'date' && (
-                <DateTimePicker
-                  value={tempWindow.date}
-                  mode="date"
-                  display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-                  themeVariant="dark"
-                  minimumDate={new Date()}
-                  maximumDate={maximumDate}
-                  onChange={handleDateChange}
-                />
-              )}
-              {pickerMode === 'start-time' && (
-                <View>
-                  <DateTimePicker
-                    value={tempWindow.startTime}
-                    mode="time"
-                    display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-                    themeVariant="dark"
-                    onChange={(e, d) => handleTimeChange(e, d, 'start')}
-                  />
-                  {Platform.OS === 'ios' && (
-                    <AnimatedPressable
-                      style={styles.pickerButton}
-                      onPress={() => setPickerMode('end-time')}
-                    >
-                      <Text style={styles.pickerButtonText}>Next: End Time</Text>
-                    </AnimatedPressable>
-                  )}
-                </View>
-              )}
-              {pickerMode === 'end-time' && (
-                <View>
-                  <DateTimePicker
-                    value={tempWindow.endTime}
-                    mode="time"
-                    display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-                    themeVariant="dark"
-                    onChange={(e, d) => handleTimeChange(e, d, 'end')}
-                  />
-                  {Platform.OS === 'ios' && (
-                    <View style={styles.pickerButtonsRow}>
-                      <AnimatedPressable
-                        style={[styles.pickerButton, styles.pickerButtonSecondary]}
-                        onPress={() => {
-                          setPickerMode(null);
-                          setTempWindow(null);
-                        }}
-                      >
-                        <Text style={styles.pickerButtonSecondaryText}>Cancel</Text>
-                      </AnimatedPressable>
-                      <AnimatedPressable style={styles.pickerButton} onPress={confirmTimeWindow}>
-                        <Text style={styles.pickerButtonText}>Confirm</Text>
-                      </AnimatedPressable>
-                    </View>
-                  )}
-                </View>
-              )}
-            </View>
           )}
         </View>
 
@@ -681,6 +445,16 @@ export default function ProposeScreen() {
         </AnimatedPressable>
         <Text style={styles.expiryNote}>PROPOSALS EXPIRE IN 72 HOURS</Text>
       </LinearGradient>
+
+      <TimePickerSheet
+        visible={sheet.kind !== 'closed'}
+        mode={sheet.kind === 'edit' ? 'edit' : 'create'}
+        initialWindow={sheet.kind === 'edit' ? selectedWindows[sheet.index] : undefined}
+        excludeIndex={sheet.kind === 'edit' ? sheet.index : undefined}
+        existingWindows={selectedWindows}
+        onCancel={closeSheet}
+        onSave={handleSheetSave}
+      />
     </View>
   );
 }
@@ -842,41 +616,6 @@ const styles = StyleSheet.create({
     fontSize: TYPOGRAPHY.fontSize.sm,
     fontFamily: TYPOGRAPHY.fontFamily.medium,
     marginTop: SPACING.xs,
-  },
-
-  // Picker
-  pickerContainer: {
-    marginTop: SPACING.base,
-    padding: SPACING.base,
-    ...MIDNIGHT.glassCard,
-  },
-  pickerButtonsRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: SPACING.base,
-    gap: SPACING.md,
-  },
-  pickerButton: {
-    flex: 1,
-    backgroundColor: BRAND_COLORS.primary,
-    paddingVertical: SPACING.md,
-    borderRadius: MIDNIGHT.radius.md,
-    alignItems: 'center',
-  },
-  pickerButtonSecondary: {
-    backgroundColor: 'transparent',
-    borderWidth: 2,
-    borderColor: BRAND_COLORS.primary,
-  },
-  pickerButtonText: {
-    color: BRAND_COLORS.onPrimary,
-    fontSize: TYPOGRAPHY.fontSize.base,
-    fontFamily: TYPOGRAPHY.fontFamily.semibold,
-  },
-  pickerButtonSecondaryText: {
-    color: BRAND_COLORS.primary,
-    fontSize: TYPOGRAPHY.fontSize.base,
-    fontFamily: TYPOGRAPHY.fontFamily.semibold,
   },
 
   // Note
