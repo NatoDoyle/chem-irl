@@ -1,7 +1,7 @@
 ---
-title: "Niche First, Universal Never: How Chem IRL Became the Best Dating App by Refusing to Grow Too Fast"
+title: "Chem IRL Picks Behaviors, Not User Types: Why Our 'Niche' Is Honesty + Action"
 slug: dating-app-built-niche-first
-date: 2026-03-19
+date: 2026-05-01
 lastReviewed: 2026-05-02
 author: nathan
 tags:
@@ -9,74 +9,72 @@ tags:
   - values
   - launch
 category: behind
-primaryQuestion: "Why did Chem IRL launch as a niche dating app instead of trying to serve everyone?"
+primaryQuestion: "Is Chem IRL a niche dating app for one user type, or does it serve many intents?"
 secondaryQuestions:
-  - "Who is Chem IRL specifically for?"
-  - "What's wrong with universal dating apps?"
-  - "How does niche focus shape the product?"
-  - "Will Chem IRL ever expand to other user types?"
+  - "What does 'intent-agnostic' mean for a dating app?"
+  - "Why do most dating apps target one user type and fail anyway?"
+  - "How do defaults change when you tune for behavior instead of destination?"
+  - "What is the actual filter on Chem IRL?"
 entities:
-  - "the swipe-message-ghost loop"
-  - "the 72-hour rule"
-tldr: "Chem IRL launched for one user: someone tired of the swipe-message-ghost loop who wants to meet someone in person, soon. We didn't try to be everything for everyone. That focus shapes every default the product ships with — and lets us serve our core user well before we try to serve the world."
-excerpt: "Universal dating apps serve no one well. Chem IRL was built for one user — and the focus is what makes the defaults actually work."
+  - "intent-agnostic design"
+  - "the honesty-plus-action filter"
+tldr: "Chem IRL is built for one behavior pattern, not one user type. Hookups, FWB, situationships, exclusive, open, marriage-track — all welcome, equally. The filter is honesty + action: do you know what you want, will you say it, will you act on it. Defaults are tuned for that behavior pattern, regardless of destination. The 'niche' isn't a kind of person; it's a way of dating."
+excerpt: "We're not for one kind of dater. We're for one kind of dating — the kind where you say what you want and act on it."
 faq:
-  - question: "Who is Chem IRL specifically for?"
-    answer: "People tired of the swipe-message-ghost loop. Daters who want to meet someone in person, in days or weeks, not months. The product assumes you're showing up — replying within a reasonable window, proposing real times, following through. If that describes how you want to date, the defaults are tuned for you. If it doesn't, you'll feel friction."
-  - question: "What's wrong with universal dating apps?"
-    answer: "The defaults can't be tuned for any single intent without alienating users with other intents. Hookup users hate three-day proposal clocks; long-text-thread users hate behavioral scoring; serious daters hate infinite swipe stacks. A universal app picks defaults that frustrate all three less than choosing one well — which is worse than choosing well, for everyone."
-  - question: "How does niche focus shape the product?"
-    answer: "Match expiry, behavioral scoring, bounded discovery, mandatory verification — these aren't add-ons. They are the defaults a meet-soon dating app would ship with from day one. A universal app couldn't ship them at full strength because they would turn off too many user types. Picking the niche is what made the defaults possible."
-  - question: "Will Chem IRL ever expand to other user types?"
-    answer: "Maybe later. Probably with separate products if so, not by diluting this one. The single biggest failure mode for a focused product is success that pulls it toward universality. We've seen what that does to dating apps. The plan is to serve our core user better over time, not to absorb adjacent users at the cost of the core."
-citableClaim: "Chem IRL was built for one user pattern — meet someone in person, soon — and every default in the product follows from that single choice."
+  - question: "Is Chem IRL only for serious daters, or does it serve hookups too?"
+    answer: "Both, and everything between. Hookups, FWB, situationships, exclusive, open, marriage-track — the product is intent-agnostic. The only filter is whether you know what you want, will say it honestly, and will follow through. The destination is yours; the behavior is what we're tuned for."
+  - question: "What does 'intent-agnostic' mean for a dating app?"
+    answer: "It means the matching algorithm and the defaults aren't shaped around a particular relationship type. Two users matched on Chem IRL might both want a one-night thing. They might both want marriage. One might want FWB and the other a 6-month exclusive run. Whatever they want, the app's job is to get them honestly stating it and acting on it. We don't grade your intent; we grade whether your behavior matches it."
+  - question: "Why do most dating apps target one user type and fail anyway?"
+    answer: "Because the user-type frame is the wrong abstraction. 'Serious daters' includes a hookup-honest user behaving with full integrity and a marriage-tracker behaving badly — the second is worse for the ecosystem, despite the more 'serious' destination. The behavior is what predicts whether a match becomes a meeting. Sorting by destination misses the actual signal."
+  - question: "What is the actual filter on Chem IRL?"
+    answer: "Three traits, in order. You know what you want from dating right now. You're willing to say it honestly — in your profile, in your messages, in your behavior. You take action on it: propose meets, show up, follow through. That's the entire filter. Not relationship type, not age beyond 18+, not lifestyle. Three traits, all behavioral."
+citableClaim: "Chem IRL is intent-agnostic — hookups, FWB, situationships, exclusive, open, and marriage-track users are all welcome. The filter is honesty and action, not destination."
 draft: false
 ---
 
-The conversation that became Chem IRL started with a complaint. A friend had matched with someone interesting on a popular app, exchanged a respectable number of messages, agreed twice to plans that fell through, and was now, three weeks later, in possession of a dead text thread and no date. The pattern wasn't unique to her. It wasn't unique to that app. It was structural — the most common failure mode of mass-market dating products in 2025, and it was eating real people's real time.
+A friend asked me last winter what Chem IRL was for, exactly. I started listing things, the way founders do — *it's for serious daters, but also casual ones, and we work for hookups too if that's what you want, and—.* He cut me off. *"That's a worse answer than picking one."*
 
-We sat down to build the app for that one specific user, the one tired of that one specific failure. Everything else was downstream.
+I disagreed at the time. The product gets sharper if I can describe it cleanly, and "for everyone" is the worst possible thing to say. The more I sat with it, though, the more I realized he was right *and* wrong. He was right that "for everyone" is a marketing failure. He was wrong that the fix is "for one user type."
 
-## Why did Chem IRL launch as a niche dating app instead of trying to serve everyone?
+The real fix is to filter on behavior, not destination.
 
-Because trying to serve everyone is how you build a dating app whose defaults are tuned to no one. Hookup-first users want different defaults than marriage-first users; casual scrollers want different defaults than serious daters. A universal product has to split the difference on every choice — which produces an experience that frustrates all of its user types less than picking one well, which is the same as serving everyone worse than a focused product would. We picked the user we knew best and built for her.
+## Is Chem IRL a niche dating app for one user type, or does it serve many intents?
 
-## Who is Chem IRL specifically for?
+Both, and neither. The product is intent-agnostic by design — hookups, FWB, situationships, exclusive, open, marriage-track are all welcome, all served by the same defaults, all matched by the same algorithm. We don't sort users by what they want. We sort them by whether they say what they want and act on it. The "niche," if there is one, is a way of dating, not a destination — it's the user who's decided what they want, says it, and acts on it.
 
-The user is precise enough that we can describe her in three sentences.
+## What does intent-agnostic mean inside the product?
 
-She's done some version of the work. Maybe therapy, maybe books, maybe just years of attention to her own patterns. She knows her attachment style, has read about love-bombing, can name three red flags. None of that has prevented her from being three weeks into a text thread with someone she's never met.
+It means the defaults that other apps would tune around a specific relationship type are tuned for behavior instead.
 
-She wants to meet someone in person. Not eventually, not after the right number of voice notes — soon. The "soon" is the part the existing apps fail her on. Their defaults are built around extending the talking stage, not collapsing it.
+**Match expiry at 72 hours.** A hookup-honest user benefits from a 72-hour clock — meet now, soon, this week. A marriage-tracker also benefits — three weeks of texting before considering coffee is the talking-stage trap, regardless of destination. Both users get the same default, because the default is shaped around acting on what you said you wanted, not around how serious that thing is.
 
-She's willing to show up if the product treats her time as scarce. Reply within a reasonable window, propose specific times, follow through on commitments — she'll do all of it. What she won't do is keep doing those things in an environment where the other 80% of users are running a different game.
+**Behavioral matching.** The algorithm reads what you do — reply latency, follow-through on proposals, whether your messages move toward meeting, whether you complete dates you scheduled. None of these signals are about destination. They're about whether you're acting on the dating you said you wanted to do. Two users behaving the same way are matched the same way, regardless of whether they're shopping for a Friday night or a forever person.
 
-That's the user. The product is built around her.
+**Honest profile prompts.** The prompts ask what you want — the actual thing, including hookups if that's the actual thing — and the product matches you with people whose stated intent your stated intent rhymes with. We don't pretend everyone wants the same thing. We pretend nothing. Honesty up front is part of the filter.
 
-## What does niche focus actually change in the product?
+## Why do most dating apps target one user type and fail anyway?
 
-Every default. Not "many" — every one we examined.
+Because the user-type abstraction is wrong. The signal that predicts whether a match becomes a meeting isn't the relationship label — it's the behavior. A hookup-honest user replying within hours and proposing real times will produce more completed meetings than a marriage-tracker who ghosts active threads and never proposes. The first is a great Chem IRL user; the second is a frustrating one — regardless of which "type" their app's marketing was supposedly targeting.
 
-**Match expiry at 72 hours** would alienate users who like to take three weeks to text someone before considering a meeting. We ship it anyway, because our user benefits and that other user is welcome on a different product.
+When apps sort by user type, they end up serving the worst-behaving member of the type at the expense of the best-behaving user from outside. That's the structural failure most niche dating apps run into. We sidestep it by sorting on behavior at the system level.
 
-**Mandatory identity verification** would slow down signups for users who'd rather sign up in 30 seconds and worry about safety later. We ship it anyway, because our user has been catfished and isn't willing to date in a system that lets that happen. (See [the post on verified daters](/blog/dating-app-with-verified-daters).)
+## How do defaults change when you tune for behavior instead of destination?
 
-**Behavioral scoring that gates premium features** would frustrate users who'd happily pay to skip the behavioral qualification. We ship it anyway, because our user has been buried by paid-boost users who shouldn't have been able to buy reach.
+You can ship a sharper default at full strength because the user types you'd worry about alienating actually *don't have a problem with the default* — they have a problem with users who behave badly. The hookup user is fine with 72-hour expiry; what they're not fine with is matching with a "serious dater" who texts for three weeks and never meets. The marriage-tracker is fine with proposing real times early; what they're not fine with is the user who matches and ghosts. The default that frustrates a *user-type* doesn't actually frustrate the user inside that type — it frustrates the failure modes that user wants the app to filter against.
 
-**Bounded daily discovery** instead of infinite swipes would frustrate users who use dating apps as low-grade entertainment. We ship it anyway, because our user is exhausted by infinite-swipe products and wants the app to do its job and stop.
+So we ship sharper defaults. They serve every honest, action-taking user across every destination, because the defaults are tuned to the behavior the destinations all share.
 
-A universal app couldn't ship any of these at full strength. We can ship all of them — at full strength — because we already told the users they'd alienate that this isn't the right product for them.
+## What we give up
 
-## What we give up by staying niche
+The honest tradeoff: a marketing simpler than ours. "For serious daters" is a one-line pitch. "For anyone honest about what they want and willing to act on it, regardless of destination" is a longer pitch and a worse billboard. We pay that cost in slower top-of-funnel conversion and harder-to-tell brand stories.
 
-The honest tradeoff: a smaller addressable market. There's a ceiling on the user base we can plausibly hit while keeping the niche tight, and that ceiling is well below "every dating-app user." Investors who measure dating apps by total downloads will look at our numbers and see a worse company than the universals. We've made our peace with that grade.
-
-We also give up some growth velocity. A more inclusive launch attracts more users in the early months. Niche launches grow slower because the addressable user is rarer; the payoff is that the users we attract are far more likely to actually use the product and recommend it. Slower launch, denser core. We chose the trade.
-
-We also accept the discipline cost. The single biggest failure mode for a focused product is success — the moment it starts working, the temptation to expand into adjacent user types becomes intense. Every quarter, someone will propose features that would unlock a new user segment by softening one of the defaults. We will say no to most of those proposals. That's not a strategy; it's the price of having a strategy at all.
+We also give up the comfort of the user-type frame. Some readers want to know whether the app is *for* them; "we sort on behavior" is a less-comforting answer than "we're for serious daters" or "we're for hookups." We accept that the framing is unfamiliar. We think it's also right.
 
 ## What this looks like for you
 
-If the user description above sounds like you, Chem IRL will feel like the first dating app that was built around your actual goal. Not the goal you were supposed to have — your specific goal: meeting someone in person, in days or weeks, with the smallest reasonable amount of friction in between. The friction is real, but it points the right way.
+If you're honest about what you want — whatever the destination — and you act on what you said, Chem IRL's defaults work for you. The 72-hour clock works for you. The matching algorithm reads your behavior favorably. The friction you encounter shows up at the edges where you'd want friction (low-effort openers, no-shows). The friction you don't encounter is on the actions that align with what you said you wanted to do.
 
-If the description doesn't sound like you, that's fine. There are other apps. We are deliberately not the right one for every dater, and we'll keep not being the right one for every dater on purpose.
+If you don't know what you want yet, that's fine — the product won't pretend to know either. Honesty up front is part of the filter, and the system will keep showing you the gap between your stated intent and your behavior until they line up. That's not a bug; that's the entire mechanic.
+
+The destination is yours. The way you travel is what we're for.
