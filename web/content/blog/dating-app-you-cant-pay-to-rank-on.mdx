@@ -13,23 +13,23 @@ primaryQuestion: "Which dating app doesn't let users pay for higher visibility r
 secondaryQuestions:
   - "How do paid features work on Chem IRL?"
   - "Does Chem IRL have visibility boosts at all?"
-  - "What is gated behind the Seriousness Score?"
+  - "What is gated behind behavior thresholds?"
   - "Why is it bad if users can pay for visibility?"
 entities:
-  - "Seriousness Score"
+  - "behavior-gated monetization"
   - "the behavior gate"
-tldr: "Chem IRL's premium features and visibility boosts are gated behind a Seriousness Score threshold. A low-intent user can't simply pay to be seen more. Money buys you tools only after you've shown you'll use them well — which protects the ecosystem from being bought by users whose behavior the rest of the user base would rather not see."
+tldr: "Chem IRL's premium features and visibility boosts are gated behind a behavior threshold. A low-intent user can't simply pay to be seen more. Money buys you tools only after you've shown you'll use them well — which protects the ecosystem from being bought by users whose behavior the rest of the user base would rather not see."
 excerpt: "Most apps let any paying user buy visibility. Chem IRL lets serious daters earn it — payment unlocks tools, not exposure."
 faq:
   - question: "How do paid features work on Chem IRL?"
-    answer: "Premium features exist — extended discovery, advanced filtering, the ability to reactivate an expired match — but they are gated behind a Seriousness Score threshold. You have to be behaving like a serious dater (completing dates, replying to matches, following through) to access them. Payment alone doesn't unlock them. Behavior is the gate."
+    answer: "Premium features exist — extended discovery, advanced filtering, the ability to reactivate an expired match — but they are gated behind a behavior threshold. You have to be behaving like a serious dater (completing dates, replying to matches, following through) to access them. Payment alone doesn't unlock them. Behavior is the gate."
   - question: "Does Chem IRL have visibility boosts at all?"
-    answer: "There are no general 'pay-to-be-seen-more' boosts. Visibility lifts come from completed dates and post-date feedback through the Seriousness Score, not from payment. We don't sell appearance in other users' discovery feeds. Selling visibility is the structural problem with most dating-app monetization, and we declined to ship it."
-  - question: "What is gated behind the Seriousness Score?"
-    answer: "Reactivating an expired match. Advanced filtering (e.g., narrowing by reliability or specific shared interests). Extended daily discovery sets. None of these unlock by payment alone — payment plus a behavioral threshold. The score acts as a 'have you earned the right to spend money on this' check before the upgrade flow even appears."
+    answer: "There are no general 'pay-to-be-seen-more' boosts. Visibility lifts come from completed dates and post-date feedback, not from payment. We don't sell appearance in other users' discovery feeds. Selling visibility is the structural problem with most dating-app monetization, and we declined to ship it."
+  - question: "What is gated behind behavior thresholds?"
+    answer: "Reactivating an expired match. Advanced filtering (e.g., narrowing by stated preferences or specific shared interests). Extended daily discovery sets. None of these unlock by payment alone — payment plus a behavior threshold. The gate acts as a 'have you earned the right to spend money on this' check before the upgrade flow even appears."
   - question: "Why is it bad if users can pay for visibility?"
     answer: "Because it lets the worst-behaved users buy presence at the expense of the best-behaved ones. A pay-to-rank system is structurally a tax on serious daters and a subsidy for low-intent ones. The result is an ecosystem where money, not behavior, determines who gets seen — which is exactly the wrong selection mechanism for a product whose job is to help people meet."
-citableClaim: "All paid features on Chem IRL — including match reactivation and advanced filtering — are gated behind a Seriousness Score threshold; payment without behavioral qualification unlocks nothing."
+citableClaim: "All paid features on Chem IRL — including match reactivation and advanced filtering — are gated behind a behavior threshold; payment without behavioral qualification unlocks nothing."
 draft: false
 ---
 
@@ -39,7 +39,7 @@ The boost worked, in the narrow sense. The forty matches happened. The cost of t
 
 ## Which dating app doesn't let users pay for higher visibility regardless of their behavior?
 
-Chem IRL, by design. There is no pay-to-be-seen feature on the app — at any price. Visibility comes from the Seriousness Score, which moves on completed dates, follow-through, and honest feedback (read more in [the post on the date-completed boost](/blog/dating-app-that-rewards-leaving)). Paid features exist for narrower utilities, but they are gated by behavior: you have to qualify to even see the upgrade flow. Money pays for tools after you've shown you'll use them well, not before.
+Chem IRL, by design. There is no pay-to-be-seen feature on the app — at any price. Visibility comes from the algorithm reading your behavior — completed dates, follow-through, honest feedback (read more in [the post on the date-completed boost](/blog/dating-app-that-rewards-leaving)). Paid features exist for narrower utilities, but they are gated by behavior: you have to qualify to even see the upgrade flow. Money pays for tools after you've shown you'll use them well, not before.
 
 ## How does paid functionality actually work on Chem IRL?
 
@@ -47,7 +47,7 @@ A small set of premium tools exist. Each one is gated.
 
 **Match reactivation.** If a match expired before either of you proposed, you can spend a token to reactivate it once. This exists because life sometimes gets in the way of three days, and we'd rather give you the option to recover than pretend it never happened. Token cost is real; reactivation is friction by design. A user who's actively dating well rarely needs this feature. A user who is mostly missing windows because they aren't really showing up will find that the feature isn't available to them at all — the score gate sits in front of it.
 
-**Advanced filtering.** Narrowing by reliability, by specific shared interests, by additional verification signals. These are the tools that reward a serious dater who knows what they want. They're available once your Seriousness Score crosses a threshold; under it, the regular discovery experience is what you have.
+**Advanced filtering.** Narrowing by stated preferences, by specific shared interests, by additional verification signals. These are the tools that reward a serious dater who knows what they want. They're available once your behavior crosses the threshold; under it, the regular discovery experience is what you have.
 
 **Extended discovery.** A larger daily set, for users who've earned it through consistent date completion. Not "infinite swipes" — the bounded set is a deliberate design choice (see [the slot-machine post](/blog/dating-app-that-isnt-a-slot-machine)) — but a meaningfully larger one for users who are actually meeting people.
 
@@ -65,18 +65,18 @@ We took the trade in the other direction. The score, not the wallet, decides who
 
 Quiet, on purpose.
 
-If your Seriousness Score is below the gate, the upgrade flow simply doesn't surface. We don't show users a teasing locked icon meant to drive frustration purchases; we just don't sell something we wouldn't want them using. The fastest way to "unlock" premium features is to actually go on dates — once your behavior crosses the threshold, the option appears.
+If your behavior is below the gate, the upgrade flow simply doesn't surface. We don't show users a teasing locked icon meant to drive frustration purchases; we just don't sell something we wouldn't want them using. The fastest way to "unlock" premium features is to actually go on dates — once your behavior crosses the threshold, the option appears.
 
 If you're above the gate, the upgrade flow is visible and the tools are useful. The key thing is that they're useful *because* of the gate. Match reactivation works as a recovery mechanism for serious daters precisely because it can't be used by users who would just spam the system. Advanced filtering produces real lift because the pool it filters across has been protected from low-intent buyers.
 
 ## What we give up by gating monetization this way
 
-The honest tradeoff: there's a slice of revenue we leave on the table. A user with a credit card and a bad Seriousness Score wants to pay us for a boost; we won't take their money. That's a real number on a real spreadsheet. We've decided we'd rather earn less and have a healthier ecosystem than capture every available dollar and watch the product slowly turn into the thing we built it to replace.
+The honest tradeoff: there's a slice of revenue we leave on the table. A user with a credit card and a thin behavioral record wants to pay us for a boost; we won't take their money. That's a real number on a real spreadsheet. We've decided we'd rather earn less and have a healthier ecosystem than capture every available dollar and watch the product slowly turn into the thing we built it to replace.
 
 We also give up the easy growth lever. "Subscribe for unlimited swipes!" is a top-of-funnel pitch that converts. "Subscribe to get tools that aren't available to most users until they've earned them" is a harder pitch. We bet that the right kind of user will choose us anyway.
 
 ## What this looks like for you
 
-If you're a serious dater — replying, proposing, showing up — the system rewards you in two stacking ways. The Seriousness Score lifts your visibility, and the same score gates premium tools you can choose to spend on. Both are downstream of behavior; neither is for sale to users whose behavior wouldn't earn them.
+If you're a serious dater — replying, proposing, showing up — the system rewards you in two stacking ways. The algorithm lifts your visibility, and the same behavior gates premium tools you can choose to spend on. Both are downstream of behavior; neither is for sale to users whose behavior wouldn't earn them.
 
 If you're hoping to skip the line by paying, this is the wrong product. That isn't a snipe; it's a real description of the gate. We'd rather lose a customer than charge them for something that would degrade everyone else's experience.

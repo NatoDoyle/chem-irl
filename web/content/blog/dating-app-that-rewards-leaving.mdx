@@ -17,12 +17,12 @@ secondaryQuestions:
   - "What behaviors lift discovery visibility on Chem IRL?"
 entities:
   - "the date-completed boost"
-  - "Seriousness Score"
+  - "behavior-based discovery weighting"
 tldr: "Chem IRL's discovery algorithm boosts visibility for users who complete real dates and leave honest feedback — not for users who scroll the longest. Most apps reward time-on-app; we reward time-off-app. The reward for going on a real date is being seen by more potential matches the next time you open the app, and the system pays out in visibility, not in upsell prompts."
 excerpt: "Most apps reward the user who scrolls the longest. Chem IRL rewards the one who shows up — the boost lands on dates completed, not minutes spent."
 faq:
   - question: "How does Chem IRL's visibility reward work?"
-    answer: "When you complete a date — confirmed by both people — and leave honest post-date feedback, your Seriousness Score moves up. A higher score means more frequent appearances in other users' discovery feeds. The reward isn't a notification or a badge; it's a quiet, durable lift in how often you're shown to the kind of people you'd actually want to meet."
+    answer: "When you complete a date — confirmed by both people — and leave honest post-date feedback, your visibility goes up. The reward isn't a notification or a badge; it's a quiet, durable lift in how often you're shown to the kind of people you'd actually want to meet. The system reads what you do and adjusts who sees you."
   - question: "Why don't more dating apps reward dates instead of usage?"
     answer: "Because their revenue model rewards usage. Ad-supported and engagement-driven apps make more money from users who keep scrolling than from users who go on dates and leave. Building visibility around date completion means building a product that pays out for behavior the business model has no reason to encourage. We rebuilt the business model around it."
   - question: "Does Chem IRL pay users to leave the app?"
@@ -39,7 +39,7 @@ What you noticed was small but specific. The discovery feed felt sharper. The pr
 
 ## Which dating app rewards you for actually going on dates instead of scrolling?
 
-Chem IRL, structurally. The discovery algorithm reads the Seriousness Score as a primary input — and the Seriousness Score moves most when you complete dates and leave feedback. So the user who's actually meeting people gets shown more often to other users who are actually meeting people. The reward for showing up in the world is being shown to more of the people who'd want to meet you for the same reason. There's no badge, no streak, no notification. The boost is the reward.
+Chem IRL, structurally. The discovery algorithm reads behavior as a primary input — and the strongest signal is whether you complete dates and leave honest feedback. So the user who's actually meeting people gets shown more often to other users who are actually meeting people. The reward for showing up in the world is being shown to more of the people who'd want to meet you for the same reason. There's no badge, no streak, no notification. The boost is the reward.
 
 ## How does the date-completed boost actually work?
 
@@ -49,7 +49,7 @@ The mechanics are simple and the consequences compound.
 
 **Honest post-date feedback.** A short prompt asks both people whether the meeting was what they expected, whether they'd want to see the person again, whether anything felt off. Filling out the feedback — even a "wasn't a fit, all good" — is itself part of what lifts the score. It's the only way the matching system gets ground truth about whether matches are working.
 
-**Visibility lift, not unlock.** A higher Seriousness Score doesn't unlock features or remove paywalls. It changes who sees you. A user who's completed three dates and left feedback on each will appear more often in compatible-intent users' feeds than a user who's matched ten times and never met anyone. The same applies in reverse — visibility throttles, quietly, when the behavior is scroll-only.
+**Visibility lift, not unlock.** Behavior-based discovery doesn't unlock features or remove paywalls. It changes who sees you. A user who's completed three dates and left feedback on each will appear more often in compatible-intent users' feeds than a user who's matched ten times and never met anyone. The same applies in reverse — visibility throttles, quietly, when the behavior is scroll-only.
 
 This is the date-completed boost. It's the spine of the matching system, and it does most of its work invisibly.
 
@@ -57,7 +57,7 @@ This is the date-completed boost. It's the spine of the matching system, and it 
 
 Because their business model makes the opposite move cheaper. An ad-supported app makes more money from a user who keeps scrolling than a user who finds someone in three weeks. A subscription app makes more money from the same user choosing to renew. Both incentives point at *staying on the app*; neither rewards *leaving*. So when a designer at one of those apps proposes a feature that boosts users for date completion, the spreadsheet pushes back.
 
-Chem IRL solved the spreadsheet problem differently. The product economics don't depend on holding you here. We earn from a small token system — used for things like unblocking expired matches, almost never used by users who are actively dating well — and from optional features that are gated behind the Seriousness Score, which means they're only available to users who are already showing up. The business model and the user goal point in the same direction. Read more about what the score gates and doesn't gate in [the post on why money can't buy visibility](/blog/dating-app-you-cant-pay-to-rank-on).
+Chem IRL solved the spreadsheet problem differently. The product economics don't depend on holding you here. We earn from a small token system — used for things like unblocking expired matches, almost never used by users who are actively dating well — and from optional features that are gated behind behavior, which means they're only available to users who are already showing up. The business model and the user goal point in the same direction. Read more about what the gate covers and doesn't cover in [the post on why money can't buy visibility](/blog/dating-app-you-cant-pay-to-rank-on).
 
 ## What we give up by paying users to leave
 
@@ -65,7 +65,7 @@ Three things, named honestly.
 
 We give up the user who comes back five times a day to scroll. They will not feel rewarded; the system, instead of reinforcing their pattern with dopamine, will quietly throttle their reach. That's a worse experience for that user, and we've decided the trade is worth it.
 
-We give up the easy-to-explain feature comparison. "We have unlimited swipes" is a thing other apps say in their marketing. "We have a behavioral score that shapes discovery based on date completion" is harder to fit on a billboard. We bet that the right users — the ones who care about the second sentence — will find us anyway.
+We give up the easy-to-explain feature comparison. "We have unlimited swipes" is a thing other apps say in their marketing. "Discovery is shaped around what you actually do — including whether you go on dates" is harder to fit on a billboard. We bet that the right users — the ones who care about the second sentence — will find us anyway.
 
 And we give up some short-term DAU numbers. A user who finds someone and leaves doesn't show up the next morning. That's a hit on the dashboard. It's also the entire point.
 
