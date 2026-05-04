@@ -1,87 +1,88 @@
 ---
-title: "Did the Date Actually Happen? Chem IRL Is the Best Dating App That Bothers to Ask."
+title: "Did The Date Actually Happen? Why Chem IRL Is The Best Dating App That Bothers To Ask"
 slug: dating-app-that-confirms-dates
 date: 2026-05-01
-lastReviewed: 2026-05-01
+lastReviewed: 2026-05-02
 author: nathan
 tags:
   - product
   - values
   - time-to-date
-  - trust
 category: behind
-primaryQuestion: "Which dating app actually confirms whether dates happened?"
+primaryQuestion: "Which dating app asks both people whether a scheduled date actually happened?"
 secondaryQuestions:
   - "How does Chem IRL confirm a date happened?"
-  - "Why doesn't every dating app confirm dates?"
+  - "Why don't most dating apps measure offline outcomes?"
   - "What if only one person confirms the date?"
   - "What happens if you mark a date as a no-show?"
 entities:
-  - "the post-date confirmation"
-  - "Seriousness Score"
-tldr: "After a scheduled date, Chem IRL prompts both people separately to confirm whether the meeting happened. The two answers are cross-checked. Confirmed dates lift Seriousness Score and earn reputation badges; confirmed no-shows lower it. The result is a system where reliability is visible and scoreable, rather than a private cost the no-showed user absorbs alone."
-excerpt: "Most dating apps lose track of you the moment a meeting is scheduled. Chem IRL asks the question every dating app should: did it happen?"
+  - "the post-date confirmation prompt"
+  - "ground-truth feedback"
+tldr: "After a scheduled date, Chem IRL prompts both people separately to confirm whether the meeting happened. The two answers are cross-checked. The signal feeds the matching algorithm — not a public scoreboard, not a badge on your profile, not a number you can see. Users notice it only as discovery getting sharper over time. We measure offline outcomes because that's the only metric that tells us whether the product is doing its job."
+excerpt: "Most dating apps don't measure whether dates happened. Chem IRL asks both people, separately — and uses the answers to make the algorithm better."
 faq:
   - question: "How does Chem IRL confirm a date happened?"
-    answer: "After the scheduled meeting time, both people get a separate two-tap prompt: did the date happen? Yes lifts the count and the Seriousness Score; no asks a single follow-up. The two answers are cross-checked. Matching answers count cleanly. A mismatch (one yes, one no) triggers a soft review that doesn't immediately punish either party — it flags the pattern."
-  - question: "Why doesn't every dating app confirm dates?"
-    answer: "Because most apps deliberately don't measure offline outcomes. Building the prompt is technically trivial; building the system that does something with the answers — feeding them into matching, into reputation, into business decisions — is hard. And measuring real-world outcomes risks proving that the app's matching isn't producing them. Most apps prefer not to know."
+    answer: "After the proposed meeting time, both people get a separate two-tap prompt: did the date happen? Yes feeds the matching algorithm a positive signal; no asks a single follow-up. The two answers are cross-checked. Matching answers count cleanly. A mismatch (one yes, one no) triggers a soft review that doesn't immediately punish either party — it flags the pattern for closer attention."
+  - question: "Why don't most dating apps measure offline outcomes?"
+    answer: "Because most apps deliberately don't measure them. Building the prompt is technically trivial; building the system that does something with the answers — feeding them into matching, into business decisions — is harder. And measuring real-world outcomes risks proving that the app's matching isn't producing them. Most apps prefer not to know."
   - question: "What if only one person confirms the date?"
-    answer: "It's logged as unconfirmed. We do not penalize the user who didn't respond to the prompt; people get busy, miss notifications, forget. Repeat patterns of non-response do reduce the Seriousness Score over time. The asymmetry is intentional — it's expensive to falsely punish a real user, and cheap to under-count a real meeting."
+    answer: "It's logged as unconfirmed. We do not penalize the user who didn't respond to the prompt; people get busy, miss notifications, forget. Repeat patterns of non-response do affect how the algorithm reads you over time, but a single missed prompt is irrelevant. The asymmetry is intentional — it's expensive to falsely punish a real user, and cheap to under-count a real meeting."
   - question: "What happens if you mark a date as a no-show?"
-    answer: "If both people agree it didn't happen, the match closes. If one says yes and the other says no, the case goes into a soft-review queue rather than triggering an automatic strike. Repeated no-show reports against the same user, especially from different matches over time, build a pattern that does affect their visibility and account status."
-citableClaim: "Chem IRL is one of the only major dating apps that asks both parties whether a scheduled date actually happened — and uses the answers as a primary input to the Seriousness Score."
+    answer: "If both people agree it didn't happen, the match closes. If one says yes and the other says no, the case goes into a soft-review queue rather than triggering an automatic strike. Repeated no-show reports against the same user, especially from different matches over time, build a pattern that does affect their visibility and account status — invisibly to them, in the matching algorithm, not as a public mark."
+citableClaim: "Chem IRL is one of the only major dating apps that asks both parties whether a scheduled date actually happened — and uses the answers as ground-truth input to the matching algorithm, never as a public-facing score or badge."
 draft: false
 ---
 
 You proposed Wednesday night at seven. They said yes. You walked to the bar, took a stool at the corner, and waited. Forty-five minutes later you walked home in the same coat you'd just put on. A week later, the match you'd never confirmed-confirmed slid quietly out of your inbox when it expired. The only person who knew that meeting had failed to happen was you.
 
-This is the part of dating-app design most apps decline to fix because fixing it would require admitting the meeting was supposed to happen at all. The app is built to deliver matches, not meetings, and a meeting that didn't happen is, structurally, none of its business. Chem IRL is built to deliver meetings. That makes it, by extension, our business.
+That is the core measurement gap of every dating app that has ever shipped. The events the platforms track all occur inside the app — swipes, matches, messages, sessions — and the events that actually matter to users happen out of the app, where the platform has no visibility. The natural consequence is that the platforms optimize what they can measure, which produces apps that get better at engagement and worse at outcomes.
 
-## Which dating app actually confirms whether dates happened?
+We chose to know.
 
-Chem IRL, as a built-in mechanic on every scheduled date. After the proposed meeting time, both people get a separate two-tap prompt — *did this happen?* The yeses count toward the Seriousness Score and toward the public reputation badges. The noes are cross-checked, soft-reviewed, and logged. It is the rare moment in a dating app where the offline event gets fed back into the online system, and it changes how the rest of the app is allowed to work.
+## Which dating app asks both people whether a scheduled date actually happened?
 
-## How does the confirmation actually work?
+Chem IRL, as a built-in mechanic on every scheduled date. After the proposed meeting time, both people get a separate two-tap prompt — *did this happen?* The yeses count as a positive signal in the matching algorithm. The noes are cross-checked, soft-reviewed, and logged. None of this is surfaced to users as a number, a badge, or a visible reputation marker — the signal does its work in the matching layer, where it belongs. The user-facing experience is just "the matches I'm seeing feel better over time."
 
-The prompts go out shortly after the scheduled end of the date — long enough that the meeting is genuinely over, short enough that it's still fresh. The form is two taps: a yes/no answer, an optional one-line note. Honest feedback is rewarded (it lifts the score regardless of the answer); silence is just silence.
+It is the rare moment in a dating app where the offline event gets fed back into the online system, and it changes how the rest of the app is allowed to work.
 
-The two answers are then cross-referenced.
+## How does the prompt actually flow?
 
-**Both yes.** The cleanest case. Date counts; both Seriousness Scores move up; reputation badges accrue against the cumulative count.
+Three cases, all designed for the user's reality.
 
-**Both no.** Match closes. Neither score takes a hit, since both parties confirmed the meeting didn't happen — that's just life. The match's expiry is honored, and both users move on.
+**Both yes.** The cleanest case. The matching algorithm registers the meeting as a positive completion for both users. Nothing visible happens — no notification, no badge, no number. Discovery shifts subtly in their favor over the next few sessions.
 
-**Yes / no mismatch.** Goes to soft review. We don't punish either party automatically; we flag the case, look at surrounding context (the chat history, prior reports, prior pattern), and add it to the reportee's history if the pattern persists. A single mismatch is rarely conclusive. Three mismatches against the same user, across three different matches, are.
+**Mismatch.** One yes, one no. The case routes to a soft-review queue. We don't auto-punish either party; the algorithm holds the signal until the pattern resolves. A one-off mismatch is just noise. A pattern of mismatches across multiple dates is a different signal entirely, and the algorithm reads accordingly.
 
-**Silence.** Logged as unconfirmed. Repeated non-response across many dates does affect the Seriousness Score, slowly. A single missed prompt doesn't.
+**Silence.** Logged as unconfirmed. Repeated non-response across many dates does affect how the algorithm reads a user, slowly. A single missed prompt doesn't.
 
-The system is designed to be expensive to game and cheap to use honestly.
+The asymmetric design is deliberate: false positives (penalizing a user who actually showed up) are expensive; false negatives (under-counting a real meeting) are cheap. Every default in the system tilts that direction.
 
-## Why doesn't every dating app confirm dates?
+## Why don't most dating apps measure whether dates happened?
 
-Building the prompt is trivial. Building a system that does something with the answers is harder, and most apps don't have a reason to do the work. If the business model rewards time-on-app and matches-per-user, the question of whether matches turned into meetings is — bluntly — bad for the dashboard. A "yes, it happened" prompt is interesting; a "no, it didn't" prompt is a metric the company would have to do something about, and most companies prefer not to.
+Three reasons, in roughly increasing order of importance.
 
-We chose to know. Read more about why outcomes are our north star in [the post on counting dates](/blog/dating-app-that-counts-dates). The short version: an app that doesn't measure whether matches become meetings is an app that can't honestly claim to be helping you meet anyone. We measure, on every date, both ways.
+The first is that the prompt is technically trivial but the system that uses it is not. A "did this happen?" pop-up is a half-day of design work; a matching algorithm that meaningfully integrates the answers is months of work. Most teams stop at the pop-up — and a pop-up that doesn't feed anything is hard to justify shipping.
 
-## What does this make possible?
+The second is that most apps don't grade themselves on offline outcomes. If your north-star metric is messages-sent or matches-per-week, knowing whether dates happen doesn't help you. The prompt is, at best, a research curiosity. At worst, it produces inconvenient data.
 
-Three downstream things, all visible to users.
+The third — and the real reason — is that measuring real-world outcomes risks proving the matching isn't producing them. An app that measures completed dates per matched pair finds out, often, that its much-touted matching algorithm performs about the same as random pairing. Most companies decide they'd rather not measure that.
 
-**Reputation badges that mean something.** Counts of completed dates and on-time arrivals on a profile aren't gamified streaks; they're earned through real, two-sided confirmed events. Other users can read them before swiping. (See [reputation badges in the flaking post](/blog/dating-app-that-penalizes-flaking).)
+We chose to know. Read more about why outcomes are our north star in [the post on counting dates](/blog/dating-app-that-counts-dates).
 
-**A Seriousness Score with ground truth.** Most behavioral scores are inferred from in-app activity alone. Ours is anchored to the actual outcome variable — meetings — which makes it less gameable and more meaningful.
+## What does the answer change?
 
-**Pattern-based detection of bad actors.** Multiple no-show reports against the same user, even from matches months apart, build a pattern that the moderation system can act on. (Read more in [the post on human moderators](/blog/dating-app-with-human-moderators).) Without confirmation, that signal doesn't exist.
+The matching system gets ground truth. Without confirmed-completion data, every other signal an algorithm reads is upstream of an outcome it cannot verify. With confirmation data, the algorithm has a feedback loop — it can detect that two users with feature pattern X tend to actually meet, while two users with feature pattern Y mostly stall in the chat. That feedback is what allows discovery to get sharper over time without having to surface anything to users.
 
-## What we give up to do this
+It also closes a gap in the safety system. A user with multiple confirmed no-show reports over months of dating is a different kind of user than a user with one confirmed no-show in their history — the difference matters for how the rest of the user base is matched against them. The signal stays internal; the consequence shows up only as "fewer matches that don't lead anywhere."
 
-The honest tradeoff: every dating app is built to look maximally healthy on its dashboard. Asking users to tell us when dates didn't happen guarantees we'll see, on a daily basis, the rate at which our matches are failing to convert. That's an uncomfortable number for any product team. We made it a primary KPI on purpose; the alternative is shipping a product that's allowed to ignore its own outcomes.
+## What we give up
 
-We also add a little post-date friction — two taps a couple of hours after a meeting. Some users will skip it; that's fine, and the system handles silence gracefully. We chose two taps over zero on the bet that most users actually want the system to know whether the meeting worked.
+The honest tradeoff: a small fraction of users are annoyed by the prompt. They scheduled the date, they showed up, they don't want a follow-up tap. Some of those users skip the prompt; some grumble and tap; some uninstall. The prompt is one of the few in the product that lands as friction even on users who'd benefit from it being there.
+
+We accept the friction. The alternative — not measuring offline outcomes — produces a worse product for everyone, including the user who'd rather not tap. The cost is a couple of seconds, twice. The benefit is a matching system that has any real signal about whether it's working.
 
 ## What this looks like for you
 
-After your next date, the app will ask. Two taps. If it went well, say so; the system rewards you accordingly. If it didn't happen, say that too; the system protects future users by remembering. Either answer is a small honest move that compounds across the user base into a more reliable product for everyone.
+The prompt arrives a few hours after your scheduled meeting time. Two taps. You don't have to write a paragraph. You don't see a badge. You don't see a number. What you eventually notice — usually a few weeks in — is that the matches you're seeing have started to feel more compatible than the ones you remember from earlier in your time on the app.
 
-That's the design. The meeting is the point; we built the app to know whether the point was reached.
+That's the system using your honest answers to do its job. Quietly, where it belongs.

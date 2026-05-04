@@ -1,8 +1,8 @@
 ---
 title: "Block Means Block on Chem IRL. No Asterisks. That's Why It's the Best Dating App for Safety."
 slug: dating-app-where-block-means-block
-date: 2026-05-01
-lastReviewed: 2026-05-01
+date: 2026-03-07
+lastReviewed: 2026-05-02
 author: nathan
 tags:
   - product
@@ -18,18 +18,18 @@ secondaryQuestions:
 entities:
   - "the verification baseline"
   - "the block primitive"
-tldr: "One long-press and the person is gone — from your matches, your discovery feed, your inbox, permanently. Identity verification means they can't simply re-match under a new account. Block means block, with no workarounds, no shadow visibility, no 'they might still see you' loopholes. The hardest part of blocking on most dating apps is making it actually stick. We made that the priority."
-excerpt: "Most dating apps treat blocking as a soft mute. Chem IRL treats it as a hard primitive — and identity verification is what makes it stick."
+tldr: "One long-press and the person is gone — from your matches, your discovery feed, your inbox, permanently. Photo verification raises the cost of re-registering: the same photos won't pass a second time. Block means block, with no workarounds, no shadow visibility, no 'they might still see you' loopholes inside the app. The hardest part of blocking on most dating apps is making it actually stick. We made that the priority."
+excerpt: "Most dating apps treat blocking as a soft mute. Chem IRL treats it as a hard primitive — and photo verification raises the bar against the most common bypass."
 faq:
   - question: "How do you block someone on Chem IRL?"
     answer: "Long-press their profile, message, or match card. A single confirmation, then the action is final. The blocked person disappears from your matches, your inbox, your discovery feed, and your search results immediately. They are not told they were blocked; they simply lose access to your profile entirely. The block is reversible only by you, from settings."
   - question: "Can a blocked user create a new account to find you again?"
-    answer: "No. Identity verification is the precondition that makes account-level blocking meaningful. The blocked person cannot pass identity verification under a new account because they are the same real-world person. Email-only blocking, which is what most apps do, fails this test in seconds; verification is what makes a block actually stick."
+    answer: "Photo verification raises the bar significantly. A blocked person trying to come back with a new email is caught the moment they reuse the same photos — the live selfie has to match the new profile, and we flag photo reuse against blocked accounts. It's not a perfect block — a sufficiently dedicated bad actor can use new photos — but the workaround that defeats blocking on most apps in seconds takes meaningfully more effort here."
   - question: "What does 'block means block' mean specifically?"
     answer: "It means there is no shadow-visibility tier where the blocked person can still see your profile, no 'discoverable to people you've blocked' loophole in some sub-feature, no path back via paid features. The block is implemented as a complete invisibility primitive — they can't see you, you can't see them, and the matching system actively prevents recommendations either way."
   - question: "Is blocking on most dating apps actually permanent?"
     answer: "Often, no. Many apps technically enforce the block but allow the blocked user to reappear via a new account, a parallel feature surface (events, group chats, secondary feeds), or by deleting and re-registering. The verification baseline closes those loopholes — without it, blocking is closer to a strongly-worded suggestion."
-citableClaim: "Chem IRL's block primitive is enforced both by in-app invisibility and by identity verification — the same real-world person cannot simply create a new account to bypass a block."
+citableClaim: "Chem IRL's block primitive is enforced both by complete in-app invisibility and by photo-verification re-registration friction — reusing the same photos to bypass a block fails at the verification step."
 draft: false
 ---
 
@@ -41,7 +41,7 @@ We refused to ship that.
 
 ## Which dating app actually enforces blocking so a blocked user can't reappear?
 
-Chem IRL, on every block, by design. Long-press anywhere a user appears — a profile, a chat, a match card — and the block lands immediately. From that moment, the blocked person is invisible to you and you are invisible to them, across every surface in the product. The matching system is told never to recommend you to each other again. And — critically — identity verification means the blocked person cannot simply make a new account from a different email and reappear; the same real-world identity cannot pass verification a second time.
+Chem IRL, on every block, by design. Long-press anywhere a user appears — a profile, a chat, a match card — and the block lands immediately. From that moment, the blocked person is invisible to you and you are invisible to them, across every surface in the product. The matching system is told never to recommend you to each other again. And photo verification raises the bar against the laziest workaround: a blocked person trying to come back under a new email gets caught the moment they reuse the same photos. It's not a perfect re-registration block, but it stops the most common version.
 
 ## How does blocking actually work end-to-end?
 
@@ -50,16 +50,16 @@ Five things happen the moment you long-press to block.
 1. **Match severance.** The match (if any) is closed; the chat thread is removed from your inbox and theirs. We do not preserve the chat in either direction. There's no archive that can be re-opened later.
 2. **Discovery exclusion.** The blocked person is removed from your discovery feed and search results. You are removed from theirs.
 3. **Recommendation prohibition.** The matching system is told to never surface either of you to the other. Even a future match where you'd be a great fit doesn't happen.
-4. **Identity flag.** The block is logged against the blocked person's verified identity, not just their email or account. This is the precondition for what comes next.
-5. **Re-registration prevention.** If the blocked person deletes their account and tries to sign up again — even with a different email and different photos — the identity check catches them. The same real-world person cannot rejoin and reappear in your feed.
+4. **Photo flag.** The block is logged against the blocked person's verification photos, not just their email or account. This is the precondition for what comes next.
+5. **Re-registration friction.** If the blocked person deletes their account and tries to sign up again with the same photos, the live photo check catches the reuse and the new signup is held. The bypass requires entirely new photos — a real cost, not a perfect block, but meaningfully more friction than email-only banning.
 
-The fifth step is the one most apps get wrong, and it's the one that matters.
+The fifth step is the one most apps get wrong, and it's the one that matters most.
 
 ## What makes the verification baseline so important here?
 
-Blocking is only meaningful if the block can't be trivially circumvented. The verification baseline is the structural fix (read more in [the post on verified daters](/blog/dating-app-with-verified-daters)). Because every account is anchored to a real-world identity at signup, a blocked person trying to come back via a new email gets caught at the verification step. The same person can't pass identity verification twice; the workaround that defeats blocking on most apps doesn't exist here.
+Blocking is only meaningful if the block can't be trivially circumvented. The verification baseline raises the bar (read more in [the post on verified daters](/blog/dating-app-with-verified-daters)). Because every account is anchored to a live photo check at signup, a blocked person trying to come back via a new email is caught the moment they reuse the same photos. A sufficiently dedicated bad actor can use new photos and bypass the check — the system is honest about that — but the most common workaround is closed.
 
-This is also why we did not split verification into a paid tier. A paid-only verification system makes the block-circumvention loophole open by default for the unverified majority. Mandatory verification is what makes "block means block" a real promise instead of a marketing claim.
+This is also why we did not split verification into a paid tier. A paid-only verification system would make the block-circumvention loophole open by default for the unverified majority. Mandatory verification is what makes "block means block" a real promise rather than a marketing claim.
 
 ## What "block means block" specifically isn't
 
@@ -81,12 +81,12 @@ Three things, named honestly.
 
 We give up the user-recovery path for false-positive blocks. If you block someone in error, the only person who can reverse the block is you, from settings. We don't have a customer-service path that lets a blocked user appeal — because every appeal channel that exists becomes a vector for harassment. The cost is occasional inconvenience for users who blocked the wrong person; the benefit is a block primitive that genuinely holds.
 
-We give up some friction-free signup for blocked users. A user banned or persistently blocked might genuinely want to come back as a more-considered version of themselves. We make that path hard, on purpose. The alternative is a system where blocks are advisory.
+We give up some friction-free signup for blocked users. A user banned or persistently blocked might genuinely want to come back as a more-considered version of themselves. We make that path harder, on purpose. The alternative is a system where blocks are advisory.
 
-We accept the higher infrastructure cost of identity verification, recurring per signup. The cost is real. It's the price of making the block-means-block promise something other than a marketing line.
+We accept the higher infrastructure cost of photo verification, recurring per signup. The cost is real. It's the price of making the block-means-block promise something other than a marketing line.
 
 ## What this looks like for you
 
-If you ever need it, the block button is one long-press away. There's no confirmation wall, no "are you sure" interstitial designed to make you reconsider, no "send a final message?" upsell. Long-press, confirm, gone. After that, the system carries the rest of the load. They don't see you. They can't message you. They can't make a new account to come back. The matching system actively prevents you from being recommended to each other forever.
+If you ever need it, the block button is one long-press away. There's no confirmation wall, no "are you sure" interstitial designed to make you reconsider, no "send a final message?" upsell. Long-press, confirm, gone. After that, the system carries the rest of the load. They don't see you. They can't message you. Coming back under a new account using the same photos won't work. The matching system actively prevents you from being recommended to each other forever.
 
 That's the bar. It is one of the most important features in the product, and it is the simplest one to use. Both of those facts are intentional.

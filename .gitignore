@@ -60,6 +60,8 @@ App Plans/
 
 # brand/ working scratch (concept iterations, raster previews, build artifacts)
 brand/working/
+brand/archive/Chemirl_logo.svg
+brand/logo-ideas/
 
 # generated images from nano-banana-2 MCP (scratch)
 generated_imgs/
@@ -67,3 +69,5 @@ generated_imgs/
 # local editorial scratch
 Blog post ideas.md
 WRITING_GUIDE.md
+web/src/app/blog/chem-irl-blog-ideas.md
+docs/COHORT_A_AUDIT_REPORT.md
