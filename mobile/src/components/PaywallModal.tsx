@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import { BRAND_COLORS, MIDNIGHT, TYPOGRAPHY, SPACING } from '../config/brand';
 import {
@@ -11,6 +11,7 @@ import {
 } from '../lib/iris/persona';
 import { startTrial } from '../lib/subscription';
 import { IAPUnavailableInExpoGoError, purchaseChemPlus } from '../lib/iap';
+import { trackEvent } from '../lib/analytics';
 
 export interface PaywallModalProps {
   visible: boolean;
@@ -22,14 +23,30 @@ export interface PaywallModalProps {
    *  subscription state lands when validate-subscription's webhook completes
    *  via the existing purchase listener — this callback fires earlier. */
   onSubscriptionRequested?: () => void;
+  /** Where in the app this paywall was opened from. Tagged on every
+   *  iris_paywall_* analytics event so funnel reports can attribute trial
+   *  starts and subscriptions back to entry points (signup_pitch, profile,
+   *  discover, match_header, …). */
+  surface?: string;
 }
 
 type Pending = 'trial' | 'subscribe' | null;
 
 export default function PaywallModal(props: PaywallModalProps) {
-  const { visible, onClose, onTrialStarted, onSubscriptionRequested } = props;
+  const { visible, onClose, onTrialStarted, onSubscriptionRequested, surface = 'unknown' } = props;
   const [pending, setPending] = useState<Pending>(null);
   const [error, setError] = useState<string | null>(null);
+  // True when the user converted (trial or subscribe) inside this open
+  // session. Used to suppress iris_paywall_dismissed when the modal closes
+  // because the user actually took action.
+  const convertedRef = useRef(false);
+
+  useEffect(() => {
+    if (visible) {
+      convertedRef.current = false;
+      trackEvent('iris_paywall_shown', { surface });
+    }
+  }, [visible, surface]);
 
   const handleStartTrial = useCallback(async () => {
     if (pending) return;
@@ -41,6 +58,8 @@ export default function PaywallModal(props: PaywallModalProps) {
         setError('Could not start trial. Try again or subscribe directly.');
         return;
       }
+      convertedRef.current = true;
+      trackEvent('iris_trial_started', { surface });
       onTrialStarted?.();
       onClose();
     } catch (err) {
@@ -48,7 +67,7 @@ export default function PaywallModal(props: PaywallModalProps) {
     } finally {
       setPending(null);
     }
-  }, [pending, onTrialStarted, onClose]);
+  }, [pending, onTrialStarted, onClose, surface]);
 
   const handleSubscribe = useCallback(async () => {
     if (pending) return;
@@ -56,6 +75,8 @@ export default function PaywallModal(props: PaywallModalProps) {
     setPending('subscribe');
     try {
       await purchaseChemPlus();
+      convertedRef.current = true;
+      trackEvent('iris_subscription_purchased', { surface });
       onSubscriptionRequested?.();
       // The purchase listener (set up at app root) handles the receipt
       // validation + entitlement update on success. We close optimistically;
@@ -70,10 +91,17 @@ export default function PaywallModal(props: PaywallModalProps) {
     } finally {
       setPending(null);
     }
-  }, [pending, onSubscriptionRequested, onClose]);
+  }, [pending, onSubscriptionRequested, onClose, surface]);
+
+  const handleDismiss = useCallback(() => {
+    if (!convertedRef.current) {
+      trackEvent('iris_paywall_dismissed', { surface });
+    }
+    onClose();
+  }, [onClose, surface]);
 
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={handleDismiss}>
       <View style={styles.overlay}>
         <View style={styles.modal}>
           <View style={styles.heroRow}>
@@ -115,7 +143,7 @@ export default function PaywallModal(props: PaywallModalProps) {
           {error && <Text style={styles.error}>{error}</Text>}
 
           <Pressable
-            onPress={onClose}
+            onPress={handleDismiss}
             disabled={pending !== null}
             hitSlop={12}
             style={styles.dismissRow}

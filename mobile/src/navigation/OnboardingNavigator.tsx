@@ -1,8 +1,12 @@
+import { useEffect, useState } from 'react';
 import { createNativeStackNavigator, NativeStackHeaderProps } from '@react-navigation/native-stack';
-import { View, Text, StyleSheet } from 'react-native';
+import { ActivityIndicator, View, Text, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import ProgressBar from '../components/ui/ProgressBar';
 import { BRAND_COLORS, MIDNIGHT, TYPOGRAPHY } from '../config/brand';
+import { supabase } from '../lib/supabase/client';
+import { getEntitlement } from '../lib/subscription';
+import { hasSeenPitch } from '../lib/iris/pitchSeen';
 import GenderIdentityScreen from '../screens/onboarding/GenderIdentityScreen';
 import InterestedInScreen from '../screens/onboarding/InterestedInScreen';
 import HeightScreen from '../screens/onboarding/HeightScreen';
@@ -21,6 +25,7 @@ import PhotosScreen from '../screens/onboarding/PhotosScreen';
 import LocationPermissionScreen from '../screens/onboarding/LocationPermissionScreen';
 import ProfileReviewScreen from '../screens/onboarding/ProfileReviewScreen';
 import IrisInterviewScreen from '../screens/iris/IrisInterviewScreen';
+import IrisPitchScreen from '../screens/iris/IrisPitchScreen';
 
 export type OnboardingStackParamList = {
   GenderIdentity: undefined;
@@ -40,8 +45,13 @@ export type OnboardingStackParamList = {
   Photos: undefined;
   LocationPermission: undefined;
   ProfileReview: undefined;
-  // Iris is an off-track optional screen reachable from ProfileReview.
-  // Deliberately not in SCREEN_ORDER so the step counter stays at 17.
+  // Iris screens are off-track optional surfaces. Deliberately not in
+  // SCREEN_ORDER so the step counter on the question screens stays at
+  // "X of 17".
+  // - IrisPitch: post-signup paywall pitch, shown once per user-device
+  //   pair before GenderIdentity. See useInitialOnboardingRoute below.
+  // - IrisInterview: bio-writing helper reachable from ProfileReview.
+  IrisPitch: undefined;
   IrisInterview: undefined;
 };
 
@@ -67,6 +77,52 @@ const SCREEN_ORDER: (keyof OnboardingStackParamList)[] = [
 
 const TOTAL_STEPS = SCREEN_ORDER.length;
 
+// Resolve the first screen the user should see when OnboardingNavigator
+// mounts. Returns null while still resolving so callers can render a
+// loader instead of flashing a question screen first.
+//
+// Order of preference:
+//   1. Already entitled (active trial/subscription) → skip pitch.
+//   2. Already saw the pitch on this device → skip pitch.
+//   3. Otherwise → show IrisPitch.
+//
+// On any failure we fall back to GenderIdentity rather than blocking
+// onboarding behind an entitlement check.
+function useInitialOnboardingRoute(): keyof OnboardingStackParamList | null {
+  const [route, setRoute] = useState<keyof OnboardingStackParamList | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
+        if (!user) {
+          if (!cancelled) setRoute('GenderIdentity');
+          return;
+        }
+        const entitlement = await getEntitlement();
+        if (cancelled) return;
+        if (entitlement.allowed) {
+          setRoute('GenderIdentity');
+          return;
+        }
+        const seen = await hasSeenPitch(user.id);
+        if (cancelled) return;
+        setRoute(seen ? 'GenderIdentity' : 'IrisPitch');
+      } catch {
+        if (!cancelled) setRoute('GenderIdentity');
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  return route;
+}
+
 function OnboardingHeader({ route }: NativeStackHeaderProps) {
   const insets = useSafeAreaInsets();
   const step = SCREEN_ORDER.indexOf(route.name as keyof OnboardingStackParamList) + 1;
@@ -89,14 +145,26 @@ function OnboardingHeader({ route }: NativeStackHeaderProps) {
 const Stack = createNativeStackNavigator<OnboardingStackParamList>();
 
 export default function OnboardingNavigator() {
+  const initialRoute = useInitialOnboardingRoute();
+
+  if (!initialRoute) {
+    return (
+      <View style={styles.loadingScreen}>
+        <ActivityIndicator color={BRAND_COLORS.primary} />
+      </View>
+    );
+  }
+
   return (
     <Stack.Navigator
+      initialRouteName={initialRoute}
       screenOptions={{
         headerShown: true,
         header: (props) => <OnboardingHeader {...props} />,
         contentStyle: { backgroundColor: MIDNIGHT.bg },
       }}
     >
+      <Stack.Screen name="IrisPitch" component={IrisPitchScreen} options={{ headerShown: false }} />
       <Stack.Screen name="GenderIdentity" component={GenderIdentityScreen} />
       <Stack.Screen name="InterestedIn" component={InterestedInScreen} />
       <Stack.Screen name="Height" component={HeightScreen} />
@@ -145,5 +213,11 @@ const styles = StyleSheet.create({
     fontFamily: TYPOGRAPHY.fontFamily.medium,
     fontSize: TYPOGRAPHY.fontSize.xs,
     color: BRAND_COLORS.text[600],
+  },
+  loadingScreen: {
+    flex: 1,
+    backgroundColor: MIDNIGHT.bg,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });
