@@ -1,11 +1,12 @@
 import Image from 'next/image';
 import Link from 'next/link';
-import { BRAND, BRAND_COLORS } from '@/config/brand';
+import { BRAND, BRAND_COLORS, COMMUNITY } from '@/config/brand';
 
 const PRODUCT_LINKS = [
   { href: '/how-it-works', label: 'How It Works' },
   { href: '/download', label: 'Download' },
   { href: '/safety', label: 'Safety' },
+  { href: '/support', label: 'Support' },
 ];
 
 const COMPANY_LINKS = [
@@ -105,7 +106,23 @@ export function Footer() {
         <div className="border-t border-white/10">
           <div className="max-w-7xl mx-auto px-4 py-6 flex flex-col sm:flex-row justify-between items-center gap-4 text-sm text-ink-400">
             <p>&copy; 2026 {BRAND.name}. All rights reserved.</p>
-            <div className="flex gap-6">
+            <div className="flex flex-wrap items-center justify-center gap-6">
+              {COMMUNITY.discordUrl ? (
+                <a
+                  href={COMMUNITY.discordUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="hover:text-aqua-400 transition-colors"
+                >
+                  Discord
+                </a>
+              ) : null}
+              <Link
+                href="/support"
+                className="hover:text-aqua-400 transition-colors"
+              >
+                Support
+              </Link>
               <Link
                 href="/privacy"
                 className="hover:text-aqua-400 transition-colors"
