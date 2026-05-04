@@ -92,6 +92,11 @@ export const BRAND_MESSAGES = {
   },
 } as const;
 
-
-
-
+// Community channels surfaced on the /support page. discordUrl is read
+// from NEXT_PUBLIC_COMMUNITY_DISCORD_URL (exposed via web/next.config.ts).
+// When unset, the support page hides the Community card and shows only
+// the email contact.
+export const COMMUNITY = {
+  discordUrl: process.env.NEXT_PUBLIC_COMMUNITY_DISCORD_URL ?? '',
+  supportEmail: 'hello@chemirl.app',
+} as const;

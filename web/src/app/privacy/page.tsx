@@ -71,6 +71,22 @@ export default function PrivacyPage() {
                 With your permission, we collect your location to show you
                 nearby users and suggest venues.
               </p>
+              <h3 className="text-lg font-semibold text-ink-900 pt-2">
+                Support Submissions
+              </h3>
+              <p>
+                When you submit a bug report, feature request, contact
+                message, or community tip via{' '}
+                <a href="/support" className="underline">
+                  /support
+                </a>
+                , we collect the submission text, your email address (when
+                provided), an optional display name, and an IP-derived hash
+                used solely for abuse prevention. Tips you choose to share
+                publicly are reviewed and may be edited and published with
+                only your display name shown alongside &mdash; your email and
+                IP-derived hash are never published.
+              </p>
             </div>
           </div>
 

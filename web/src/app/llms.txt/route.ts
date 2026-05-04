@@ -27,6 +27,11 @@ const STATIC_LINKS = [
     hint: 'Safety features, reporting, and policies.',
   },
   {
+    url: `${SITE}/support/`,
+    title: 'Support',
+    hint: 'FAQ, contact, bug reports, feature requests, and community-shared tips.',
+  },
+  {
     url: `${SITE}/privacy/`,
     title: 'Privacy policy',
     hint: 'How user data is handled.',
