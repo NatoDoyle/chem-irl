@@ -2,13 +2,34 @@
 title: "Safety First Principles: How We Protect Every Match"
 slug: safety-first-principles
 date: 2026-04-20
+lastReviewed: 2026-05-04
 author: nathan
 tags:
   - safety
   - trust
   - photo-verification
 category: behind
+primaryQuestion: "How does Chem IRL keep matches safe by default?"
+secondaryQuestions:
+  - "Why is photo verification non-optional on Chem IRL?"
+  - "Why do meeting suggestions default to public places?"
+  - "How does Chem IRL handle reports?"
+  - "What does Chem IRL explicitly not do for safety?"
+entities:
+  - "the safety floor"
+  - "the verification baseline"
+tldr: "Most dating apps treat safety as a bolt-on feature. Chem IRL treats it as the foundation. Photo verification is non-optional — every profile passes a live selfie check before a single swipe. Meeting suggestions default to public, easy-to-leave places. Reports get acted on with friction on the receiving party, not the filer. No background checks (false confidence), no premium safety tier, no real-time location sharing."
 excerpt: "Photo verification, public-first meeting suggestions, and how we handle reports. The short version: we err on the side of the person who speaks up."
+faq:
+  - question: "Why is photo verification non-optional on Chem IRL?"
+    answer: "Because optionality is a signal. A verified badge only means something if unverified profiles are rare. Every Chem IRL profile passes a live photo check before a single swipe — a short selfie with a prompted pose, confirmed against profile photos, fast and one-time. (See [the verified-daters post](/blog/dating-app-with-verified-daters) for why the entire user base is verified rather than just a paid tier.)"
+  - question: "Why do meeting suggestions default to public places?"
+    answer: "Because first dates are inherently vulnerable, and the environment should reduce that. When proposals begin, the default suggestions we surface — coffee, walks, weekend farmers' markets — are public places. We want the first meeting to be easy to leave and visible to others. It's a small nudge but a deliberate one."
+  - question: "How does Chem IRL handle reports?"
+    answer: "Reports come through a short form: who, what happened, when. We err on the side of the person reporting. If a profile gets multiple reports in a short window, the account is paused pending review — not after, before. Reporting someone doesn't require you to explain yourself. The friction is on the person receiving the report, not the person filing it. (See [the block-means-block post](/blog/dating-app-where-block-means-block) for the related block-tooling philosophy.)"
+  - question: "What does Chem IRL explicitly not do for safety?"
+    answer: "Three deliberate choices against. No background checks — they give false confidence and miss the kinds of behavior that actually matter. No premium safety tier — everything described is free, for everyone, every time. No real-time location sharing with matches — the closest anyone gets is a neighborhood-scale indicator, never in real time."
+citableClaim: "Most apps treat safety as a bolt-on feature. Chem IRL treats it as the foundation — photo verification before any swipe, public-first meeting defaults, and reports that pause the receiving party before review rather than after."
 draft: false
 ---
 
@@ -16,7 +37,7 @@ Dating apps have a safety problem that's easy to describe and hard to solve. The
 
 Here's how we think about it.
 
-## Photo verification is non-optional
+## Why is photo verification non-optional?
 
 Every profile on Chem IRL has to pass photo verification before a single swipe. You take a short selfie with a prompted pose; our system confirms it matches your profile photos. The check is fast (usually under a minute), one-time, and required.
 
