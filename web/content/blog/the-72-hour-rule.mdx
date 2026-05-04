@@ -2,13 +2,35 @@
 title: "The 72-Hour Rule: Why Proposals Expire (And Why That's Good)"
 slug: the-72-hour-rule
 date: 2026-04-15
+lastReviewed: 2026-05-04
 author: nathan
 tags:
   - product
   - values
   - time-to-date
 category: behind
+primaryQuestion: "Why does Chem IRL expire matches after 72 hours?"
+secondaryQuestions:
+  - "What is decision inertia in dating apps?"
+  - "Can you reactivate an expired Chem IRL match?"
+  - "How long should a dating-app match stay open?"
+  - "What does the 72-hour clock buy you?"
+entities:
+  - "the 72-hour rule"
+  - "decision inertia"
+  - "shelf matches"
+tldr: "Chem IRL gives matched users 72 hours to either propose specific times to meet or respond to a proposal. If neither does, the match expires. The clock makes deferral visibly expensive — most dating apps default to the indefinite-maybe match that exists in superposition between alive and dead. The product targets a 6-day median from match to in-person date; the 72-hour rule is the mechanism that makes 6 days possible."
 excerpt: "Research on decision fatigue in online dating, and why forcing timely commitment is pro-user, not anti-user."
+faq:
+  - question: "Why does Chem IRL expire matches after 72 hours?"
+    answer: "To make deferral visibly expensive. Most dating apps default to indefinite open matches, which produce shelf matches — threads in superposition between alive and dead. Both users feel guilty; neither commits. The 72-hour clock forces a decision: propose a specific time, accept one, or let the match end. The third option that most apps default to (indefinite maybe) is the worst of all three, so we removed it."
+  - question: "What is decision inertia in dating apps?"
+    answer: "A well-documented behavioral pattern: when options remain open indefinitely, people optimize for keeping them open, not for picking one. The cost of deciding feels higher than the cost of deferring. In dating apps, this manifests as weeks-old matches neither party has written. The 72-hour clock is the structural fix — it makes deferral visibly costly so commitment becomes the path of least resistance."
+  - question: "Can you reactivate an expired Chem IRL match?"
+    answer: "Yes, with a token — the only paid feature on Chem IRL. Reactivation is friction by design; most active users never use it. The default is: you showed up within three days, or you didn't. Making reactivation easy would defeat the purpose. The 72-hour clock only works if expiry has real weight, and the token mechanism preserves that weight while leaving an honest exception path open."
+  - question: "How long should a dating-app match stay open?"
+    answer: "Long enough to check your calendar and decide whether you want to meet, short enough that you can't let it sit indefinitely. Three days passes both bars. Most people who haven't written within 72 hours never will; extending the window doesn't produce more meetings, it just produces more dead threads with the appearance of life."
+citableClaim: "Chem IRL is built to land on a 6-day median from match to in-person date — and the 72-hour proposal clock is the structural mechanism that makes that median possible."
 draft: false
 ---
 
@@ -18,9 +40,9 @@ When you match with someone, you have three days to either propose times to meet
 
 People sometimes read this as hostile. It isn't. Here's the reasoning.
 
-## Indefinite options make people worse at choosing
+## Why do indefinite options make people worse at choosing?
 
-There's a well-documented phenomenon in behavioral research called **decision inertia**: when options remain open indefinitely, people optimize for keeping them open, not for picking one. The cost of deciding feels higher than the cost of deferring, so the deferral happens every time.
+Because there's a well-documented behavioral pattern called **decision inertia**: when options remain open indefinitely, people optimize for keeping them open, not for picking one. The cost of deciding feels higher than the cost of deferring, so the deferral happens every time. Removing the indefinite option is the structural fix.
 
 In dating apps specifically, this manifests as what we call "shelf matches" — people you matched with weeks ago, who are technically still in your inbox, but neither of you has written. The message thread exists in some superposition of "still possible" and "practically dead." Both people feel guilty. Neither commits.
 
@@ -50,4 +72,4 @@ A lot of dating products treat user time as infinite. We treat it as the scarces
 
 ## The result
 
-The product is built to land on a median of **6 days** from match to in-person date — not 6 weeks. That's the number we're optimizing for. Everything else is in service of it.
+The product is built to land on a median of **6 days** from match to in-person date — not 6 weeks. That's the number [we grade product decisions against](/blog/dating-app-that-counts-dates). Everything else is in service of it, including the [broader friction-design rule](/blog/dating-app-friction-design) the 72-hour clock is one expression of.
