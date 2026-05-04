@@ -46,6 +46,7 @@ export type AnalyticsEvent =
   | 'iris_draft_used'
   | 'iris_draft_dismissed'
   | 'iris_paywall_shown'
+  | 'iris_paywall_dismissed'
   | 'iris_trial_started'
   | 'iris_subscription_purchased';
 

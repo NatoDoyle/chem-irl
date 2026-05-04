@@ -22,6 +22,8 @@ import {
   saveFilters,
   toRpcParams,
 } from '../../lib/discoveryFilters';
+import PaywallModal from '../../components/PaywallModal';
+import { getEntitlement } from '../../lib/subscription';
 
 type FeedItemWithPhotos = FeedItem & { photos: string[] };
 
@@ -40,6 +42,23 @@ export default function DiscoverScreen() {
   const [seenUserIds, setSeenUserIds] = useState<Set<string>>(new Set());
   const [filters, setFilters] = useState<DiscoveryFilters>(DEFAULT_FILTERS);
   const [filterSheetVisible, setFilterSheetVisible] = useState(false);
+  // Chem Plus upgrade chip — hidden until we know whether the user is
+  // already entitled, then hidden permanently for entitled users.
+  const [entitled, setEntitled] = useState<boolean | null>(null);
+  const [paywallVisible, setPaywallVisible] = useState(false);
+
+  const refreshEntitlement = useCallback(async () => {
+    try {
+      const ent = await getEntitlement();
+      setEntitled(ent.allowed);
+    } catch {
+      setEntitled(null);
+    }
+  }, []);
+
+  useEffect(() => {
+    refreshEntitlement();
+  }, [refreshEntitlement]);
   // Throttle like actions to prevent spam (min 1 second between likes)
   const likeThrottleRef = useRef(createThrottle(() => {}, 1000));
   const feedLenRef: MutableRefObject<number> = useRef(0);
@@ -274,13 +293,25 @@ export default function DiscoverScreen() {
   const headerContent = (
     <View style={[styles.header, { paddingTop: insets.top + SPACING.sm }]}>
       <Text style={styles.headerTitle}>Chem IRL</Text>
-      <AnimatedPressable
-        onPress={() => setFilterSheetVisible(true)}
-        style={styles.filterButton}
-        accessibilityLabel="Filter settings"
-      >
-        <Ionicons name="options-outline" size={22} color={BRAND_COLORS.text[600]} />
-      </AnimatedPressable>
+      <View style={styles.headerActions}>
+        {entitled === false && (
+          <AnimatedPressable
+            onPress={() => setPaywallVisible(true)}
+            style={styles.upgradeChip}
+            accessibilityLabel="Try Chem Plus free for 3 days"
+          >
+            <Ionicons name="sparkles" size={14} color={BRAND_COLORS.aqua[300]} />
+            <Text style={styles.upgradeChipText}>Plus</Text>
+          </AnimatedPressable>
+        )}
+        <AnimatedPressable
+          onPress={() => setFilterSheetVisible(true)}
+          style={styles.filterButton}
+          accessibilityLabel="Filter settings"
+        >
+          <Ionicons name="options-outline" size={22} color={BRAND_COLORS.text[600]} />
+        </AnimatedPressable>
+      </View>
     </View>
   );
 
@@ -366,6 +397,16 @@ export default function DiscoverScreen() {
         onClose={() => setFilterSheetVisible(false)}
         onApply={handleApplyFilters}
       />
+      <PaywallModal
+        visible={paywallVisible}
+        onClose={() => {
+          setPaywallVisible(false);
+          refreshEntitlement();
+        }}
+        onTrialStarted={refreshEntitlement}
+        onSubscriptionRequested={refreshEntitlement}
+        surface="discover"
+      />
     </View>
   );
 }
@@ -387,6 +428,11 @@ const styles = StyleSheet.create({
     fontFamily: TYPOGRAPHY.fontFamily.serifItalic,
     color: BRAND_COLORS.primary,
   },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.sm,
+  },
   filterButton: {
     width: 40,
     height: 40,
@@ -394,6 +440,24 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.06)',
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  upgradeChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: 8,
+    borderRadius: MIDNIGHT.radius.full,
+    backgroundColor: 'rgba(10, 127, 116, 0.15)',
+    borderWidth: 1,
+    borderColor: BRAND_COLORS.aqua[700],
+  },
+  upgradeChipText: {
+    fontFamily: TYPOGRAPHY.fontFamily.semibold,
+    fontSize: TYPOGRAPHY.fontSize.xs,
+    color: BRAND_COLORS.aqua[300],
+    textTransform: 'uppercase',
+    letterSpacing: TYPOGRAPHY.letterSpacing.wide,
   },
   cardArea: {
     flex: 1,

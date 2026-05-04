@@ -31,6 +31,8 @@ import {
   shouldRunReconciliation,
   markReconciliationComplete,
 } from '../../lib/reconcilePhotos';
+import PaywallModal from '../../components/PaywallModal';
+import { getEntitlement } from '../../lib/subscription';
 import {
   GENDER_OPTIONS,
   ORIENTATION_OPTIONS,
@@ -112,6 +114,25 @@ export default function ProfileScreen() {
 
   // Track which sections are expanded (for edit mode)
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set());
+
+  // Chem Plus upgrade card. Hidden once the user is entitled (active
+  // trial or subscription). `null` means we haven't checked yet — the
+  // card is hidden until we know, so users don't see a flash.
+  const [entitled, setEntitled] = useState<boolean | null>(null);
+  const [paywallVisible, setPaywallVisible] = useState(false);
+
+  const refreshEntitlement = useCallback(async () => {
+    try {
+      const ent = await getEntitlement();
+      setEntitled(ent.allowed);
+    } catch {
+      setEntitled(null);
+    }
+  }, []);
+
+  useEffect(() => {
+    refreshEntitlement();
+  }, [refreshEntitlement]);
 
   const toggleSection = useCallback((section: string) => {
     setExpandedSections((prev) => {
@@ -745,6 +766,28 @@ export default function ProfileScreen() {
           </Text>
         </View>
 
+        {/* Chem Plus Upgrade — hidden once the user is entitled */}
+        {entitled === false && (
+          <AnimatedPressable
+            style={styles.upgradeCard}
+            onPress={() => setPaywallVisible(true)}
+            accessibilityRole="button"
+            accessibilityLabel="Try Chem Plus free for 3 days"
+            haptic={false}
+          >
+            <View style={styles.upgradeIcon}>
+              <Ionicons name="sparkles" size={18} color={BRAND_COLORS.onPrimary} />
+            </View>
+            <View style={styles.upgradeBody}>
+              <Text style={styles.upgradeTitle}>Try Chem Plus free for 3 days</Text>
+              <Text style={styles.upgradeSubtitle}>
+                Iris helps with your bio, dates, and replies.
+              </Text>
+            </View>
+            <Ionicons name="chevron-forward" size={18} color={BRAND_COLORS.text[600]} />
+          </AnimatedPressable>
+        )}
+
         {/* About Card */}
         <View style={styles.glassCard}>
           <View style={styles.cardHeader}>
@@ -1135,6 +1178,19 @@ export default function ProfileScreen() {
           style={styles.signOutButton}
         />
       </ScrollView>
+
+      <PaywallModal
+        visible={paywallVisible}
+        onClose={() => {
+          setPaywallVisible(false);
+          // Re-check entitlement after the modal closes so the card
+          // disappears immediately once the trial / subscription lands.
+          refreshEntitlement();
+        }}
+        onTrialStarted={refreshEntitlement}
+        onSubscriptionRequested={refreshEntitlement}
+        surface="profile"
+      />
     </View>
   );
 }
@@ -1189,6 +1245,42 @@ const styles = StyleSheet.create({
   heroSection: {
     alignItems: 'center',
     marginBottom: 32,
+  },
+
+  // Chem Plus upgrade card (between hero and About)
+  upgradeCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.md,
+    paddingVertical: SPACING.md,
+    paddingHorizontal: SPACING.base,
+    borderRadius: MIDNIGHT.radius.lg,
+    backgroundColor: 'rgba(10, 127, 116, 0.10)',
+    borderWidth: 1,
+    borderColor: BRAND_COLORS.aqua[700],
+    marginBottom: SPACING.xl,
+  },
+  upgradeIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: BRAND_COLORS.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  upgradeBody: {
+    flex: 1,
+  },
+  upgradeTitle: {
+    fontFamily: TYPOGRAPHY.fontFamily.semibold,
+    fontSize: TYPOGRAPHY.fontSize.sm,
+    color: BRAND_COLORS.text[900],
+  },
+  upgradeSubtitle: {
+    fontFamily: TYPOGRAPHY.fontFamily.regular,
+    fontSize: TYPOGRAPHY.fontSize.xs,
+    color: BRAND_COLORS.text[600],
+    marginTop: 2,
   },
   avatarRing: {
     width: 106,
