@@ -1,12 +1,16 @@
 // Supabase Edge Function: iris-forget
 //
-// GDPR Article 17 ("right to erasure") for the Iris feature. The caller
-// authenticates with their JWT and the function deletes everything Iris
-// has retained about that user:
+// GDPR Article 17 ("right to erasure") for the Iris feature plus its
+// sibling photo-safety / identity-verification feature. The caller
+// authenticates with their JWT and the function deletes everything we
+// retained about that user across these AI surfaces:
 //
-//   * iris_memory          — structured user knowledge + OCEAN scores
-//   * iris_conversations   — every session this user ever had
-//   * iris_messages        — cascade-deleted via FK ON DELETE CASCADE
+//   * iris_memory                  — structured user knowledge + OCEAN scores
+//   * iris_conversations           — every session this user ever had
+//   * iris_messages                — cascade-deleted via FK ON DELETE CASCADE
+//   * photo_verification_checks    — per-call moderation audit log
+//   * profiles.verification_*      — denormalised verification status reset
+//   * <uuid>/verification/*        — selfie objects in the `profiles` bucket
 //
 // What is intentionally NOT deleted by this endpoint:
 //
@@ -15,9 +19,11 @@
 //                        cancel the subscription via App Store / Play and
 //                        we let it lapse naturally; we don't expunge the
 //                        original_transaction_id history.
-//   * profiles, matches, messages, etc. — Iris is a layer on top; broader
-//                        account deletion is out of scope here. A separate
-//                        user-delete endpoint (not yet built) covers it.
+//   * profiles, matches, messages, etc. — broader account deletion is
+//                        out of scope here. A separate user-delete
+//                        endpoint (not yet built) covers it. The
+//                        verification_* columns on profiles ARE reset
+//                        because those are AI-feature state.
 //
 // Auth: standard JWT (verify_jwt = true, the default). The function only
 // ever deletes data for `auth.uid()` — there is no admin override path.
@@ -109,6 +115,61 @@ serve(async (req) => {
     return jsonResponse({ error: 'memory_delete_failed' }, 500);
   }
 
+  // 3. Delete photo-verification audit rows.
+  const { count: verificationChecksDeleted, error: verifyChecksErr } = await admin
+    .from('photo_verification_checks')
+    .delete({ count: 'exact' })
+    .eq('user_id', user.id);
+  if (verifyChecksErr) {
+    console.error('iris-forget: photo_verification_checks delete failed', verifyChecksErr);
+    // Non-fatal: continue so we still wipe the selfie + reset status.
+  }
+
+  // 4. Remove selfie objects from storage. Supabase storage `remove`
+  //    doesn't recurse a prefix, so we list-then-remove.
+  let selfiesRemoved = 0;
+  try {
+    const { data: listing, error: listErr } = await admin.storage
+      .from('profiles')
+      .list(`${user.id}/verification`, { limit: 1000 });
+    if (listErr) {
+      console.error('iris-forget: selfie list failed', listErr);
+    } else if (listing && listing.length > 0) {
+      const paths = listing
+        .filter((o: { name: string }) => typeof o.name === 'string' && o.name.length > 0)
+        .map((o: { name: string }) => `${user.id}/verification/${o.name}`);
+      if (paths.length > 0) {
+        const { data: removed, error: removeErr } = await admin.storage
+          .from('profiles')
+          .remove(paths);
+        if (removeErr) {
+          console.error('iris-forget: selfie remove failed', removeErr);
+        } else {
+          selfiesRemoved = (removed as { name: string }[] | null)?.length ?? 0;
+        }
+      }
+    }
+  } catch (err) {
+    console.error('iris-forget: selfie cleanup threw', err);
+    // Non-fatal: continue.
+  }
+
+  // 5. Reset the denormalised verification state on profiles. We do NOT
+  //    delete the profile row; that's broader account deletion (out of
+  //    scope). We just clear the AI-feature columns back to defaults.
+  const { error: profileResetErr } = await admin
+    .from('profiles')
+    .update({
+      verification_status: 'unverified',
+      verification_completed_at: null,
+      verification_selfie_path: null,
+    })
+    .eq('id', user.id);
+  if (profileResetErr) {
+    console.error('iris-forget: profile verification reset failed', profileResetErr);
+    // Non-fatal: storage + audit rows are already gone.
+  }
+
   return jsonResponse(
     {
       ok: true,
@@ -118,13 +179,15 @@ serve(async (req) => {
         // pre-count call errored we report null rather than guess.
         messages: messagesErr ? null : messagesCount ?? 0,
         memory: memoryDeleted ?? 0,
+        photo_verification_checks: verifyChecksErr ? null : verificationChecksDeleted ?? 0,
+        verification_selfies: selfiesRemoved,
       },
       // What this endpoint does NOT touch — surfaced so the caller can
       // route the user to the right next step if they want to cancel
       // their subscription too.
-      retained: ['subscriptions', 'profiles', 'matches', 'messages'],
+      retained: ['subscriptions', 'profiles_core', 'matches', 'messages'],
     },
-    200,
+    200
   );
 });
 
