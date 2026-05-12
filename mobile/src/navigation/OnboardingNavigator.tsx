@@ -22,10 +22,16 @@ import AstrologyScreen from '../screens/onboarding/AstrologyScreen';
 import WorkEducationScreen from '../screens/onboarding/WorkEducationScreen';
 import ProfileSetupScreen from '../screens/onboarding/ProfileSetupScreen';
 import PhotosScreen from '../screens/onboarding/PhotosScreen';
+import PhotoVerificationScreen from '../screens/onboarding/PhotoVerificationScreen';
 import LocationPermissionScreen from '../screens/onboarding/LocationPermissionScreen';
 import ProfileReviewScreen from '../screens/onboarding/ProfileReviewScreen';
 import IrisInterviewScreen from '../screens/iris/IrisInterviewScreen';
 import IrisPitchScreen from '../screens/iris/IrisPitchScreen';
+
+// Feature flag — when false (default), PhotoVerification is removed from
+// SCREEN_ORDER and not registered as a screen. Lets the edge function and
+// schema land before the UI lights up.
+const PHOTO_VERIFICATION_ENABLED = process.env.EXPO_PUBLIC_ENABLE_PHOTO_VERIFICATION === 'true';
 
 export type OnboardingStackParamList = {
   GenderIdentity: undefined;
@@ -43,6 +49,11 @@ export type OnboardingStackParamList = {
   WorkEducation: undefined;
   ProfileSetup: undefined;
   Photos: undefined;
+  // Mandatory photo safety + identity verification step. Sits between
+  // Photos and LocationPermission. Gated on PHOTO_VERIFICATION_ENABLED;
+  // when off the entry is removed from SCREEN_ORDER and the screen is not
+  // registered, so attempting to navigate to it is a typed no-op.
+  PhotoVerification: undefined;
   LocationPermission: undefined;
   ProfileReview: undefined;
   // Iris screens are off-track optional surfaces. Deliberately not in
@@ -71,6 +82,9 @@ const SCREEN_ORDER: (keyof OnboardingStackParamList)[] = [
   'WorkEducation',
   'ProfileSetup',
   'Photos',
+  ...(PHOTO_VERIFICATION_ENABLED
+    ? (['PhotoVerification'] as (keyof OnboardingStackParamList)[])
+    : []),
   'LocationPermission',
   'ProfileReview',
 ];
@@ -180,6 +194,9 @@ export default function OnboardingNavigator() {
       <Stack.Screen name="WorkEducation" component={WorkEducationScreen} />
       <Stack.Screen name="ProfileSetup" component={ProfileSetupScreen} />
       <Stack.Screen name="Photos" component={PhotosScreen} />
+      {PHOTO_VERIFICATION_ENABLED && (
+        <Stack.Screen name="PhotoVerification" component={PhotoVerificationScreen} />
+      )}
       <Stack.Screen name="LocationPermission" component={LocationPermissionScreen} />
       <Stack.Screen name="ProfileReview" component={ProfileReviewScreen} />
       <Stack.Screen
