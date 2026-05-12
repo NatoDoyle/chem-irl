@@ -23,7 +23,6 @@ export interface User {
   orientation: UserOrientation;
   city_id: string;
   timezone: string;
-  verified_at?: string;
   last_active_at: string;
 }
 

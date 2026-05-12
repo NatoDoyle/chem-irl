@@ -48,7 +48,16 @@ export type AnalyticsEvent =
   | 'iris_paywall_shown'
   | 'iris_paywall_dismissed'
   | 'iris_trial_started'
-  | 'iris_subscription_purchased';
+  | 'iris_subscription_purchased'
+  // Photo safety + identity verification events. Fired both during
+  // onboarding and from the profile edit flow.
+  | 'photo_safety_scanned'
+  | 'photo_match_checked'
+  | 'verification_started'
+  | 'verification_completed'
+  | 'verification_blocked'
+  | 'verification_review_required'
+  | 'verification_retry';
 
 export interface AnalyticsProperties {
   [key: string]: string | number | boolean | null | undefined;
