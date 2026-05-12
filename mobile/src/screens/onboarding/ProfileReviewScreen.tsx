@@ -18,6 +18,10 @@ import { trackEvent } from '../../lib/analytics';
 import { useProfileRefresh } from '../../contexts/ProfileRefreshContext';
 import type { OnboardingStackParamList } from '../../navigation/OnboardingNavigator';
 
+// Same flag as OnboardingNavigator. When false, the verification step is
+// off the rails entirely, so this gate must not block completion either.
+const PHOTO_VERIFICATION_ENABLED = process.env.EXPO_PUBLIC_ENABLE_PHOTO_VERIFICATION === 'true';
+
 type ProfileReviewScreenNavigationProp = NativeStackNavigationProp<
   OnboardingStackParamList,
   'ProfileReview'
@@ -79,6 +83,33 @@ export default function ProfileReviewScreen() {
         Alert.alert(title, message);
         setSaving(false);
         return;
+      }
+
+      // Photo-verification gate. When the feature is enabled, the user
+      // must have completed the verification step (status='verified' or
+      // 'pending_review') before we flip signup_completed. We don't
+      // re-run any checks here — that's the verification screen's job.
+      if (PHOTO_VERIFICATION_ENABLED) {
+        const { data: verifyRow } = await supabase
+          .from('profiles')
+          .select('verification_status')
+          .eq('id', user.id)
+          .maybeSingle();
+        const status = (verifyRow as { verification_status?: string } | null)?.verification_status;
+        if (status !== 'verified' && status !== 'pending_review') {
+          Alert.alert(
+            'Verification incomplete',
+            'Please finish photo verification before completing your profile.',
+            [
+              {
+                text: 'Verify now',
+                onPress: () => navigation.navigate('PhotoVerification'),
+              },
+            ]
+          );
+          setSaving(false);
+          return;
+        }
       }
 
       // Mark profile as complete and signup as completed
