@@ -26,6 +26,7 @@ import { ensureProfileExists } from '../../lib/profile';
 import { sanitizeMultilineText } from '../../lib/sanitize';
 import { addBreadcrumb, clearUserContext } from '../../lib/sentry';
 import { trackEvent } from '../../lib/analytics';
+import { moderatePhoto, PhotoModerationError } from '../../lib/photoModeration';
 import {
   reconcilePhotos,
   shouldRunReconciliation,
@@ -56,6 +57,12 @@ import {
   validateWeeklySlot,
 } from '../../lib/availability';
 import AvailabilitySlotPicker from '../../components/AvailabilitySlotPicker';
+
+// Mirror of OnboardingNavigator's flag. When off, photo moderation
+// calls are skipped — the existing behaviour is preserved verbatim so
+// nothing changes for users who haven't seen the new screen.
+const PHOTO_VERIFICATION_ENABLED = process.env.EXPO_PUBLIC_ENABLE_PHOTO_VERIFICATION === 'true';
+const MATCH_CONFIDENCE_THRESHOLD = 0.7;
 
 type PhotoUploadState = 'idle' | 'uploading' | 'success' | 'error';
 type PhotoDeletionState = 'idle' | 'deleting';
@@ -494,6 +501,84 @@ export default function ProfileScreen() {
         Alert.alert('Duplicate photo', 'This photo is already in your profile.');
         setUploading(false);
         return;
+      }
+
+      // Photo safety + identity-match check (flag-gated). On `blocked`
+      // we roll the photo back out of storage; on `review` we demote
+      // verification_status; on `match`/`no_match` we only breadcrumb.
+      if (PHOTO_VERIFICATION_ENABLED) {
+        try {
+          const safety = await moderatePhoto({ kind: 'safety', photoPath: fileName });
+          if (safety.kind !== 'safety') {
+            throw new PhotoModerationError('unexpected_kind', 502, safety);
+          }
+          trackEvent('photo_safety_scanned', {
+            decision: safety.decision,
+            riskScore: safety.overallRiskScore,
+            isOnboarding: false,
+          });
+          if (safety.decision === 'blocked') {
+            await supabase.storage.from('profiles').remove([fileName]);
+            setPhotoUploadStates((prev) => new Map(prev).set(tempIndex, 'error'));
+            Alert.alert(
+              'Photo not allowed',
+              `${safety.summary} ${safety.recommendedAction}`.trim()
+            );
+            setUploading(false);
+            return;
+          }
+
+          // Re-match new gallery photo against the stored verification
+          // selfie. Failures here are observational only — pets and
+          // scenery are legitimate gallery content.
+          const { data: profileForMatch } = await supabase
+            .from('profiles')
+            .select('verification_selfie_path, verification_status')
+            .eq('id', user.id)
+            .maybeSingle();
+          const row = profileForMatch as {
+            verification_selfie_path?: string | null;
+            verification_status?: string | null;
+          } | null;
+          if (row?.verification_selfie_path) {
+            const match = await moderatePhoto({
+              kind: 'match',
+              photoPath: fileName,
+              comparePath: row.verification_selfie_path,
+            });
+            if (match.kind === 'match') {
+              trackEvent('photo_match_checked', {
+                decision: match.decision,
+                confidence: match.confidence,
+                isOnboarding: false,
+              });
+              if (match.decision !== 'match' || match.confidence < MATCH_CONFIDENCE_THRESHOLD) {
+                addBreadcrumb(
+                  'gallery photo did not match verification selfie',
+                  'photo-verification',
+                  'warning',
+                  { photoPath: fileName, decision: match.decision }
+                );
+              }
+            }
+          }
+
+          if (safety.decision === 'review' && row?.verification_status === 'verified') {
+            // Only demote, never elevate. If the user wasn't verified
+            // before, this no-ops.
+            await supabase
+              .from('profiles')
+              .update({ verification_status: 'pending_review' })
+              .eq('id', user.id);
+          }
+        } catch (modError) {
+          // Moderation failure is non-fatal for the user's edit. Log
+          // and continue — we'd rather let a borderline photo through
+          // than block all profile edits on a Claude outage.
+          addBreadcrumb('photo moderation failed (non-fatal)', 'photo-verification', 'error', {
+            error: modError instanceof Error ? modError.message : String(modError),
+          });
+        }
       }
 
       const updatedPhotos = [...photos, publicUrl].slice(0, 6);
