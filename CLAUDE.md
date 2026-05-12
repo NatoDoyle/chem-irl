@@ -211,12 +211,13 @@ Use git worktrees when working on two or more features in parallel across separa
 
 **Where they live:** `.worktrees/<branch-with-slash-as-dash>/` at the repo root. The directory is gitignored. Convention: branch `feat/mobile-ux-fixes` → worktree `.worktrees/feat-mobile-ux-fixes/`.
 
-**Create a worktree (always branch off fresh `origin/main`):**
+**Create a worktree (branch off fresh `origin/main` by default):**
 ```bash
 git fetch origin --prune
 git worktree add -b feat/<desc> .worktrees/feat-<desc> origin/main
 cd .worktrees/feat-<desc>
 ```
+Exception: if this worktree's code depends on another open PR's code, branch off that PR's branch instead. See **Stacked PRs** below.
 
 **Bootstrap each worktree.** `node_modules` and `.env*` files do not carry over (the former is gitignored, and Expo/RN native modules don't symlink reliably). Per worktree:
 ```bash
@@ -242,6 +243,28 @@ For abandoned work: `git worktree remove --force` + `git branch -D` (tag `archiv
 - Keep ≤3 active worktrees (same limit as branches).
 - `git worktree list` to inspect; `git worktree prune` to clean up stale registrations after a manual directory delete.
 - Enforcement hooks (`.claude/hooks/`) work per-worktree automatically — they resolve the branch from the file's directory.
+
+### Stacked PRs (when one PR's code depends on another)
+
+When a PR's code imports or otherwise depends on a file introduced in another open PR, branch the dependent PR off its prerequisite's feature branch — **not** off `origin/main`. Otherwise the dependent PR's CI will fail with `Cannot find module …` (or equivalent) until the prerequisite merges and the dependent is rebased.
+
+**Creating a stack:**
+```bash
+git fetch origin --prune
+# PR A (the prerequisite — independent)
+git worktree add -b feat/<topic>-base .worktrees/feat-<topic>-base origin/main
+# PR B (the dependent — based on A, not main)
+git worktree add -b feat/<topic>-dependent .worktrees/feat-<topic>-dependent feat/<topic>-base
+```
+
+When opening PRs from a stack, set the dependent PR's base to its prerequisite's branch in the GitHub UI (or `gh pr create --base feat/<topic>-base`), so reviewers see only the incremental diff.
+
+**Recovery if a stack is already pushed against `main` and CI is red:**
+1. Merge the prerequisite PR first.
+2. Run `gh pr update-branch <num>` on each dependent — this merges `main` into the PR branch and retriggers CI with the dependency in place.
+3. Once green, merge that one. Repeat for the next layer.
+
+The "≤3 active worktrees" rule counts the whole stack against the limit, not each level separately.
 
 ## How to work
 
@@ -280,3 +303,13 @@ Run or propose only the validations relevant to the files changed. Prefer root-c
 
 ## Lessons Learned
 <!-- Append new lessons here as they're approved -->
+
+### 2026-05-12 — Stacked PRs against `main` red CI on dependents
+
+**What happened:** The `feat/photo-verification` series shipped as 5 PRs (#81–#85), all branched off `origin/main` in parallel worktrees. PRs #84 and #85 imported `mobile/src/lib/photoModeration.ts` from PR #83's branch. CI failed on the dependents' first push with `Cannot find module '../../lib/photoModeration'` because the imported file existed only on #83's branch, not on `main`.
+
+**Why it happened:** "Always branch off fresh `origin/main`" was applied universally — including to PRs that depend on sibling PRs. The CI environment checks out the PR's branch alone, with no knowledge of sibling PRs, so the import failed.
+
+**Resolution:** Merged #81 → #82 → #83 first, then ran `gh pr update-branch 84` to merge updated `main` into #84's branch and retrigger CI. Repeated for #85 after #84 merged.
+
+**Prevention:** See **Stacked PRs** under Git workflow. When a dependent PR imports from a sibling, branch it off the prerequisite's branch with `git worktree add -b feat/<topic>-b .worktrees/feat-<topic>-b feat/<topic>-a` and set its PR base to the prerequisite's branch.
