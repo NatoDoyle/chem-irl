@@ -1,21 +1,25 @@
--- SUPERSEDED: this RPC and its supporting unique constraint are now
--- codified in supabase/migrations/20260513155725_codify_confirm_proposal.sql.
--- Kept here for historical reference only; do not edit.
+-- Codifies the confirm_proposal RPC and its supporting unique constraint,
+-- originally applied via Dashboard on 2026-02-03 (see
+-- docs/SUPABASE_MIGRATION_DRIFT_2026-04-27.md). Source SQL lived only in
+-- db/proposal_confirmation_fix.sql; this migration makes
+-- supabase/migrations/ the single source of truth.
+--
+-- All statements are idempotent: safe to apply against a database that
+-- already has the constraint/function (the originally-applied state) and
+-- safe to apply against a fresh database. ALTER TABLE ADD CONSTRAINT does
+-- not support IF NOT EXISTS, so the constraint is wrapped in a guarded DO
+-- block. Function body is a verbatim copy of db/proposal_confirmation_fix.sql.
 
--- Proposal Confirmation Race Condition Fix
--- This migration adds a unique constraint on confirms.proposal_id and creates
--- a transactional RPC function to handle proposal confirmation atomically.
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint WHERE conname = 'confirms_proposal_id_unique'
+  ) THEN
+    ALTER TABLE confirms
+      ADD CONSTRAINT confirms_proposal_id_unique UNIQUE (proposal_id);
+  END IF;
+END $$;
 
--- ============================================================================
--- Step 1: Add unique constraint to prevents multiple confirms per proposal
--- ============================================================================
--- Only one confirm per proposal is allowed (first confirm wins)
-ALTER TABLE confirms
-ADD CONSTRAINT confirms_proposal_id_unique UNIQUE (proposal_id);
-
--- ============================================================================
--- Step 2: Create RPC function for atomic proposal confirmation
--- ============================================================================
 CREATE OR REPLACE FUNCTION confirm_proposal(
   p_proposal_id UUID,
   p_match_id UUID,
@@ -151,6 +155,6 @@ BEGIN
 END;
 $$;
 
--- Grant execute permission to authenticated users
 GRANT EXECUTE ON FUNCTION confirm_proposal(UUID, UUID, UUID, JSONB) TO authenticated;
 
+SELECT pg_notify('pgrst', 'reload schema');
