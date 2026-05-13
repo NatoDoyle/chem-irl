@@ -1,3 +1,7 @@
+-- SUPERSEDED: this RPC and its supporting column/index are now codified in
+-- supabase/migrations/20260513155500_codify_mark_messages_read.sql.
+-- Kept here for historical reference only; do not edit.
+
 -- Read Receipts Feature
 -- Adds read_at column to messages table and RPC function to mark messages as read
 
