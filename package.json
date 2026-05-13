@@ -3,7 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "docs:check": "tsx scripts/check-markdown-links.ts"
+    "docs:check": "tsx scripts/check-markdown-links.ts",
+    "brand:tokens": "tsx scripts/generate-brand-tokens.ts",
+    "brand:check": "tsx scripts/generate-brand-tokens.ts --check"
   },
   "devDependencies": {
     "opentype.js": "^1.3.4",
