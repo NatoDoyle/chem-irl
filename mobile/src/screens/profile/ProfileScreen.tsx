@@ -12,6 +12,8 @@ import {
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useNavigation } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import * as ImagePicker from 'expo-image-picker';
 import * as FileSystem from 'expo-file-system/legacy';
 import { decode } from 'base64-arraybuffer';
@@ -24,7 +26,7 @@ import { deletePhotoFromStorage } from '../../lib/storage';
 import { getErrorAlert } from '../../lib/errors';
 import { ensureProfileExists } from '../../lib/profile';
 import { sanitizeMultilineText } from '../../lib/sanitize';
-import { addBreadcrumb, clearUserContext } from '../../lib/sentry';
+import { addBreadcrumb } from '../../lib/sentry';
 import { trackEvent } from '../../lib/analytics';
 import { moderatePhoto, PhotoModerationError } from '../../lib/photoModeration';
 import {
@@ -69,6 +71,7 @@ type PhotoDeletionState = 'idle' | 'deleting';
 
 export default function ProfileScreen() {
   const insets = useSafeAreaInsets();
+  const navigation = useNavigation<NativeStackNavigationProp<any, 'ProfileMain'>>();
   const { width: screenWidth } = useWindowDimensions();
   const contentPadding = 24;
   const photoGridGap = 12;
@@ -687,12 +690,6 @@ export default function ProfileScreen() {
     }
   };
 
-  const handleSignOut = async () => {
-    addBreadcrumb('User signing out', 'auth', 'info');
-    clearUserContext();
-    await supabase.auth.signOut();
-  };
-
   const addSlot = (slot: WeeklySlot) => {
     const error = validateWeeklySlot(slot);
     if (error) {
@@ -813,7 +810,12 @@ export default function ProfileScreen() {
             <Ionicons name="arrow-back" size={24} color={BRAND_COLORS.primary} />
           </AnimatedPressable>
           <Text style={styles.headerTitle}>Profile</Text>
-          <AnimatedPressable style={styles.headerIcon} onPress={() => {}} haptic={false}>
+          <AnimatedPressable
+            style={styles.headerIcon}
+            onPress={() => navigation.navigate('Settings')}
+            haptic={false}
+            accessibilityLabel="Settings"
+          >
             <Ionicons name="settings-outline" size={24} color={BRAND_COLORS.primary} />
           </AnimatedPressable>
         </View>
@@ -1253,14 +1255,6 @@ export default function ProfileScreen() {
           loading={saving}
           disabled={saving}
           style={styles.saveButton}
-        />
-
-        {/* Sign Out */}
-        <GHButton
-          title="Sign Out"
-          onPress={handleSignOut}
-          variant="coral"
-          style={styles.signOutButton}
         />
       </ScrollView>
 
@@ -1738,11 +1732,5 @@ const styles = StyleSheet.create({
   // Buttons
   saveButton: {
     marginTop: SPACING.lg,
-  },
-  signOutButton: {
-    alignSelf: 'flex-start',
-    marginTop: SPACING.base,
-    paddingHorizontal: SPACING.lg,
-    paddingVertical: SPACING.md,
   },
 });
