@@ -221,6 +221,69 @@ export function setupPurchaseListener(
   return teardownPurchaseListeners;
 }
 
+/**
+ * Restore prior purchases for the signed-in App Store / Play Store account.
+ *
+ * Primarily useful for subscriptions (Chem Plus) on iOS — token packs are
+ * consumable so they typically don't appear in `getAvailablePurchases`.
+ * Each restored purchase is run through the same validate-receipt /
+ * validate-subscription edge functions used by the live purchase listener.
+ *
+ * Returns the number of purchases successfully validated; individual
+ * failures are swallowed so one bad purchase doesn't abort the rest.
+ */
+export async function restorePurchases(): Promise<number> {
+  const iap = loadIAP();
+
+  if (Platform.OS === 'ios') {
+    await iap.syncIOS();
+  }
+
+  const purchases = await iap.getAvailablePurchases({
+    alsoPublishToEventListenerIOS: false,
+    onlyIncludeActiveItemsIOS: true,
+  });
+
+  let restored = 0;
+
+  for (const purchase of purchases) {
+    const receipt = purchase.purchaseToken;
+    if (!receipt) continue;
+
+    const isSubscription = (ALL_SUBSCRIPTION_IDS as readonly string[]).includes(purchase.productId);
+
+    try {
+      if (isSubscription) {
+        const { error } = await supabase.functions.invoke('validate-subscription', {
+          body: {
+            receipt,
+            platform: Platform.OS,
+            productId: purchase.productId,
+            originalTransactionId: getOriginalTransactionId(purchase),
+          },
+        });
+        if (error) continue;
+        await iap.finishTransaction({ purchase, isConsumable: false });
+      } else {
+        const { error } = await supabase.functions.invoke('validate-receipt', {
+          body: {
+            receipt,
+            platform: Platform.OS,
+            productId: purchase.productId,
+          },
+        });
+        if (error) continue;
+        await iap.finishTransaction({ purchase, isConsumable: true });
+      }
+      restored++;
+    } catch {
+      // Skip individual failures so one bad purchase doesn't abort the rest.
+    }
+  }
+
+  return restored;
+}
+
 /** Clean up IAP connection and listeners */
 export async function endIAP(): Promise<void> {
   const { endConnection } = loadIAP();
