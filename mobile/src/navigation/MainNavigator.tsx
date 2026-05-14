@@ -7,6 +7,7 @@ import ProposeScreen from '../screens/matches/ProposeScreen';
 import ChatScreen from '../screens/matches/ChatScreen';
 import ViewProfileScreen from '../screens/matches/ViewProfileScreen';
 import ProfileScreen from '../screens/profile/ProfileScreen';
+import SettingsScreen from '../screens/profile/SettingsScreen';
 import { BRAND_COLORS, MIDNIGHT, TYPOGRAPHY } from '../config/brand';
 
 // Debug screen - only available in development builds
@@ -25,7 +26,10 @@ export type MainTabParamList = {
     screen: keyof MatchesStackParamList;
     params?: MatchesStackParamList[keyof MatchesStackParamList];
   };
-  Profile: undefined;
+  ProfileStack: {
+    screen: keyof ProfileStackParamList;
+    params?: ProfileStackParamList[keyof ProfileStackParamList];
+  };
   Debug?: undefined; // Optional - only in dev builds
 };
 
@@ -37,8 +41,14 @@ export type MatchesStackParamList = {
   ViewProfile: { userId: string };
 };
 
+export type ProfileStackParamList = {
+  ProfileMain: undefined;
+  Settings: undefined;
+};
+
 const Tab = createBottomTabNavigator<MainTabParamList>();
 const MatchesStack = createNativeStackNavigator<MatchesStackParamList>();
+const ProfileStack = createNativeStackNavigator<ProfileStackParamList>();
 
 function MatchesStackNavigator() {
   return (
@@ -49,6 +59,15 @@ function MatchesStackNavigator() {
       <MatchesStack.Screen name="Chat" component={ChatScreen} />
       <MatchesStack.Screen name="ViewProfile" component={ViewProfileScreen} />
     </MatchesStack.Navigator>
+  );
+}
+
+function ProfileStackNavigator() {
+  return (
+    <ProfileStack.Navigator screenOptions={{ headerShown: false }}>
+      <ProfileStack.Screen name="ProfileMain" component={ProfileScreen} />
+      <ProfileStack.Screen name="Settings" component={SettingsScreen} />
+    </ProfileStack.Navigator>
   );
 }
 
@@ -84,8 +103,8 @@ export default function MainNavigator() {
         }}
       />
       <Tab.Screen
-        name="Profile"
-        component={ProfileScreen}
+        name="ProfileStack"
+        component={ProfileStackNavigator}
         options={{
           tabBarLabel: 'Profile',
         }}
