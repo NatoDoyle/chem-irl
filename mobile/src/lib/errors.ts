@@ -110,3 +110,65 @@ export function getErrorAlert(
     message: getUserErrorMessage(error),
   };
 }
+
+// === Additive taxonomy for Sentry event tagging (PR-A) ============
+// Defines the shape PR-B will populate from raw errors. Existing helpers
+// above (formatError, getUserErrorMessage, isRecoverableError,
+// isSessionExpiredError, getErrorAlert) keep their current signatures and
+// behavior in this PR; PR-B rewrites them to produce a NormalizedError
+// internally while preserving the public API.
+
+export const ERROR_KINDS = {
+  AuthSessionExpired: 'auth.session_expired',
+  AuthUnauthorized: 'auth.unauthorized',
+  AuthRateLimited: 'auth.rate_limited',
+  NetworkOffline: 'network.offline',
+  NetworkTimeout: 'network.timeout',
+  NetworkFetchFailed: 'network.fetch_failed',
+  RpcInvalidInput: 'rpc.invalid_input',
+  RpcNotFound: 'rpc.not_found',
+  RpcServerError: 'rpc.server_error',
+  RpcRateLimited: 'rpc.rate_limited',
+  IapReceiptInvalid: 'iap.receipt_invalid',
+  IapUserCancelled: 'iap.user_cancelled',
+  IapStoreUnavailable: 'iap.store_unavailable',
+  OfflineQueueDropped: 'offline_queue.dropped',
+  StorageUploadFailed: 'storage.upload_failed',
+  StorageReadFailed: 'storage.read_failed',
+  ModerationBlocked: 'moderation.blocked',
+  ModerationReviewRequired: 'moderation.review_required',
+  RealtimeDisconnect: 'realtime.disconnect',
+  Unknown: 'unknown',
+} as const;
+export type ErrorKind = (typeof ERROR_KINDS)[keyof typeof ERROR_KINDS];
+
+export const ERROR_SEVERITIES = {
+  Critical: 'critical',
+  High: 'high',
+  Medium: 'medium',
+  Low: 'low',
+} as const;
+export type ErrorSeverity = (typeof ERROR_SEVERITIES)[keyof typeof ERROR_SEVERITIES];
+
+export const ERROR_LAYERS = {
+  Mobile: 'mobile',
+  Edge: 'edge',
+  Db: 'db',
+} as const;
+export type ErrorLayer = (typeof ERROR_LAYERS)[keyof typeof ERROR_LAYERS];
+
+export interface NormalizedError {
+  kind: ErrorKind;
+  severity: ErrorSeverity;
+  layer: ErrorLayer;
+  retryable: boolean;
+  // Sentry tags. Always includes `kind`, `severity`, `layer`; PR-B adds
+  // call-site tags like `screen`, `rpc`, `action`.
+  tags: Record<string, string>;
+  // Sentry `extra` data; will be passed through scrubSentryPayload before send.
+  extra?: Record<string, unknown>;
+  // The original thrown value preserved for Sentry.captureException.
+  cause: unknown;
+  // Copy safe to show the user. May be the same as the technical message.
+  userMessage: string;
+}
