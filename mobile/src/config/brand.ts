@@ -1,3 +1,6 @@
+// GENERATED — do not edit; run `bun run brand:tokens` to update.
+// Canonical source: brand/tokens.ts
+
 import { Platform } from 'react-native';
 
 export const BRAND = {
@@ -9,7 +12,6 @@ export const BRAND = {
 } as const;
 
 export const BRAND_COLORS = {
-  // Aquamarine scale
   aqua: {
     50: '#E9FFFD',
     100: '#D1FFFB',
@@ -17,39 +19,34 @@ export const BRAND_COLORS = {
     300: '#74F0E7',
     400: '#3FE0D6',
     500: '#0B9A8D',
-    600: '#0A7F74', // PRIMARY
-    700: '#08655D', // PRESSED
+    600: '#0A7F74',
+    700: '#08655D',
     800: '#064C46',
     900: '#043533',
   },
-  // Primary tokens
-  primary: '#0A7F74', // aqua600
-  primaryPressed: '#08655D', // aqua700
-  primarySoft: 'rgba(10, 127, 116, 0.15)', // dark-mode soft primary
-  primaryLight: '#34D399', // scores, success indicators
-  primaryHover: '#08655D', // alias for primaryPressed
-  // Neutral tokens
-  surface: '#111318', // card/surface background on midnight
-  border: '#1a1f2e', // elevated border
+  primary: '#0A7F74',
+  primaryPressed: '#08655D',
+  primarySoft: 'rgba(10, 127, 116, 0.15)',
+  primaryLight: '#34D399',
+  primaryHover: '#08655D',
+  surface: '#111318',
+  border: '#1a1f2e',
   text: {
-    900: '#F5F5F5', // primary text (light on dark)
-    700: '#D1D5DB', // secondary text
-    600: '#9CA3AF', // muted text
-    500: '#6B7280', // dimmed text
-    400: '#4B5563', // placeholder text
-    100: '#1a1f2e', // subtle dark surface
+    100: '#1a1f2e',
+    400: '#4B5563',
+    500: '#6B7280',
+    600: '#9CA3AF',
+    700: '#D1D5DB',
+    900: '#F5F5F5',
   },
-  // Semantic tokens
   success: '#16A34A',
   warning: '#F59E0B',
   danger: '#EF4444',
   info: '#2563EB',
-  // Legacy background structure (for backward compat)
   background: {
-    50: '#111318', // surface
-    0: '#0D0F14', // deep midnight
+    0: '#0D0F14',
+    50: '#111318',
   },
-  // On-primary text (white for dark primary)
   onPrimary: '#FFFFFF',
 } as const;
 
@@ -58,12 +55,17 @@ export const BRAND_COLORS = {
 // aquamarine glow effects, and gold CTAs.
 
 export const MIDNIGHT = {
-  bg: '#0D0F14', // deep midnight background
-  surface: '#111318', // card/elevated surfaces
-  inputBg: '#161922', // slightly lighter for input distinction
-  borderDefault: '#1a1f2e', // elevated border
-  coral: '#F97316', // warm accent for secondary CTAs
-  radius: { sm: 8, md: 14, lg: 20, full: 9999 },
+  bg: '#0D0F14',
+  surface: '#111318',
+  inputBg: '#161922',
+  borderDefault: '#1a1f2e',
+  coral: '#F97316',
+  radius: {
+    sm: 8,
+    md: 14,
+    lg: 20,
+    full: 9999,
+  },
   shadow: {
     warm: Platform.select({
       ios: {
@@ -84,21 +86,18 @@ export const MIDNIGHT = {
       android: { elevation: 8 },
     }),
   },
-  // Glass card style tokens
   glassCard: {
     backgroundColor: 'rgba(17, 19, 24, 0.8)',
     borderWidth: 1,
     borderColor: '#1a1f2e',
     borderRadius: 20,
   },
-  // Compact glass card (14px radius — match cards, onboarding options)
   glassCardSm: {
     backgroundColor: 'rgba(17, 19, 24, 0.8)',
     borderWidth: 1,
     borderColor: '#1a1f2e',
     borderRadius: 14,
   },
-  // Glow effects
   glow: {
     primary: Platform.select({
       ios: {
@@ -130,8 +129,7 @@ export const MIDNIGHT = {
   },
 } as const;
 
-// Backward-compat alias — all 44 files importing GOLDEN_HOUR
-// automatically get Midnight tokens.
+// Backward-compat alias — all files importing GOLDEN_HOUR resolve to MIDNIGHT.
 export const GOLDEN_HOUR = MIDNIGHT;
 
 export const GOLD = {
@@ -141,7 +139,7 @@ export const GOLD = {
   300: '#FCD34D',
   400: '#FBBF24',
   500: '#EAB308',
-  600: '#CA8A04', // primary gold accent (CTAs, active states)
+  600: '#CA8A04',
   700: '#A16207',
   800: '#854D0E',
   900: '#713F12',
@@ -149,12 +147,10 @@ export const GOLD = {
 
 export const TYPOGRAPHY = {
   fontFamily: {
-    // Body / Labels — Inter
     regular: 'Inter-Regular',
     medium: 'Inter-Medium',
     semibold: 'Inter-SemiBold',
     bold: 'Inter-Bold',
-    // Headlines — Libre Caslon Text (serif)
     serif: 'LibreCaslonText-Regular',
     serifBold: 'LibreCaslonText-Bold',
     serifItalic: 'LibreCaslonText-Italic',
@@ -194,26 +190,17 @@ export const SPACING = {
 } as const;
 
 export const REFINED_WARMTH = {
-  // Extends MIDNIGHT — all midnight values still apply
   ...MIDNIGHT,
-
-  // Gold accent (tertiary alongside aquamarine + coral)
   gold: GOLD[600],
   goldSoft: GOLD[100],
-
-  // Gradient presets (array pairs for LinearGradient)
   gradient: {
-    warmSurface: ['#0D0F14', '#111318'] as const, // subtle dark gradient
-    premium: ['#0A7F74', '#086E64'] as const, // deep aquamarine CTA
-    celebration: ['#F97316', '#CA8A04'] as const, // coral-to-gold for match moments
-    cardOverlay: ['transparent', 'rgba(13, 15, 20, 0.85)'] as const, // photo card dark overlay
-    midnightGlow: ['rgba(10, 127, 116, 0.08)', 'transparent'] as const, // subtle aqua glow from top
+    warmSurface: ['#0D0F14', '#111318'] as const,
+    premium: ['#0A7F74', '#086E64'] as const,
+    celebration: ['#F97316', '#CA8A04'] as const,
+    cardOverlay: ['transparent', 'rgba(13, 15, 20, 0.85)'] as const,
+    midnightGlow: ['rgba(10, 127, 116, 0.08)', 'transparent'] as const,
   },
-
-  // Extended radius
   radius: { ...MIDNIGHT.radius, xl: 28 },
-
-  // Extended shadows
   shadow: {
     ...MIDNIGHT.shadow,
     subtle: Platform.select({
@@ -235,35 +222,40 @@ export const REFINED_WARMTH = {
       android: { elevation: 12 },
     }),
   },
-
-  // Animation constants
   animation: {
     duration: {
       fast: 150,
       normal: 250,
       slow: 400,
       entrance: 500,
-      premium: 600, // luxury feel for key moments
+      premium: 600,
     },
     spring: {
-      default: { damping: 15, stiffness: 150 },
-      bounce: { damping: 8, stiffness: 200 },
-      gentle: { damping: 20, stiffness: 100 },
+      default: {
+        damping: 15,
+        stiffness: 150,
+      },
+      bounce: {
+        damping: 8,
+        stiffness: 200,
+      },
+      gentle: {
+        damping: 20,
+        stiffness: 100,
+      },
     },
   },
-
-  // Typography shorthand
   typography: TYPOGRAPHY,
   spacing: SPACING,
 } as const;
 
 export const BRAND_MESSAGES = {
   proposal: {
-    error: 'Pick 2\u20133 different times within the next 7 days.',
+    error: 'Pick 2–3 different times within the next 7 days.',
     busy: "You're at today's proposal limit. Improve acceptance to raise it.",
     expired: 'Expired.',
-    expiredReceiver: 'Reopen & propose 2\u20133 times.',
-    reminder: 'Pick one or send 2\u20133 times.',
+    expiredReceiver: 'Reopen & propose 2–3 times.',
+    reminder: 'Pick one or send 2–3 times.',
   },
   speed: {
     dormant: 'Your Speed holds at 50. Send 4 likes today to re-enter discovery.',
