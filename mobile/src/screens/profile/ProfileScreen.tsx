@@ -34,7 +34,6 @@ import {
   markReconciliationComplete,
 } from '../../lib/reconcilePhotos';
 import PaywallModal from '../../components/PaywallModal';
-import { getEntitlement } from '../../lib/subscription';
 import {
   GENDER_OPTIONS,
   ORIENTATION_OPTIONS,
@@ -59,6 +58,7 @@ import {
 } from '../../lib/availability';
 import AvailabilitySlotPicker from '../../components/AvailabilitySlotPicker';
 import { styles } from './ProfileScreen.styles';
+import { useProfilePaywall } from './hooks/useProfilePaywall';
 
 // Mirror of OnboardingNavigator's flag. When off, photo moderation
 // calls are skipped — the existing behaviour is preserved verbatim so
@@ -125,24 +125,8 @@ export default function ProfileScreen() {
   // Track which sections are expanded (for edit mode)
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set());
 
-  // Chem Plus upgrade card. Hidden once the user is entitled (active
-  // trial or subscription). `null` means we haven't checked yet — the
-  // card is hidden until we know, so users don't see a flash.
-  const [entitled, setEntitled] = useState<boolean | null>(null);
-  const [paywallVisible, setPaywallVisible] = useState(false);
-
-  const refreshEntitlement = useCallback(async () => {
-    try {
-      const ent = await getEntitlement();
-      setEntitled(ent.allowed);
-    } catch {
-      setEntitled(null);
-    }
-  }, []);
-
-  useEffect(() => {
-    refreshEntitlement();
-  }, [refreshEntitlement]);
+  const { entitled, paywallVisible, showPaywall, dismissPaywall, refreshEntitlement } =
+    useProfilePaywall();
 
   const toggleSection = useCallback((section: string) => {
     setExpandedSections((prev) => {
@@ -857,7 +841,7 @@ export default function ProfileScreen() {
         {entitled === false && (
           <AnimatedPressable
             style={styles.upgradeCard}
-            onPress={() => setPaywallVisible(true)}
+            onPress={showPaywall}
             accessibilityRole="button"
             accessibilityLabel="Try Chem Plus free for 3 days"
             haptic={false}
@@ -1260,12 +1244,7 @@ export default function ProfileScreen() {
 
       <PaywallModal
         visible={paywallVisible}
-        onClose={() => {
-          setPaywallVisible(false);
-          // Re-check entitlement after the modal closes so the card
-          // disappears immediately once the trial / subscription lands.
-          refreshEntitlement();
-        }}
+        onClose={dismissPaywall}
         onTrialStarted={refreshEntitlement}
         onSubscriptionRequested={refreshEntitlement}
         surface="profile"
