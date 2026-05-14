@@ -193,26 +193,28 @@ Mobile app uses `EXPO_PUBLIC_*` env vars loaded via Expo. See `mobile/.env.examp
 
 ## Git workflow
 
-- Never work directly on `main`. Create a branch per task: `fix/<desc>`, `feat/<desc>`, `chore/<desc>`.
-- Before starting work: `git fetch origin --prune`, checkout main, `git pull --ff-only origin main`, ensure `git status --porcelain` is clean.
+**Worktrees are the default.** Every change goes in its own worktree off fresh `origin/main`. The primary checkout (`/Users/nathandoyle/Projects/Dating App/chem-irl/`) stays on `main` and is **not** edited — work happens in `.worktrees/<branch>/` only. No exceptions, including trivial fixes.
+
+- Never work directly on `main`, and never run `git checkout -b` / `git switch -c` from the primary checkout — the hygiene hook will block it. Use `git worktree add -b <branch> .worktrees/<dir> origin/main` instead (see **Worktree workflow** below).
+- Branch naming (applies to the worktree's branch): `fix/<desc>`, `feat/<desc>`, `chore/<desc>`.
 - Commit prefixes: `fix:`, `feat:`, `chore:`, `test:`, `docs:`
 - One logical change per commit; no mixed concerns.
 - Prefer PR + squash merge. Do not merge into `main` locally.
 - If `main` diverges from `origin/main`, stop and ask before resolving.
-- Keep at most 3 active WIP branches. Merged branches should be deleted; abandoned branches should be tagged (`archive/<branch>`) then deleted.
+- Keep at most 3 active worktrees. After merge, run `git worktree remove` + delete the branch (local + remote). Abandoned work: tag `archive/<branch>` first, then `git worktree remove --force` + `git branch -D`.
 - Read `agent_docs/git_workflow.md` for full details.
 
 ### Enforcement hooks
 `.claude/hooks/` runs on `PreToolUse` to enforce the rules above:
 - `block-edit-on-main.sh` — blocks `Edit`/`Write`/`NotebookEdit` when the target file's working tree is on `main` (worktree-aware: resolves the branch from the file's directory, not the shell CWD).
 - `block-push-to-main.sh` — blocks `git push` when the shell's CWD is on `main`.
-- `enforce-branch-hygiene.sh` — runs on `git checkout -b` / `git switch -c`; blocks if the working tree is dirty or warns if the local branch count exceeds 5.
+- `enforce-branch-hygiene.sh` — runs on `git checkout -b` / `git switch -c`. **Always blocks the command when run from the primary checkout** (use `git worktree add -b ... origin/main` instead). Inside a worktree it still blocks if the working tree is dirty and warns if the local branch count exceeds 5.
 
 If a hook blocks a tool call, the fix is almost always "create or switch to a feature branch first," not bypassing the hook.
 
-### Worktrees (parallel feature work)
+### Worktree workflow
 
-Use git worktrees when working on two or more features in parallel across separate terminals. Each worktree is a full working copy with its own checked-out branch.
+Every change uses a git worktree — this is the default, not an "advanced" option. Each worktree is a full working copy with its own checked-out branch, so multiple terminals can each operate on a different feature without `git switch` collisions. The primary checkout stays on `main`.
 
 **Where they live:** `.worktrees/<branch-with-slash-as-dash>/` at the repo root. The directory is gitignored. Convention: branch `feat/mobile-ux-fixes` → worktree `.worktrees/feat-mobile-ux-fixes/`.
 
@@ -245,9 +247,9 @@ git push origin --delete feat/<desc>
 For abandoned work: `git worktree remove --force` + `git branch -D` (tag `archive/<branch>` first if you want a recovery point).
 
 **Hygiene:**
-- Keep ≤3 active worktrees (same limit as branches).
+- Keep ≤3 active worktrees.
 - `git worktree list` to inspect; `git worktree prune` to clean up stale registrations after a manual directory delete.
-- Enforcement hooks (`.claude/hooks/`) work per-worktree automatically — they resolve the branch from the file's directory.
+- Enforcement hooks (`.claude/hooks/`) work per-worktree automatically — they resolve the branch from the file's directory. The hygiene hook also blocks `git checkout -b` / `git switch -c` when run from the primary checkout, so worktree creation is the only path forward.
 
 ### Stacked PRs (when one PR's code depends on another)
 

@@ -10,25 +10,29 @@ Cursor must consult both this file (.cursorrules) and .cursor/rules/*.mdc before
 - Never modify already-applied Supabase migrations. If a migration timestamp exists in `supabase_migrations.schema_migrations`, treat that file as immutable and create a new timestamped migration instead.
 - Check if a migration timestamp is applied: `SELECT 1 FROM supabase_migrations.schema_migrations WHERE version = '<timestamp>';` (run in Dashboard SQL Editor). If it returns a row, do not edit that migration file; create a new timestamped migration instead.
 - If a change would touch >5 files OR delete/rename any file, STOP and ask before proceeding.
-- Before creating a branch, run `git status --porcelain`. If any unrelated paths are dirty, STOP and ask whether to `git restore` or `git stash`. Do not proceed until clean.
+- Before creating a worktree, run `git status --porcelain` in the primary checkout. If any unrelated paths are dirty, STOP and ask whether to `git restore` or `git stash`. Do not proceed until clean.
+- Never run `git checkout -b` / `git switch -c` from the primary checkout. Use `git worktree add -b <branch> .worktrees/<dir> origin/main` instead. The `.claude/hooks/enforce-branch-hygiene.sh` hook enforces this.
 
-## Safer default Git workflow
-- Never work directly on main. main is for integration only.
-- Before starting any task:
+## Safer default Git workflow (worktree-first)
+- The primary checkout stays on main; main is for integration only. Never `git checkout -b` or `git switch -c` from it.
+- Every task uses its own worktree at `.worktrees/<branch-with-slash-as-dash>/`.
+- Before starting any task (run from the primary checkout):
   - `git fetch origin --prune`
-  - `git checkout main`
-  - `git pull --ff-only origin main` (or equivalent ff-only)
-  - `git status --porcelain` must be empty; if not, STOP and ask whether to restore or stash (do not proceed).
-- Create a new branch per task: `fix/<short-desc>`, `feat/<short-desc>`, `chore/<short-desc>`.
-- Atomic commits:
+  - `git worktree add -b <type>/<short-desc> .worktrees/<type>-<short-desc> origin/main`
+  - `cd .worktrees/<type>-<short-desc>`
+  - `git status --porcelain` must be empty; if not, STOP and ask.
+- Per-worktree bootstrap (env files and `node_modules` do not carry over):
+  - `cp ../../mobile/.env.local mobile/.env.local 2>/dev/null || true`
+  - `cd mobile && bun install` (or `cd web && bun install`)
+- Atomic commits (run from inside the worktree):
   - `git add -p`
   - Review with `git diff --cached`
   - One logical change per commit; no mixed concerns.
   - Commit message prefixes: `fix:`, `feat:`, `chore:`, `test:`, `docs:`
   - Push after each atomic commit: `git push -u origin <branch>` on first push, then `git push`.
-- Never create merge commits on main from pulling: use fast-forward only (`pull --ff-only`).
+- Never create merge commits on main from pulling: use fast-forward only (`pull --ff-only`) when updating the primary checkout.
 - If a non-fast-forward push happens (e.g. push rejected): STOP and ask; do not merge origin/main into local main automatically.
-- Keep main stable: main should always pass `npm test` (and lint/type-check where applicable). Merge back via squash if the branch has many small commits, otherwise merge normally.
+- Keep main stable: main should always pass the relevant quality gates. Merge back via PR + squash by default.
 
 ### Non-fast-forward / diverged branch playbook
 - If main and origin/main have diverged, Cursor must STOP and not choose automatically.
@@ -45,19 +49,21 @@ Cursor must consult both this file (.cursorrules) and .cursor/rules/*.mdc before
 - If unrelated files are modified, stash them (keep index): `git stash push -u --keep-index -m "WIP unrelated"`.
 - Never mix concerns in one commit (e.g. DB + UI + tests) unless they are inseparable for the same fix.
 
-## Atomic Git + Branch workflow
-- Always create a new branch per task:
+## Atomic Git + Worktree workflow
+- Always create a new worktree per task (off fresh `origin/main`, unless stacked on another open PR):
   - `fix/<short-desc>` for bug fixes
   - `feat/<short-desc>` for features
   - `chore/<short-desc>` for tooling/docs
-- Make atomic commits:
+- Worktree creation (run from the primary checkout):
+  - `git worktree add -b <type>/<short-desc> .worktrees/<type>-<short-desc> origin/main`
+- Make atomic commits (from inside the worktree):
   - One logical change per commit (no mixed concerns)
   - Prefer `git add -p` to stage only relevant hunks
   - Commit message prefixes: `fix:`, `feat:`, `chore:`, `test:`, `docs:`
 - Push after each atomic commit (so we can revert easily):
   - `git push -u origin <branch>` for first push; then `git push` after each commit
 - Keep main stable:
-  - main should always pass `npm test` (and lint/type-check where applicable)
+  - main should always pass the relevant quality gates
   - Merge back via squash if the branch has many small commits, otherwise merge normally
 
 ## Quality gates (lightweight)
@@ -74,20 +80,21 @@ Cursor must consult both this file (.cursorrules) and .cursor/rules/*.mdc before
 - Function return type changes: do not replace an existing function's RETURNS TABLE shape in-place. Create a `_v2` function and switch the client to it.
 - Check if a migration timestamp is applied: `SELECT 1 FROM supabase_migrations.schema_migrations WHERE version = '<timestamp>';` (run in Dashboard SQL Editor). If it returns a row, do not edit that migration file; create a new timestamped migration instead.
 
-## Branch hygiene (keep repo manageable)
-- Keep at most 3 active WIP branches at a time (active = recently worked on and pushed to origin). Everything else must be merged or archived/deleted.
+## Worktree hygiene (keep repo manageable)
+- Keep at most 3 active worktrees at a time (active = recently worked on and pushed to origin). Everything else must be merged or archived/deleted.
 - Before starting new work:
   - `git fetch origin --prune`
-  - `git branch -vv` (review what's ahead/behind and tracking)
-- Categorize each branch:
-  - READY → open PR and squash merge; then delete local + remote branch:
+  - `git worktree list` (review active worktrees, their branches, and ahead/behind status)
+- Categorize each worktree:
+  - READY → open PR and squash merge; then clean up:
+    - `git worktree remove .worktrees/<dir>`
     - `git branch -d <branch>`
     - `git push origin --delete <branch>`
-  - WIP → ensure it is pushed; rename to `wip/<topic>` if not ready to merge.
-  - ABANDONED → optionally tag, then delete local + remote:
+  - WIP → ensure the worktree's branch is pushed; rename to `wip/<topic>` if not ready to merge.
+  - ABANDONED → optionally tag, then force-remove:
     - `git tag archive/<branch> <sha>` and `git push origin archive/<branch>`
-    - `git branch -D <branch>` and `git push origin --delete <branch>`
-- Never delete a branch without first confirming it's merged or tagged/archived.
+    - `git worktree remove --force .worktrees/<dir>`, `git branch -D <branch>`, and `git push origin --delete <branch>`
+- Never delete a worktree or branch without first confirming it's merged or tagged/archived.
 - Never merge into `main` locally; use PR + squash merge by default.
 
 ---
