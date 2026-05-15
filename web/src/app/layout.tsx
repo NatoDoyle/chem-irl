@@ -1,6 +1,8 @@
 import type { Metadata, Viewport } from 'next';
 import { Inter, Libre_Caslon_Text } from 'next/font/google';
 import Script from 'next/script';
+import { Analytics } from '@vercel/analytics/next';
+import { SpeedInsights } from '@vercel/speed-insights/next';
 import { Nav } from '@/components/Nav';
 import { Footer } from '@/components/Footer';
 import { SearchOverlay } from '@/components/blog/SearchOverlay';
@@ -69,6 +71,8 @@ export default function RootLayout({
           <Footer />
         </div>
         <SearchOverlay />
+        <Analytics />
+        <SpeedInsights />
         {plausibleDomain && (
           <Script
             data-domain={plausibleDomain}
