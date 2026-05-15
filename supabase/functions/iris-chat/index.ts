@@ -38,6 +38,7 @@ import {
   EXTRACTION_SYSTEM_PROMPT,
   type IrisSurface,
 } from './system-prompt.ts';
+import { withObservability, type EdgeHandler } from '../_shared/observability.ts';
 
 const ANTHROPIC_API_URL = 'https://api.anthropic.com/v1/messages';
 const ANTHROPIC_VERSION = '2023-06-01';
@@ -69,7 +70,11 @@ const RATE_LIMIT_WINDOW_SECONDS = 300;
 
 type Json = Record<string, unknown>;
 
-serve(async (req) => {
+// Note: the inner try/catch around the dispatch re-throws to the
+// observability wrapper so it can log + capture to Sentry + return the
+// standard 500 with request_id. PR-C-rollout will dedent and remove the
+// now-pointless try/catch in a separate cleanup commit.
+const handler: EdgeHandler = async (req, ctx) => {
   if (req.method !== 'POST') {
     return jsonResponse({ error: 'method_not_allowed' }, 405);
   }
@@ -107,6 +112,7 @@ serve(async (req) => {
   if (authError || !user) {
     return jsonResponse({ error: 'unauthorized' }, 401);
   }
+  ctx.user_id = user.id;
 
   // --- Entitlement check: can_use? ---
   const { data: canUseData, error: canUseError } = await userClient.rpc('iris_can_use');
@@ -142,10 +148,14 @@ serve(async (req) => {
     // Default to 'turn' for forward-compat.
     return await handleTurn({ body, admin, userId: user.id, anthropicKey });
   } catch (err) {
-    console.error('iris-chat: unhandled error', err);
-    return jsonResponse({ error: 'internal_error' }, 500);
+    // Re-throw to the observability wrapper for structured log + Sentry
+    // capture + standard 500 response with request_id. The wrapper's tags
+    // already include layer:edge + fn:iris-chat.
+    throw err;
   }
-});
+};
+
+serve(withObservability(handler, { name: 'iris-chat' }));
 
 // ============================================================================
 // Operation: turn (streaming)
