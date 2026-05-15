@@ -33,6 +33,7 @@ import {
   handleNotificationTap,
 } from './src/lib/notifications';
 import ProfileRefreshContext from './src/contexts/ProfileRefreshContext';
+import { AppErrorBoundary } from './src/components/AppErrorBoundary';
 
 const Stack = createNativeStackNavigator();
 
@@ -322,17 +323,19 @@ export default function App() {
 
   return (
     <ProfileRefreshContext.Provider value={refreshProfile}>
-      <NavigationContainer ref={navigationRef} theme={MidnightTheme}>
-        <Stack.Navigator screenOptions={screenOptions}>
-          <Stack.Screen name="Root">
-            {() => {
-              if (!session || signupIncomplete) return <AuthNavigator />;
-              if (!profileComplete) return <OnboardingNavigator />;
-              return <MainNavigator />;
-            }}
-          </Stack.Screen>
-        </Stack.Navigator>
-      </NavigationContainer>
+      <AppErrorBoundary>
+        <NavigationContainer ref={navigationRef} theme={MidnightTheme}>
+          <Stack.Navigator screenOptions={screenOptions}>
+            <Stack.Screen name="Root">
+              {() => {
+                if (!session || signupIncomplete) return <AuthNavigator />;
+                if (!profileComplete) return <OnboardingNavigator />;
+                return <MainNavigator />;
+              }}
+            </Stack.Screen>
+          </Stack.Navigator>
+        </NavigationContainer>
+      </AppErrorBoundary>
     </ProfileRefreshContext.Provider>
   );
 }
