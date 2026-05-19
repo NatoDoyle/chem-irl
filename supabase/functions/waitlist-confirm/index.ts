@@ -11,8 +11,12 @@
 // On success it 302s into the marketing site's /waitlist/success page
 // with a `source` discriminator and (for waitlist) a referral `code`, so
 // the user lands on the real shareable referral landing instead of a
-// dead-end Supabase URL. Errors still render inline since the marketing
-// site has no equivalent error path.
+// dead-end Supabase URL. Errors ALSO 302 there, with a `?state=` param,
+// rather than rendering inline HTML: Supabase forcibly sandboxes HTML
+// bodies served from the shared *.supabase.co function domain
+// (Content-Type downgraded to text/plain + CSP sandbox + nosniff), so an
+// inline error page renders as raw source text. A redirect carries no
+// HTML body, so it is not sandboxed.
 //
 // JWT verification is disabled in supabase/config.toml — the link is
 // opened directly from email, no client auth context.
@@ -20,12 +24,19 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
-const HTML_HEADERS = {
-  'Content-Type': 'text/html; charset=utf-8',
-  'Cache-Control': 'no-store',
-};
-
 const MARKETING_SUCCESS_URL = 'https://chemirl.app/waitlist/success';
+
+// Confirmation outcomes the marketing /waitlist/success page renders from
+// a `?state=` query param. `expired` / `already_confirmed` are only emitted
+// once the idempotent confirm RPC lands (follow-up PR); the contract is
+// defined here now so that change stays purely server-side.
+type ConfirmState = 'invalid' | 'expired' | 'already_confirmed' | 'error';
+
+function redirectToStatus(state: ConfirmState): Response {
+  const u = new URL(MARKETING_SUCCESS_URL);
+  u.searchParams.set('state', state);
+  return Response.redirect(u.toString(), 302);
+}
 
 serve(async (req) => {
   // Only GET is meaningful (link click from email). HEAD also fine.
@@ -37,14 +48,14 @@ serve(async (req) => {
   const token = (url.searchParams.get('token') ?? '').trim();
 
   if (!token || token.length < 16 || token.length > 256) {
-    return errorPage('Invalid or missing confirmation link.', 400);
+    return redirectToStatus('invalid');
   }
 
   const supabaseUrl = Deno.env.get('SUPABASE_URL');
   const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
   if (!supabaseUrl || !serviceRoleKey) {
     console.error('waitlist-confirm: missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY');
-    return errorPage('Something went wrong on our end. Try again in a few minutes.', 500);
+    return redirectToStatus('error');
   }
 
   const admin = createClient(supabaseUrl, serviceRoleKey);
@@ -55,18 +66,18 @@ serve(async (req) => {
 
   if (error) {
     console.error('confirm_waitlist_email_v2 rpc failed:', error);
-    return errorPage('Something went wrong. Try clicking the link again.', 500);
+    return redirectToStatus('error');
   }
 
   if (!data || data.success !== true) {
     const reason = data?.error ?? 'unknown';
-    if (reason === 'invalid_or_used_token' || reason === 'invalid_token') {
-      return errorPage(
-        "This confirmation link has expired or already been used. If you've already confirmed, you're all set.",
-        410,
-      );
-    }
-    return errorPage('We could not confirm this email. Try signing up again.', 400);
+    // Supabase sandboxes inline HTML on *.supabase.co, so every failure
+    // 302s to the marketing site instead of rendering a page here. The
+    // HTTP-status signal is dropped for the human; keep it in the log.
+    // PR-2 (idempotent confirm) will add an `expired_token` branch →
+    // redirectToStatus('expired').
+    console.error('waitlist-confirm: confirm failed', { reason });
+    return redirectToStatus('invalid');
   }
 
   const email = typeof data.email === 'string' ? data.email : null;
@@ -79,10 +90,7 @@ serve(async (req) => {
     console.error(
       'waitlist-confirm: rpc returned success without email or source',
     );
-    return errorPage(
-      'Something went wrong on our end. Try again in a few minutes.',
-      500,
-    );
+    return redirectToStatus('error');
   }
 
   // Push the now-confirmed contact to the appropriate Resend audience.
@@ -104,10 +112,7 @@ serve(async (req) => {
       console.error(
         'waitlist-confirm: waitlist confirm returned without referral_code',
       );
-      return errorPage(
-        'Something went wrong on our end. Try again in a few minutes.',
-        500,
-      );
+      return redirectToStatus('error');
     }
     successUrl.searchParams.set('code', referralCode);
   }
@@ -168,58 +173,4 @@ async function addToResendAudience(
   } catch (err) {
     console.error('Resend audiences add threw', err);
   }
-}
-
-// --- HTML rendering -------------------------------------------------------
-
-function shell(title: string, bodyInner: string, status: number): Response {
-  return new Response(
-    `<!doctype html>
-<html lang="en">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <meta name="robots" content="noindex">
-  <title>${title} — Chem IRL</title>
-  <style>
-    body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#F8FAFC;color:#0F172A;margin:0;padding:0;line-height:1.5;}
-    main{max-width:520px;margin:0 auto;padding:64px 24px;}
-    .card{background:#fff;border-radius:16px;padding:32px;box-shadow:0 4px 24px rgba(15,23,42,.06);}
-    h1{font-size:24px;margin:0 0 16px;font-weight:700;}
-    p{margin:0 0 16px;color:#334155;}
-    .muted{color:#64748B;font-size:14px;}
-    .pill{display:inline-block;background:#EEF7F8;color:#0F766E;padding:4px 12px;border-radius:999px;font-size:13px;font-weight:600;margin-bottom:16px;}
-    code{background:#F1F5F9;padding:2px 6px;border-radius:4px;font-size:13px;}
-    a{color:#0F172A;text-decoration:underline;}
-  </style>
-</head>
-<body>
-  <main>
-    <div class="card">${bodyInner}</div>
-  </main>
-</body>
-</html>`,
-    { status, headers: HTML_HEADERS },
-  );
-}
-
-function errorPage(message: string, status: number): Response {
-  return shell(
-    'Confirmation issue',
-    `
-    <h1>We hit a snag</h1>
-    <p>${escapeHtml(message)}</p>
-    <p class="muted">If this keeps happening, write to <a href="mailto:hello@chemirl.app">hello@chemirl.app</a> and we'll sort it.</p>
-  `,
-    status,
-  );
-}
-
-function escapeHtml(s: string): string {
-  return s
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
 }
