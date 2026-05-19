@@ -3,10 +3,12 @@
 // Shared confirm endpoint for both lists. Reached by the link in the
 // confirmation email sent by either waitlist-signup (waitlist) or
 // waitlist-blog-subscribe (blog). Wraps the SECURITY DEFINER RPC
-// `confirm_waitlist_email_v2`: validates the single-use token, marks
-// email_confirmed_at, applies referral score for waitlist signups, and
-// returns the row's source so this function can push the freshly-confirmed
-// contact to the right Resend audience.
+// `confirm_waitlist_email_v3`: idempotently validates the token and marks
+// email_confirmed_at WITHOUT burning the token, so an email-scanner
+// prefetch (Outlook/M365 Safe Links, Gmail, …) followed by the human's
+// click both resolve cleanly instead of "already used". Applies referral
+// score for waitlist signups and returns the row's source so this function
+// can push the freshly-confirmed contact to the right Resend audience.
 //
 // On success it 302s into the marketing site's /waitlist/success page
 // with a `source` discriminator and (for waitlist) a referral `code`, so
@@ -27,9 +29,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 const MARKETING_SUCCESS_URL = 'https://chemirl.app/waitlist/success';
 
 // Confirmation outcomes the marketing /waitlist/success page renders from
-// a `?state=` query param. `expired` / `already_confirmed` are only emitted
-// once the idempotent confirm RPC lands (follow-up PR); the contract is
-// defined here now so that change stays purely server-side.
+// a `?state=` query param.
 type ConfirmState = 'invalid' | 'expired' | 'already_confirmed' | 'error';
 
 function redirectToStatus(state: ConfirmState): Response {
@@ -60,12 +60,12 @@ serve(async (req) => {
 
   const admin = createClient(supabaseUrl, serviceRoleKey);
 
-  const { data, error } = await admin.rpc('confirm_waitlist_email_v2', {
+  const { data, error } = await admin.rpc('confirm_waitlist_email_v3', {
     p_token: token,
   });
 
   if (error) {
-    console.error('confirm_waitlist_email_v2 rpc failed:', error);
+    console.error('confirm_waitlist_email_v3 rpc failed:', error);
     return redirectToStatus('error');
   }
 
@@ -74,10 +74,19 @@ serve(async (req) => {
     // Supabase sandboxes inline HTML on *.supabase.co, so every failure
     // 302s to the marketing site instead of rendering a page here. The
     // HTTP-status signal is dropped for the human; keep it in the log.
-    // PR-2 (idempotent confirm) will add an `expired_token` branch →
-    // redirectToStatus('expired').
     console.error('waitlist-confirm: confirm failed', { reason });
+    if (reason === 'expired_token') {
+      return redirectToStatus('expired');
+    }
     return redirectToStatus('invalid');
+  }
+
+  // Idempotent re-hit: an email-scanner prefetch already confirmed this
+  // row, and now the human's click lands here. The contact was pushed to
+  // Resend on that first (confirming) hit, so show the calm "already
+  // confirmed" page — no celebration, no duplicate audience push.
+  if (data.already_confirmed === true) {
+    return redirectToStatus('already_confirmed');
   }
 
   const email = typeof data.email === 'string' ? data.email : null;
