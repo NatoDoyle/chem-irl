@@ -189,23 +189,38 @@ async function buildFaviconIco(): Promise<void> {
 async function buildOpenGraphImage(): Promise<void> {
   // 1200×630 social card: aquamarine gradient, icon left, wordmark + tagline right.
   const tagline = 'Less texting. More chemistry.';
-  const iconSvgRaw = readFileSync(brand('logo-icon.svg'), 'utf8')
+  const iconRawSvg = readFileSync(brand('logo-icon.svg'), 'utf8');
+  const iconVb = iconRawSvg.match(/viewBox="([\d.-]+) ([\d.-]+) ([\d.-]+) ([\d.-]+)"/);
+  if (!iconVb) throw new Error('logo-icon.svg viewBox missing');
+  const ivx = Number(iconVb[1]);
+  const ivy = Number(iconVb[2]);
+  const ivh = Number(iconVb[4]);
+  // Icon viewBox is not 0 0-origin; compute a transform that lands it on the
+  // card. Single-color aqua mark is invisible on the dark aqua gradient → knock
+  // its aqua fills/strokes white (the #ffffff heart knockout stays white).
+  const iconScale = 360 / ivh;
+  const iconSvgRaw = iconRawSvg
     .replace(/<\?xml[^>]*>\s*/, '')
-    .replace(/<svg[^>]*>\s*/, '<g transform="translate(110 170) scale(1.15)">')
-    .replace(/<\/svg>\s*$/, '</g>');
+    .replace(
+      /<svg[^>]*>\s*/,
+      `<g transform="translate(${(110 - ivx * iconScale).toFixed(2)} ${(135 - ivy * iconScale).toFixed(2)}) scale(${iconScale.toFixed(5)})">`,
+    )
+    .replace(/<\/svg>\s*$/, '</g>')
+    .replace(/fill="#0a7f74"/gi, 'fill="#FFFFFF"')
+    .replace(/stroke="#0a7f74"/gi, 'stroke="#FFFFFF"');
   const wordmarkSvg = readFileSync(brand('logo-wordmark.svg'), 'utf8');
   const wmViewBox = wordmarkSvg.match(/viewBox="0 0 ([\d.]+) ([\d.]+)"/);
   if (!wmViewBox) throw new Error('wordmark viewBox missing');
   const wmW = Number(wmViewBox[1]);
   const wmH = Number(wmViewBox[2]);
-  // Swap palette for dark bg: ink → white, aqua accent → gold.
+  // New wordmark is single-color aqua (#0a7f74). Render it all white on the
+  // dark card for legibility (README: mono-white on dark/aqua backgrounds).
   const wordmarkInline = wordmarkSvg
     .replace(/<\?xml[^>]*>\s*/, '')
-    .replace(/fill="#0B1220"/g, 'fill="#FFFFFF"')
-    .replace(/fill="#0A7F74"/g, 'fill="#CA8A04"');
+    .replace(/fill="#0a7f74"/gi, 'fill="#FFFFFF"');
   // Scale wordmark so the whole lockup fits horizontally on the 1200 canvas.
-  // Wordmark native width ~465; at scale 1.2 ≈ 558px. Place at x=530 to leave margin.
-  const wmScale = 1.2;
+  // Wordmark native width ~776; at scale 0.72 ≈ 559px. Place at x=530 to leave margin.
+  const wmScale = 0.72;
   const wmX = 530;
   const wmY = 210;
   const og = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630">

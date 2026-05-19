@@ -24,15 +24,16 @@ Two pipelines convert this directory's canonical sources into per-app artifacts:
 bun run brand:tokens   # regenerate from tokens.ts
 bun run brand:check    # CI guard: exits 1 on drift
 
-# Logo geometry → SVG variants → raster assets
-bunx tsx scripts/build-brand-variants.ts   # SVG variants from master geometry
+# Logo lockup → consumed SVGs → raster assets
+bunx tsx scripts/split-brand-lockup.ts     # slice Chem IRL.svg → logo/icon/wordmark
 bunx tsx scripts/rasterize-brand.ts        # platform PNG/ICO assets
 ```
 
-The first pipeline reads `brand/tokens.ts`. The second reads
-`brand/fonts/Inter-ExtraBold.ttf` plus the flask/heart path constants
-embedded in `scripts/build-brand-variants.ts`. Both are deterministic —
-running them twice produces byte-identical output.
+The first pipeline reads `brand/tokens.ts`. The second slices the canonical
+lockup `brand/Chem IRL.svg` into the three consumed SVGs (`logo.svg`,
+`logo-icon.svg`, `logo-wordmark.svg`) — glyphs are pre-outlined in the
+source, so there is no font input — then rasterizes them. Both are
+deterministic — running them twice produces byte-identical output.
 
 ## Palette quick reference
 
@@ -58,27 +59,28 @@ Loaded via `expo-font` on mobile (`mobile/src/lib/fonts.ts`) and via
 
 ## The mark
 
-Chem IRL's mark is a geometric Erlenmeyer flask with a centered heart —
-a simplification of the earlier illustrated mark (faces inside the flask)
-into a form that reads instantly at 16px and reproduces reliably in
-single-color applications.
+Chem IRL's mark is a single-color aqua (`#0A7F74`) vertical lockup: two
+interlocking rings cradling a heart, with white knockout shapes inside the
+mark, set above the **Chem IRL** wordmark. It reads in one color and
+reproduces reliably down to favicon sizes.
 
-Typography in the wordmark is **Inter ExtraBold** with glyphs outlined
-as paths (no runtime font dependency). The `Chem` token uses the ink
-color, `IRL` uses the aqua accent — matching the existing web nav
-pattern where `IRL` is always highlighted.
+The canonical artwork is `brand/Chem IRL.svg`; `scripts/split-brand-lockup.ts`
+slices it into the three consumed SVGs. The wordmark glyphs are pre-outlined
+paths in the source (no runtime or build-time font dependency) and are a
+single aqua color — there is no ink/aqua split.
 
 ### Logo files
 
 | File | Purpose | Colors |
 |---|---|---|
-| `logo.svg` | Primary lockup (icon + wordmark) | aqua flask, gold heart, ink "Chem", aqua "IRL" |
-| `logo-icon.svg` | Mark only, square | aqua flask, gold heart |
-| `logo-wordmark.svg` | Wordmark only | ink "Chem", aqua "IRL" |
-| `logo-mono-black.svg` | Full lockup, single-color | `#0B1220` |
-| `logo-mono-white.svg` | Full lockup, reversed | `#FFFFFF` (for dark backgrounds) |
-| `logo-aqua.svg` | Full lockup, brand aqua | `#0A7F74` |
-| `logo-gold.svg` | Full lockup, brand gold | `#CA8A04` |
+| `Chem IRL.svg` | **Canonical source lockup** — sliced by `split-brand-lockup.ts` | aqua `#0A7F74` + white knockouts |
+| `logo.svg` | Primary lockup (mark + wordmark), generated | aqua `#0A7F74` |
+| `logo-icon.svg` | Mark only, square, generated | aqua `#0A7F74` |
+| `logo-wordmark.svg` | Wordmark only, generated | aqua `#0A7F74` |
+| `logo-mono-black.svg` | Legacy old-flask variant — **not** regenerated from the new source | `#0B1220` |
+| `logo-mono-white.svg` | Legacy old-flask variant — **not** regenerated from the new source | `#FFFFFF` |
+| `logo-aqua.svg` | Legacy old-flask variant — **not** regenerated from the new source | `#0A7F74` |
+| `logo-gold.svg` | Legacy old-flask variant — **not** regenerated from the new source | `#CA8A04` |
 
 ## Usage rules
 
@@ -93,12 +95,13 @@ mark's width as clearspace.
 - Full lockup (`logo.svg`): **96px** wide minimum. Below that, the
   wordmark loses legibility — switch to icon-only.
 - Icon (`logo-icon.svg`): **16px** minimum. Below that, the heart
-  detail disappears — the flask silhouette alone is still acceptable.
+  detail disappears — the ring silhouette alone is still acceptable.
 
 ### Do
 
 - Use `logo.svg` on light backgrounds (white, `#FFFBF7`).
-- Use `logo-mono-white.svg` on brand aqua, ink, or photographic backgrounds.
+- On dark, brand-aqua, or photographic backgrounds, render the mark in
+  white (the social card does this) rather than the aqua source as-is.
 - Use `logo-icon.svg` on its own when space is constrained.
 - Keep the mark vertical and proportional — never rotate or skew.
 
@@ -128,10 +131,12 @@ mark's width as clearspace.
 
 ## Why Inter TTF is in this repo
 
-`brand/fonts/Inter-ExtraBold.ttf` is checked in as a build input for the
-wordmark path generation. It's used at build time only — the delivered SVGs
-embed outlined paths, not `<text>` elements, so consumers have no runtime
-font dependency. Inter is licensed under the SIL Open Font License
+`brand/fonts/Inter-ExtraBold.ttf` was historically the build input for
+wordmark path generation. The wordmark is now pre-outlined directly in
+`brand/Chem IRL.svg`, so the logo pipeline no longer reads this font — it
+is retained only as a brand-kit reference. The delivered SVGs embed
+outlined paths, not `<text>` elements, so consumers have no runtime font
+dependency. Inter is licensed under the SIL Open Font License
 (`brand/fonts/Inter-LICENSE.txt`).
 
 ## Trademark status
