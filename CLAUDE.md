@@ -54,12 +54,14 @@ bun run android          # start on Android emulator
 ```bash
 bun run lint -- --max-warnings 0   # ESLint (zero warnings enforced)
 bun run type-check                 # TypeScript strict check (tsc --noEmit)
-bun test                           # unit tests (jest, node environment)
+bun run test:unit                  # unit tests (jest, node). NOT bare `bun test` (see note)
 bun run format:check               # Prettier check
 ```
 
+> **`bun test` ≠ the unit suite.** Bare `bun test` invokes Bun's native test runner, which **segfaults** in this environment (Bun 1.3.11) instead of running jest. Always use `bun run test:unit` (or `bunx jest -c jest.unit.config.js`).
+
 ### Running a single test
-Default `bun test` runs the unit (node) suite only. RN component tests require `bun run test:native` (or the explicit `jest.native.config.js` invocation) — they will not run via `bun test`.
+Default `bun run test:unit` runs the unit (node) suite only. RN component tests require `bun run test:native` (or the explicit `jest.native.config.js` invocation) — they will not run via the unit config.
 ```bash
 cd mobile && bunx jest -c jest.unit.config.js --testPathPattern="<pattern>"   # unit (node)
 cd mobile && bunx jest -c jest.native.config.js --testPathPattern="<pattern>" # RN component (jest-expo)
@@ -147,7 +149,7 @@ No separate backend server. The mobile app connects directly to Supabase (Postgr
 
 ### Testing
 Two Jest configurations:
-- `jest.unit.config.js` — unit tests in `src/lib/__tests__/` and `src/config/__tests__/` (node environment, default via `bun test`)
+- `jest.unit.config.js` — unit tests in `src/lib/__tests__/` and `src/config/__tests__/` (node environment, run via `bun run test:unit`)
 - `jest.native.config.js` — React Native component tests (jest-expo preset)
 
 ### Environment
@@ -203,6 +205,7 @@ Mobile app uses `EXPO_PUBLIC_*` env vars loaded via Expo. See `mobile/.env.examp
 - Prefer PR + squash merge. Do not merge into `main` locally.
 - If `main` diverges from `origin/main`, stop and ask before resolving.
 - Keep at most 3 active worktrees. After merge, run `git worktree remove` + delete the branch (local + remote). Abandoned work: tag `archive/<branch>` first, then `git worktree remove --force` + `git branch -D`.
+- **Never `--delete-branch` (or `git push origin --delete`) a branch that is the base of other open PRs.** Deleting a stacked PR's base auto-closes its dependents, and GitHub will not let them be reopened (the base ref is gone). Check `gh pr list --base <branch>` first; if anything targets it, retarget those to `main` (`gh pr edit <n> --base main`) or merge them, then delete. See the 2026-05-19 lesson.
 - Read `agent_docs/git_workflow.md` for full details.
 
 ### Enforcement hooks
@@ -321,3 +324,13 @@ Run or propose only the validations relevant to the files changed. Prefer root-c
 **Resolution:** Merged #81 → #82 → #83 first, then ran `gh pr update-branch 84` to merge updated `main` into #84's branch and retrigger CI. Repeated for #85 after #84 merged.
 
 **Prevention:** See **Stacked PRs** under Git workflow. When a dependent PR imports from a sibling, branch it off the prerequisite's branch with `git worktree add -b feat/<topic>-b .worktrees/feat-<topic>-b feat/<topic>-a` and set its PR base to the prerequisite's branch.
+
+### 2026-05-19 — `--delete-branch` on a stacked PR's base auto-closed its dependents
+
+**What happened:** Merging PR #101 (`feat/observability-shared-helpers`, the base of stacked PRs #102 and #104) via `gh pr merge 101 --squash --delete-branch` deleted the base branch. GitHub immediately closed #102 and #104; `gh pr reopen` refused them because the base ref no longer existed.
+
+**Why it happened:** `--delete-branch` is correct hygiene for an independent PR, but #101 was a stack base. Removing its branch removed the base ref of its dependents, and GitHub closes (and will not reopen) a PR whose base branch is gone.
+
+**Resolution:** Head branches survived on origin, so no commits were lost. Rebased each dependent onto `main` with `git rebase --onto origin/main <old-base-commit>` (dropping the now-squash-merged base commit), force-pushed, and opened replacement PRs #110/#111 against `main` — which also gave them the full CI suite they never received on a non-`main` base.
+
+**Prevention:** See the `--delete-branch` rule under **Git workflow**. Before deleting any branch, run `gh pr list --base <branch>`; if anything targets it, retarget to `main` or merge it first.
