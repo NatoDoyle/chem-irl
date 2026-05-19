@@ -3,6 +3,7 @@
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { withObservability, type EdgeHandler } from '../_shared/observability.ts';
 
 const EXPO_PUSH_API_URL = 'https://exp.host/--/api/v2/push/send';
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') || '';
@@ -18,7 +19,11 @@ const DEBOUNCE_WINDOW_MS = 5000; // 5 seconds
 const processedEvents = new Map<string, number>();
 const DEDUP_TTL_MS = 60000; // 1 minute TTL for deduplication cache
 
-serve(async (req) => {
+// Note: the inner try/catch re-throws to the observability wrapper so it can
+// log + capture to Sentry + return the standard 500 with request_id. The body
+// is otherwise unchanged from before; PR-C-rollout will dedent and remove
+// the now-pointless try/catch in a separate cleanup commit.
+const handler: EdgeHandler = async (req, _ctx) => {
   try {
     // SECURITY: Verify webhook secret before processing
     const webhookSecret = req.headers.get('x-webhook-secret');
@@ -295,14 +300,12 @@ serve(async (req) => {
       }
     );
   } catch (error) {
-    console.error('Error processing push notification:', error);
-    return new Response(
-      JSON.stringify({ error: error.message }),
-      {
-        headers: { 'Content-Type': 'application/json' },
-        status: 500,
-      }
-    );
+    // Re-throw to the observability wrapper for structured log + Sentry
+    // capture + standard 500 response with request_id. The wrapper's tags
+    // already include layer:edge + fn:push.
+    throw error;
   }
-});
+};
+
+serve(withObservability(handler, { name: 'push' }));
 
