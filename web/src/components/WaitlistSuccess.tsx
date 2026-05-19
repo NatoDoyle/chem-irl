@@ -48,6 +48,26 @@ function getServerSource(): null {
   return null;
 }
 
+// `?state=…` is set by the waitlist-confirm edge function when the
+// confirmation could not complete. That function cannot render its own
+// page (Supabase sandboxes HTML on the *.supabase.co function domain), so
+// it 302s here and this page owns every non-success outcome.
+type ConfirmIssue = 'invalid' | 'expired' | 'already_confirmed' | 'error';
+
+function getStateFromUrl(): ConfirmIssue | null {
+  if (typeof window === 'undefined') return null;
+  const raw = new URL(window.location.href).searchParams.get('state');
+  return raw === 'invalid' ||
+    raw === 'expired' ||
+    raw === 'already_confirmed' ||
+    raw === 'error'
+    ? raw
+    : null;
+}
+function getServerState(): null {
+  return null;
+}
+
 // Effect-stored fetch result, paired with the code it was for so we don't
 // flash stale data if the URL changes while a fetch is in flight.
 interface FetchedFor {
@@ -81,6 +101,11 @@ export function WaitlistSuccess() {
     noopSubscribe,
     getSourceFromUrl,
     getServerSource,
+  );
+  const issueState = useSyncExternalStore(
+    noopSubscribe,
+    getStateFromUrl,
+    getServerState,
   );
   const [hydrated, setHydrated] = useState(false);
   const [fetched, setFetched] = useState<FetchedFor | null>(null);
@@ -125,6 +150,14 @@ export function WaitlistSuccess() {
       email_confirmed: fetched.result.email_confirmed,
     });
   }, [fetched, justConfirmed]);
+
+  // Confirmation failures (and, once the idempotent confirm RPC lands, the
+  // already-confirmed re-hit) arrive as `?state=…` from the edge function.
+  // This owns every non-success outcome, so it gates before the
+  // success/blog/code paths.
+  if (hydrated && issueState !== null) {
+    return <ConfirmIssueView state={issueState} />;
+  }
 
   // Blog confirms have a complete UI without the position RPC — render
   // the dedicated view as soon as the URL has resolved. Wait for hydration
@@ -278,6 +311,70 @@ function BlogSubscribeConfirmed({ justConfirmed }: { justConfirmed: boolean }) {
       >
         Read the blog →
       </Link>
+    </Shell>
+  );
+}
+
+// --- Confirm-issue branch -------------------------------------------------
+
+const CONFIRM_ISSUE_COPY: Record<
+  ConfirmIssue,
+  { title: string; body: string; cta: string; alert: boolean }
+> = {
+  already_confirmed: {
+    title: "You're already confirmed",
+    body: "Your email is locked in. We'll email you when the Dublin beta opens.",
+    cta: 'Back to Chem IRL →',
+    alert: false,
+  },
+  expired: {
+    title: 'This link expired',
+    body: 'Confirmation links last 7 days — join again and we’ll send a fresh one.',
+    cta: 'Join the waitlist →',
+    alert: false,
+  },
+  invalid: {
+    title: 'This link isn’t valid',
+    body: 'Use the most recent confirmation email, or sign up again for a new link.',
+    cta: 'Join the waitlist →',
+    alert: true,
+  },
+  error: {
+    title: 'We couldn’t confirm your email',
+    body: 'Something broke on our end. Open the link again in a few minutes.',
+    cta: 'Try again →',
+    alert: true,
+  },
+};
+
+// Single surface for every non-success confirm outcome. Reuses Shell so
+// there is no new layout/CSS; copy lives inline per brand/MESSAGES.md
+// (one-off page strings are not brand tokens).
+function ConfirmIssueView({ state }: { state: ConfirmIssue }) {
+  const copy = CONFIRM_ISSUE_COPY[state];
+  return (
+    <Shell>
+      <h1 className="text-2xl font-bold text-ink-900 mb-3">{copy.title}</h1>
+      <p
+        role={copy.alert ? 'alert' : undefined}
+        className={`mb-6 ${copy.alert ? 'text-coral' : 'text-ink-700'}`}
+      >
+        {copy.body}
+      </p>
+      <Link
+        href="/download"
+        className="inline-flex items-center justify-center bg-aqua-600 hover:bg-aqua-700 text-white font-semibold py-3 px-6 rounded-xl transition-colors"
+      >
+        {copy.cta}
+      </Link>
+      {state === 'error' && (
+        <p className="mt-4 text-xs text-ink-500">
+          Still stuck? Email{' '}
+          <a className="underline" href="mailto:hello@chemirl.app">
+            hello@chemirl.app
+          </a>
+        </p>
+      )}
     </Shell>
   );
 }
