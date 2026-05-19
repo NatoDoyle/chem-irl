@@ -38,6 +38,34 @@ verify_jwt = false
 # the shared WAITLIST_ALLOWED_ORIGINS allowlist.
 verify_jwt = false
 
+# Authenticated mobile-client functions below. JWT verification is on by
+# default (no `verify_jwt = false`); the function bodies still re-check
+# auth.uid() against the operation they perform.
+
+[functions.iris-chat]
+# Authenticated. Streams conversational responses from the AI concierge.
+# Called by mobile/src/components/IrisChatModal.tsx.
+
+[functions.iris-forget]
+# Authenticated. GDPR Article 17 right-to-erasure for the AI concierge
+# transcript + derived profile. Called by the in-app settings flow.
+
+[functions.moderate-photo]
+# Authenticated. Server-side photo moderation gate invoked from
+# mobile/src/screens/onboarding/PhotoVerificationScreen.tsx and
+# mobile/src/screens/profile/ProfileScreen.tsx via the
+# mobile/src/lib/photoModeration.ts client wrapper.
+
+[functions.validate-receipt]
+# Authenticated. Verifies iOS / Android in-app purchase receipts for
+# token packs. Called by mobile/src/lib/iap.ts from the
+# purchaseUpdatedListener after a successful purchase.
+
+[functions.validate-subscription]
+# Authenticated. Verifies iOS / Android subscription receipts and writes
+# the entitlement row. Called by mobile/src/lib/iap.ts on
+# `chem_plus_monthly` purchases.
+
 # Email Templates Configuration
 # These templates are used for local development with Supabase CLI
 # For hosted projects, configure templates in the Supabase Dashboard:
