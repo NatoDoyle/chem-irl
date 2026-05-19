@@ -190,6 +190,7 @@ Mobile app uses `EXPO_PUBLIC_*` env vars loaded via Expo. See `mobile/.env.examp
 - Do not change an existing RPC/function return shape in place; create a versioned replacement such as `_v2` and update callers.
 - When changing PostgREST RPC-related functions or exposed schema behavior, account for schema cache reload requirements (include `SELECT pg_notify('pgrst','reload schema');` in migrations).
 - RLS: `upsert` with `onConflict` can trigger UPDATE, so an UPDATE policy is required for that path.
+- Edge functions on the shared `*.supabase.co` domain cannot serve rendered HTML. Supabase forcibly rewrites HTML responses to `Content-Type: text/plain` + `Content-Security-Policy: sandbox` + `X-Content-Type-Options: nosniff` (anti-phishing), so the page renders as raw source text even though the function code sets `text/html`. To show a user-facing page from an edge function, **302-redirect to the marketing site** (a redirect has no body, so it is not sandboxed) — see `waitlist-confirm`'s `redirectToStatus()` → `chemirl.app/waitlist/success?state=…`. Only serve HTML directly from a function via an attached custom domain, and only if inline rendering is genuinely required.
 
 ## Git workflow
 
