@@ -196,8 +196,9 @@ async function buildOpenGraphImage(): Promise<void> {
   const ivy = Number(iconVb[2]);
   const ivh = Number(iconVb[4]);
   // Icon viewBox is not 0 0-origin; compute a transform that lands it on the
-  // card. Single-color aqua mark is invisible on the dark aqua gradient → knock
-  // its aqua fills/strokes white (the #ffffff heart knockout stays white).
+  // card. The single-color aqua mark is invisible on the dark aqua gradient, so
+  // knock its aqua fills/strokes white; recolor the heart knockout to aqua so it
+  // stays visible against the now-white vesica (inverts the light-bg treatment).
   const iconScale = 360 / ivh;
   const iconSvgRaw = iconRawSvg
     .replace(/<\?xml[^>]*>\s*/, '')
@@ -206,8 +207,9 @@ async function buildOpenGraphImage(): Promise<void> {
       `<g transform="translate(${(110 - ivx * iconScale).toFixed(2)} ${(135 - ivy * iconScale).toFixed(2)}) scale(${iconScale.toFixed(5)})">`,
     )
     .replace(/<\/svg>\s*$/, '</g>')
-    .replace(/fill="#0a7f74"/gi, 'fill="#FFFFFF"')
-    .replace(/stroke="#0a7f74"/gi, 'stroke="#FFFFFF"');
+    .replace(/fill="#ffffff"/g, 'fill="#0A7F74"')
+    .replace(/fill="#0a7f74"/g, 'fill="#FFFFFF"')
+    .replace(/stroke="#0a7f74"/g, 'stroke="#FFFFFF"');
   const wordmarkSvg = readFileSync(brand('logo-wordmark.svg'), 'utf8');
   const wmViewBox = wordmarkSvg.match(/viewBox="0 0 ([\d.]+) ([\d.]+)"/);
   if (!wmViewBox) throw new Error('wordmark viewBox missing');
