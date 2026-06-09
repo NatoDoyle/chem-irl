@@ -116,7 +116,13 @@ export async function submitWaitlistSignup(
 export interface PositionLookupSuccess {
   success: true;
   position: number | null;
+  // Confirmed referrals (friends who signed up via this code AND confirmed
+  // their email — these are the ones that have awarded score).
   referred_count: number;
+  // Signed up via this code but haven't confirmed their email yet, so they
+  // haven't awarded score. Surfaced so the success page can explain why the
+  // score hasn't moved instead of looking broken.
+  pending_referred_count: number;
   gender_weighted_score: number;
   email_confirmed: boolean;
 }
@@ -129,9 +135,10 @@ export interface PositionLookupFailure {
 export type PositionLookupResult = PositionLookupSuccess | PositionLookupFailure;
 
 /**
- * Calls the `waitlist_position_for_code` SECURITY DEFINER RPC. The code
+ * Calls the `waitlist_position_for_code_v2` SECURITY DEFINER RPC. The code
  * is the user's own referral_code (returned by submitWaitlistSignup).
- * No PII is exposed — RPC returns only position/score/confirmation.
+ * No PII is exposed — RPC returns only position/score/confirmation plus
+ * confirmed vs pending referral counts.
  */
 export async function getPositionForCode(code: string): Promise<PositionLookupResult> {
   const client = getSupabaseClient();
@@ -140,7 +147,7 @@ export async function getPositionForCode(code: string): Promise<PositionLookupRe
     return { success: false, error: 'invalid_code' };
   }
 
-  const { data, error } = await client.rpc('waitlist_position_for_code', { p_code: code });
+  const { data, error } = await client.rpc('waitlist_position_for_code_v2', { p_code: code });
 
   if (error) {
     return { success: false, error: 'rpc_failed' };
@@ -154,6 +161,8 @@ export async function getPositionForCode(code: string): Promise<PositionLookupRe
     success: true,
     position: typeof obj.position === 'number' ? obj.position : null,
     referred_count: typeof obj.referred_count === 'number' ? obj.referred_count : 0,
+    pending_referred_count:
+      typeof obj.pending_referred_count === 'number' ? obj.pending_referred_count : 0,
     gender_weighted_score:
       typeof obj.gender_weighted_score === 'number'
         ? obj.gender_weighted_score

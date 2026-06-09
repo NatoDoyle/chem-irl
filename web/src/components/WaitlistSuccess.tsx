@@ -85,6 +85,7 @@ type DerivedState =
       code: string;
       position: number | null;
       referredCount: number;
+      pendingCount: number;
       score: number;
       emailConfirmed: boolean;
     };
@@ -180,6 +181,7 @@ export function WaitlistSuccess() {
               code,
               position: fetched.result.position,
               referredCount: fetched.result.referred_count,
+              pendingCount: fetched.result.pending_referred_count,
               score: fetched.result.gender_weighted_score,
               emailConfirmed: fetched.result.email_confirmed,
             };
@@ -267,11 +269,25 @@ export function WaitlistSuccess() {
         <ShareButtons referralUrl={referralUrl} />
       </div>
 
-      {state.referredCount > 0 && (
-        <p className="text-sm text-ink-500 mb-4">
-          {state.referredCount} friend{state.referredCount === 1 ? '' : 's'}{' '}
-          have signed up through your link so far.
-        </p>
+      {(state.referredCount > 0 || state.pendingCount > 0) && (
+        <div className="mb-4 space-y-1 text-sm text-ink-500">
+          {state.referredCount > 0 && (
+            <p>
+              {state.referredCount === 1
+                ? '1 friend confirmed through your link so far'
+                : `${state.referredCount} friends confirmed through your link so far`}
+              {' '}— that&apos;s what counts toward your score.
+            </p>
+          )}
+          {state.pendingCount > 0 && (
+            <p>
+              {state.pendingCount === 1
+                ? "1 friend signed up but hasn't confirmed their email yet"
+                : `${state.pendingCount} friends signed up but haven't confirmed their email yet`}
+              {' '}— they&apos;ll count once they confirm.
+            </p>
+          )}
+        </div>
       )}
 
       <p className="text-xs text-ink-500">

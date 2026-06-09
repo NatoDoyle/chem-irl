@@ -209,6 +209,7 @@ serve(async (req) => {
         firstName: first_name,
         position: data.position ?? null,
         token: data.email_confirmation_token,
+        referralCode: typeof data.referral_code === 'string' ? data.referral_code : null,
       });
     }
 
@@ -308,6 +309,11 @@ interface ConfirmationEmailArgs {
   firstName: string | null;
   position: number | null;
   token: string;
+  // The signup's own referral_code, used to build a durable status link
+  // (chemirl.app/waitlist/success?code=…) so the user can return to their
+  // position/score and share link any time. Null only if the RPC somehow
+  // omitted it — the status link is then dropped from the email.
+  referralCode: string | null;
 }
 
 async function sendConfirmationEmail(args: ConfirmationEmailArgs): Promise<void> {
@@ -315,6 +321,16 @@ async function sendConfirmationEmail(args: ConfirmationEmailArgs): Promise<void>
   const fromAddress = Deno.env.get('WAITLIST_EMAIL_FROM') ?? 'Chem IRL <hello@chemirl.app>';
   const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
   const confirmUrl = `${supabaseUrl}/functions/v1/waitlist-confirm?token=${encodeURIComponent(args.token)}`;
+
+  // Durable, personal status link on the marketing site. Carries the user's
+  // referral_code so /waitlist/success can show their live position, score,
+  // and share link — before AND after they confirm. Overridable for staging
+  // via the WAITLIST_SUCCESS_URL secret (mirrors waitlist-confirm's constant).
+  const successBase =
+    Deno.env.get('WAITLIST_SUCCESS_URL') ?? 'https://chemirl.app/waitlist/success';
+  const statusUrl = args.referralCode
+    ? `${successBase}?code=${encodeURIComponent(args.referralCode)}`
+    : null;
 
   const greeting = args.firstName ? `Hey ${args.firstName},` : 'Hey,';
   const positionLine = args.position
@@ -332,11 +348,19 @@ async function sendConfirmationEmail(args: ConfirmationEmailArgs): Promise<void>
     <a href="${confirmUrl}" style="background:#0F172A;color:#fff;text-decoration:none;padding:12px 20px;border-radius:8px;display:inline-block;">Confirm my email</a>
   </p>
   <p style="color:#475569;font-size:14px;">Or copy this link into your browser:<br><span style="word-break:break-all;">${confirmUrl}</span></p>
+  ${
+    statusUrl
+      ? `<p style="color:#475569;font-size:14px;">Check your spot and grab your referral link any time:<br><a href="${statusUrl}" style="color:#0F766E;word-break:break-all;">${statusUrl}</a></p>`
+      : ''
+  }
   <hr style="border:none;border-top:1px solid #E2E8F0;margin:32px 0;">
   <p style="color:#475569;font-size:12px;">If you didn't sign up for Chem IRL, you can ignore this email — your address won't be added to anything.</p>
 </body></html>`;
 
-  const text = `${greeting}\n\n${positionLine} Confirm your email:\n${confirmUrl}\n\nIf you didn't sign up for Chem IRL, ignore this email.\n`;
+  const statusText = statusUrl
+    ? `\nCheck your spot and grab your referral link any time:\n${statusUrl}\n`
+    : '';
+  const text = `${greeting}\n\n${positionLine} Confirm your email:\n${confirmUrl}\n${statusText}\nIf you didn't sign up for Chem IRL, ignore this email.\n`;
 
   // Feature flag: if Resend isn't wired up yet, log the payload and bail.
   if (!apiKey) {
