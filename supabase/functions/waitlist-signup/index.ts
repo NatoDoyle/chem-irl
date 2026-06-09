@@ -3,7 +3,7 @@
 // Anonymous POST endpoint called by the static marketing site
 // (web/src/app/download — and a forthcoming web/src/components/WaitlistForm.tsx)
 // to register a Dublin waitlist signup. Wraps the SECURITY DEFINER RPC
-// `claim_waitlist_signup` (granted only to service_role) and returns the
+// `claim_waitlist_signup_v2` (granted only to service_role) and returns the
 // caller's position + referral_code.
 //
 // JWT verification is disabled in supabase/config.toml ([functions.waitlist-signup]).
@@ -138,6 +138,14 @@ serve(async (req) => {
     const referred_by_code = clampStr(body.referred_by_code, 32);
     const consent_marketing = body.consent_marketing === true;
 
+    // Channel attribution (WAITLIST_AUDIT.md §4) — campaign labels captured by
+    // the frontend on landing. Clamped to the DB CHECK limit (120).
+    const utm_source = clampStr(body.utm_source, 120);
+    const utm_medium = clampStr(body.utm_medium, 120);
+    const utm_campaign = clampStr(body.utm_campaign, 120);
+    const utm_term = clampStr(body.utm_term, 120);
+    const utm_content = clampStr(body.utm_content, 120);
+
     // --- Request fingerprint (no raw IP stored) ---
     const ipRaw = (req.headers.get('x-forwarded-for') ?? '').split(',')[0]?.trim();
     const ipHash = ipRaw ? await sha256Hex(ipRaw) : null;
@@ -175,7 +183,9 @@ serve(async (req) => {
       }
     }
 
-    const { data, error } = await admin.rpc('claim_waitlist_signup', {
+    // _v2 = v1 + utm_* write-through (migration 20260609190942). Deploy this
+    // function only AFTER that migration is applied — _v2 must exist first.
+    const { data, error } = await admin.rpc('claim_waitlist_signup_v2', {
       p_email: email,
       p_first_name: first_name,
       p_age_band: age_band,
@@ -187,10 +197,15 @@ serve(async (req) => {
       p_consent_privacy: consent_privacy,
       p_ip_hash: ipHash,
       p_user_agent: userAgent,
+      p_utm_source: utm_source,
+      p_utm_medium: utm_medium,
+      p_utm_campaign: utm_campaign,
+      p_utm_term: utm_term,
+      p_utm_content: utm_content,
     });
 
     if (error) {
-      console.error('claim_waitlist_signup rpc failed:', error);
+      console.error('claim_waitlist_signup_v2 rpc failed:', error);
       return json({ error: 'signup_failed' }, 500);
     }
 

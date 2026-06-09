@@ -7,6 +7,7 @@ import { Nav } from '@/components/Nav';
 import { Footer } from '@/components/Footer';
 import { SearchOverlay } from '@/components/blog/SearchOverlay';
 import { SentryInit } from '@/components/SentryInit';
+import { UtmCapture } from '@/components/UtmCapture';
 import './globals.css';
 
 // Canonical brand typography. Font families are mirrored in mobile/src/lib/fonts.ts.
@@ -63,6 +64,7 @@ export default function RootLayout({
     <html lang="en">
       <body className={`${inter.variable} ${libreCaslon.variable} antialiased`}>
         <SentryInit />
+        <UtmCapture />
         <div data-pagefind-ignore="all">
           <Nav />
         </div>
