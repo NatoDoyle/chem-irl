@@ -270,3 +270,18 @@ export async function getQueueSize(): Promise<number> {
   const queue = await loadQueue();
   return queue.length;
 }
+
+/**
+ * Clear all queued operations.
+ *
+ * Called on sign-out so a session's pending messages/proposals (which carry a
+ * fixed sender_id) never replay under a different account on the same device.
+ * Best-effort: storage failures are logged, not thrown.
+ */
+export async function clearQueue(): Promise<void> {
+  try {
+    await AsyncStorage.removeItem(QUEUE_STORAGE_KEY);
+  } catch (error) {
+    console.error('Error clearing queue:', error);
+  }
+}

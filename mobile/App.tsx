@@ -32,6 +32,7 @@ import {
   setupNotificationListeners,
   handleNotificationTap,
 } from './src/lib/notifications';
+import { clearQueue } from './src/lib/offlineQueue';
 import ProfileRefreshContext from './src/contexts/ProfileRefreshContext';
 import { AppErrorBoundary } from './src/components/AppErrorBoundary';
 
@@ -193,6 +194,11 @@ export default function App() {
         resetUser();
         unregisterDeviceToken().catch((err) => {
           console.error('Error unregistering device token:', err);
+        });
+        // Purge any pending offline mutations so they can't replay under a
+        // different account if someone else signs in on this device.
+        clearQueue().catch((err) => {
+          console.error('Error clearing offline queue:', err);
         });
         setSession(null);
         setProfileComplete(false);
