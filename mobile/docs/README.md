@@ -34,6 +34,8 @@ docs/
 ├── TEST_RUN_LOG_TEMPLATE.md
 ├── RELEASE_CHECKLIST.md
 └── archive/
+    ├── CURRENT_ASSESSMENT.md
+    ├── MOBILE_APP_ASSESSMENT.md
     ├── IMPLEMENTATION_SUMMARY.md
     ├── VALIDATION_REPORT.md
     ├── MOBILE_APP_ANALYSIS.md
@@ -47,7 +49,7 @@ docs/
 
 1. **First time setup**: See [Install on Phones](./INSTALL_ON_PHONES.md)
 2. **Staging environment**: See [Supabase Staging Setup](./SUPABASE_STAGING_SETUP.md)
-3. **Testing**: Run `npm run test:two-device` for workflow, then follow [Two-Device Test Plan](./TWO_DEVICE_TEST_PLAN.md)
+3. **Testing**: Run `bun run test:two-device` for workflow, then follow [Two-Device Test Plan](./TWO_DEVICE_TEST_PLAN.md)
 4. **Before release**: Complete [Release Checklist](./RELEASE_CHECKLIST.md)
 
 ## Email OTP Authentication Setup
