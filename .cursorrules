@@ -68,10 +68,10 @@ Cursor must consult both this file (.cursorrules) and .cursor/rules/*.mdc before
 
 ## Quality gates (lightweight)
 - For mobile app changes, run (or keep changes compatible with):
-  - `cd mobile && npm run lint -- --max-warnings 0`
-  - `cd mobile && npm run type-check`
-  - `cd mobile && npm test`
-  - `cd mobile && npm run format:check`
+  - `cd mobile && bun run lint -- --max-warnings 0`
+  - `cd mobile && bun run type-check`
+  - `cd mobile && bun run test:unit`
+  - `cd mobile && bun run format:check`
 - Prefer fixing root-cause rather than skipping suites.
 
 ## Supabase / DB safety
@@ -122,10 +122,10 @@ Required sections (in this exact order):
 - If a command was NOT run, do not include it.
 
 Required commands to claim “quality gates pass”:
-- cd mobile && npm run lint -- --max-warnings 0
-- cd mobile && npm run type-check
-- cd mobile && npm test
-- cd mobile && npm run format:check
+- cd mobile && bun run lint -- --max-warnings 0
+- cd mobile && bun run type-check
+- cd mobile && bun run test:unit
+- cd mobile && bun run format:check
 
 4) REPO STATE
 - Paste the exact output of:

@@ -132,6 +132,6 @@ These may come back. They are not on the table for v1.
 
 When prompting Claude Code on a feature, reference this file:
 
-> "Read PRODUCT.md and DESIGN.md before suggesting an implementation. The feature must align with the principles in PRODUCT.md — flag any conflict before writing code."
+> "Read PRODUCT.md and MESSAGES.md before suggesting an implementation. The feature must align with the principles in PRODUCT.md — flag any conflict before writing code."
 
 If a feature request from me contradicts something here, **push back**. This doc is the contract.

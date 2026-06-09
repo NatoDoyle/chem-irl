@@ -6,7 +6,7 @@ Run only the checks relevant to the changes made.
 For changes in `mobile/`, use:
 - `cd mobile && bun run lint -- --max-warnings 0`
 - `cd mobile && bun run type-check`
-- `cd mobile && bun test`
+- `cd mobile && bun run test:unit`
 - `cd mobile && bun run format:check`
 
 ## Validation policy
