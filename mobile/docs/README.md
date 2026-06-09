@@ -17,6 +17,7 @@ This directory contains all documentation for the Chem IRL mobile app.
 
 ### Release
 
+- **[Release & Staging Flow Map](./RELEASE_FLOW_MAP.md)** - When to use which checklist (start here)
 - **[Release Checklist](./RELEASE_CHECKLIST.md)** - Pre-build verification steps before building for production
 
 ### Archive
@@ -33,10 +34,13 @@ docs/
 ├── TWO_DEVICE_TEST_PLAN.md
 ├── TEST_RUN_LOG_TEMPLATE.md
 ├── RELEASE_CHECKLIST.md
+├── RELEASE_FLOW_MAP.md
 └── archive/
     ├── CURRENT_ASSESSMENT.md
     ├── MOBILE_APP_ASSESSMENT.md
-    ├── IMPLEMENTATION_SUMMARY.md
+    ├── IMPLEMENTATION_SUMMARY-2025-12-27-code-otp-auth.md
+    ├── IMPLEMENTATION_SUMMARY-2025-01-28-production-features.md
+    ├── IMPLEMENTATION_SUMMARY-2025-01-27-mvp-gaps.md
     ├── VALIDATION_REPORT.md
     ├── MOBILE_APP_ANALYSIS.md
     ├── PRODUCTION_HARDENING_SUMMARY.md
