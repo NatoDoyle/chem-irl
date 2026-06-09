@@ -4,12 +4,12 @@ There are four operational checklists in this folder. They're intentionally **se
 
 ## At a glance
 
-| You're doing… | Use | Cadence |
-|---|---|---|
-| Setting up a brand-new Supabase project (staging or prod) | [STAGING_SETUP_FINAL_CHECKLIST.md](./STAGING_SETUP_FINAL_CHECKLIST.md) | Once per environment |
-| Configuring the Supabase dashboard step-by-step (email/phone providers) | [SUPABASE_DASHBOARD_CHECKLIST.md](./SUPABASE_DASHBOARD_CHECKLIST.md) | Reference, as needed |
-| Verifying just the OTP email template is code-only | [SUPABASE_OTP_TEMPLATE_CHECKLIST.md](./SUPABASE_OTP_TEMPLATE_CHECKLIST.md) | Quick check |
-| Shipping a build to TestFlight / the stores | [RELEASE_CHECKLIST.md](./RELEASE_CHECKLIST.md) | Every release |
+| You're doing…                                                           | Use                                                                        | Cadence              |
+| ----------------------------------------------------------------------- | -------------------------------------------------------------------------- | -------------------- |
+| Setting up a brand-new Supabase project (staging or prod)               | [STAGING_SETUP_FINAL_CHECKLIST.md](./STAGING_SETUP_FINAL_CHECKLIST.md)     | Once per environment |
+| Configuring the Supabase dashboard step-by-step (email/phone providers) | [SUPABASE_DASHBOARD_CHECKLIST.md](./SUPABASE_DASHBOARD_CHECKLIST.md)       | Reference, as needed |
+| Verifying just the OTP email template is code-only                      | [SUPABASE_OTP_TEMPLATE_CHECKLIST.md](./SUPABASE_OTP_TEMPLATE_CHECKLIST.md) | Quick check          |
+| Shipping a build to TestFlight / the stores                             | [RELEASE_CHECKLIST.md](./RELEASE_CHECKLIST.md)                             | Every release        |
 
 ## Typical sequence
 
