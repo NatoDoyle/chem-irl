@@ -88,7 +88,7 @@ chem-irl/
 # Mobile (run from mobile/)
 bun run lint -- --max-warnings 0   # ESLint
 bun run type-check                 # TypeScript strict
-bun test                           # Unit tests
+bun run test:unit                  # Unit tests
 bun run format:check               # Prettier
 
 # Documentation links
