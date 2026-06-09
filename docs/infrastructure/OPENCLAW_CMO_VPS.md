@@ -27,13 +27,15 @@ rationale; the [Phase 0/1 build plan](../superpowers/plans/2026-06-09-autonomous
 | Access | ✅ Working | `ssh openclaw` → root, key `~/.ssh/openclaw_hetzner` |
 | OpenClaw gateway | ✅ LIVE | `openclaw-gateway.service` (user unit), v2026.6.1, port 18789 |
 | Telegram bot | ✅ LIVE | `@Natosopenclawbot`, DM-only, processed messages 2026-06-09 |
-| CMO code (`/root/marketing`) | ✅ BUILT | 10 commits, 9/9 unit tests green (all HTTP mocked) |
-| CMO timers | ⏸ WRITTEN, NOT INSTALLED | 4 unit files in `systemd/`; nothing scheduled |
+| CMO code (`/root/marketing`) | ✅ BUILT | 13 commits, 12/12 unit tests green (all HTTP mocked) |
+| CMO timers | 🟡 PARTIAL | backup (06:30) + health (07:00) timers **enabled**; collect/digest installed but **not enabled** — gated on go-live (§9) |
 | CMO `.env` | ❌ MISSING | No secrets on the box for the CMO yet |
 | CMO database (`data/cmo.db`) | ❌ ABSENT | Nothing has ever collected |
 | `marketing_waitlist_snapshot()` RPC | ✅ LIVE in prod | Merged PR #116, applied + verified 2026-06-09 |
 | Kill-switch (`PAUSED` flag) | ✅ Mechanism in place | Flag not currently set (nothing to pause yet) |
-| Backups / git remote for `/root/marketing` | ❌ **NONE** | **Top risk — disk loss = total loss** (§12 R1) |
+| Backups for `/root/marketing` | ✅ Off-box | Private repo `NatoDoyle/chem-irl-marketing` (write deploy key) + nightly snapshot push |
+| Failure alerting | ✅ Armed | `OnFailure=` → Telegram via `cmo-alert@` (`.env`-gated no-op until go-live) |
+| Host security | ✅ Hardened | UFW deny-in (22 only) · fail2ban (sshd) · key-only SSH (password auth off) |
 
 **Verdict:** the Sense loop is code-complete but dormant. §9 is the go-live path; §13 lists the
 gotchas to read before touching anything.
@@ -70,10 +72,10 @@ anything to anyone except the founder's own Telegram. Content creation (Phase 2)
 │  ~/.ssh/openclaw_hetzner│   │   │   Node 24 · OpenClaw 2026.6.1          │   │   │                        │
 └─────────────────────────┘   │   │   models ──────────────────────────────┼───┼─► Tensorix API (LLM)       │
                               │   │                                        │   │                            │
-                              │   └─ [cmo-collect / cmo-digest timers]     │   │  Supabase PostgREST        │
-                              │       ┄┄┄ not installed yet (§9) ┄┄┄       │   │   marketing_waitlist_      │
-                              │                                            │   │   snapshot() RPC (anon)    │
-                              │  /root/marketing  — git repo, NO remote ⚠  │   │   ▲                        │
+                              │   ├─ cmo-backup/-health timers (enabled)   │   │  Supabase PostgREST        │
+                              │   └─ [cmo-collect/-digest timers]          │   │   marketing_waitlist_      │
+                              │       ┄┄ installed, not enabled (§9) ┄┄    │   │   snapshot() RPC (anon)    │
+                              │  /root/marketing — git repo ──nightly push─┼───┼─► GitHub (private backup)  │
                               │   ├─ cmo/         Python 3.14 venv ────────┼───┼───┤                        │
                               │   ├─ data/cmo.db  (absent until 1st run)   │   │   │                        │
                               │   ├─ PAUSED       kill-switch flag         │   │  Plausible Stats API v1    │
@@ -141,7 +143,7 @@ tables from spec §12.
 | Runtimes | Node v24.16.0 (OpenClaw) · Python 3.14.4 (CMO venv) · git 2.53 |
 | systemd linger | **Enabled for root** — user services/timers run without a login session |
 | Patching | `unattended-upgrades` active |
-| Firewall | **UFW inactive; iptables ACCEPT-all; no fail2ban** (§11, §12 S2/S3) |
+| Firewall | **UFW active** (default deny incoming; 22/tcp only) · **fail2ban active** (sshd jail) · sshd `PasswordAuthentication no` — all enabled 2026-06-09 (§11) |
 | Other workloads | None — no docker, no web server, root crontab empty; `/opt` and `/srv` empty |
 | Notable absences | `sqlite3` CLI **not installed** (inspect the DB via Python — §10) |
 
@@ -202,11 +204,12 @@ plain stdout/stderr → journald (§10), with no alerting (§12 R3).
 
 ## 6. The CMO system (`/root/marketing`)
 
-A standalone git repo (10 commits, one per build-plan task; **no remote** — §12 R1) containing a
-dependency-light Python package. Venv at `.venv/` on **Python 3.14.4** (the plan specified 3.12;
-3.14 is what `apt` provided — recorded deviation, no functional impact). Only two dependencies:
-`requests`, `pytest`. Test suite: **9/9 green**, all HTTP mocked — the suite proves wiring and
-parsing, not live credentials.
+A standalone git repo (13 commits; remote: **private GitHub `NatoDoyle/chem-irl-marketing`** via a
+write-scoped deploy key — the nightly backup timer pushes code + a DB snapshot off-box) containing
+a dependency-light Python package. Venv at `.venv/` on **Python 3.14.4** (the plan specified 3.12;
+3.14 is what `apt` provided — recorded deviation, no functional impact). Only two dependencies,
+pinned: `requests==2.34.2`, `pytest==9.0.3`. Test suite: **12/12 green**, all HTTP mocked — the
+suite proves wiring and parsing, not live credentials.
 
 ### 6.1 Module inventory
 
@@ -217,8 +220,8 @@ parsing, not live credentials.
 | `cmo/webio.py` | Thin HTTP wrapper over `requests` | `get_json` / `post_json`, 20 s timeout, raises on non-2xx |
 | `cmo/connectors/waitlist.py` | Dublin waitlist metrics | `POST {SUPABASE_URL}/rest/v1/rpc/marketing_waitlist_snapshot` with anon key; records 8 metrics + raw payload |
 | `cmo/connectors/plausible.py` | Site analytics | Plausible Stats API **v1** (`/api/v1/stats/aggregate` + two breakdowns); records visitors/pageviews/duration + top sources/pages. Live account's API version unverified (§13) |
-| `cmo/run_collect.py` | Collector entrypoint (daily) | Checks `PAUSED` **before any work**; each connector runs fault-isolated (one failing cannot stop the other); exit 1 if any failed |
-| `cmo/digest.py` | Weekly digest text | Deltas vs the value ≤7 days ago; female-share % with the GTM target line; top sources/pages. Cosmetic nuance: a metric's first old snapshot can render "+0 wk" (§13) |
+| `cmo/run_collect.py` | Collector entrypoint (daily) | Checks `PAUSED` **before any work**; each connector runs fault-isolated (one failing cannot stop the other); prunes `raw_snapshots` >90 days; exit 1 if any failed |
+| `cmo/digest.py` | Weekly digest text | Deltas vs the value ≤7 days ago; female-share % with the GTM target line; top sources/pages. Stale-only metrics render **no** delta (the "+0 wk" artifact was fixed + regression-tested 2026-06-09) |
 | `cmo/notify.py` | Telegram delivery | `sendMessage` to the configured operator chat only; chunks at 4,000 chars (under Telegram's 4,096 cap) |
 | `cmo/run_digest.py` | Digest entrypoint (weekly) | Same `PAUSED` gate; build → send → exit |
 
@@ -231,16 +234,26 @@ raw_snapshots(id, surface, payload TEXT/json, captured_at TEXT)
 ```
 
 Append-only time series; "latest value" and "value on or before <ts>" are the two read patterns
-(the digest's weekly delta = latest − value_on_or_before(now − 7d)). No retention policy yet
-(§12 C3).
+(the digest's weekly delta = latest − value_on_or_before(now − 7d)). `raw_snapshots` is pruned to
+90 days on every collect (`store.prune_raw`); `metric_snapshots` is kept forever (tiny rows).
 
-### 6.3 Scheduling (designed, not active)
+### 6.3 Scheduling & ops units (partially active)
 
-`systemd/` holds 4 unit files — `cmo-collect.{service,timer}` (daily 06:00 UTC) and
-`cmo-digest.{service,timer}` (Mondays 08:00 UTC), both `Persistent=true`, `Type=oneshot`,
-`ExecStart` pointing at the venv Python. They are **not copied into `~/.config/systemd/user/` and
-not enabled** — deliberately, because running them without `.env` would just schedule failures.
-§9 step 5 activates them.
+`systemd/` holds 8 unit files, all installed in `~/.config/systemd/user/`, all hardened
+(`NoNewPrivileges`, `PrivateTmp`, `ProtectSystem=full`) and all timers carrying
+`RandomizedDelaySec=300`:
+
+- `cmo-collect.{service,timer}` (daily 06:00 UTC) and `cmo-digest.{service,timer}` (Mondays
+  08:00 UTC) — installed but **not enabled**, deliberately: without `.env` they'd just schedule
+  failures. §9 step 5 enables them.
+- `cmo-backup.{service,timer}` (daily 06:30 UTC) — **enabled**. Runs `scripts/backup.sh`:
+  SQLite `.backup` snapshot into `backups/` (once the DB exists) + commit + push to the private
+  remote.
+- `cmo-health.{service,timer}` (daily 07:00 UTC) — **enabled**. Runs `scripts/health.sh`:
+  disk ≥80%, available RAM ≤300 MiB, or failed user units → Telegram alert.
+- `cmo-alert@.service` — `OnFailure=` target for collect/digest/backup; runs
+  `scripts/notify-failure.sh <unit>` which sends the unit name + last journal lines to the
+  operator's Telegram. All alerting reads `.env` and is a logged no-op until go-live populates it.
 
 ### 6.4 Guardrails (`playbook.md`) and context pack
 
@@ -302,11 +315,14 @@ paid-plan feature. No API key is owned yet; see the decision box in §9.
 | OpenClaw gateway | — | — | ✅ | `systemctl --user is-active` → `active`; v2026.6.1 |
 | Telegram bot | — | — | ✅ | Inbound messages in gateway journal |
 | `marketing_waitlist_snapshot` RPC | spec §11 | PR #116 | ✅ prod | Live call returned the 8-key payload |
-| `cmo` package + tests | plan Tasks 1–9 | ✅ 10 commits | ❌ never run live | `pytest -q` → `9 passed`; `data/` empty |
-| systemd timers | plan Task 10 | ✅ unit files | ❌ not installed | `systemctl --user list-timers` shows no `cmo-*` |
+| `cmo` package + tests | plan Tasks 1–9 | ✅ 13 commits | ❌ never run live | `pytest -q` → `12 passed`; `data/` empty |
+| Collect/digest timers | plan Task 10 | ✅ installed | ❌ not enabled | gated on `.env` — §9 step 5 |
+| Off-box backup (repo + DB snapshot) | improvement R1/R2 | ✅ | ✅ nightly 06:30 UTC | `cmo-backup.timer` enabled; pushes verified 2026-06-09 |
+| Failure alerting + health check | improvements R3/R8 | ✅ | ✅ armed (`.env`-gated) | `cmo-alert@` + `cmo-health.timer` (07:00 UTC) |
 | CMO `.env` | plan Task 11 | ❌ | ❌ | `ls /root/marketing/.env` → absent |
 | First digest | plan Task 11 | ❌ | ❌ | Telegram has never received one |
 | Playbook + context pack | plan Task 12 | ✅ | ✅ (passive) | Files present, committed |
+| UTM capture (chem-irl) | improvement P1 | ✅ PR #128 | ❌ pending merge + `db push` + fn deploy | see PR's deploy-sequencing notes |
 
 **Recorded deviations from the build plan** (the plan is a point-in-time doc — it stays unmodified;
 these corrections live here):
@@ -437,18 +453,20 @@ fails silently until someone reads the journal or notices a thin digest (§12 R3
 
 ## 11. Security posture & accepted risks
 
-**Posture today:** SSH is key-based as root; secrets sit in `600`-perm files; the Telegram channel
-is DM-only with an allowlist; the CMO is L0 read-only behind a playbook contract and a global
-kill-switch; `unattended-upgrades` patches the OS. There is **no firewall** (UFW inactive,
-iptables ACCEPT-all) and **no fail2ban**, but the only listening service besides sshd is the
-gateway on 18789.
+**Posture today:** SSH is key-based as root with **password auth disabled** (sshd drop-in,
+2026-06-09); **UFW is active** (default-deny inbound, 22/tcp only — safe because the gateway binds
+`127.0.0.1:18789`); **fail2ban** guards sshd (it was catching real brute-force attempts within
+minutes of install); secrets sit in `600`-perm files; the Telegram channel is DM-only with an
+allowlist; the CMO is L0 read-only behind a playbook contract and a global kill-switch; the cmo
+systemd units run with `NoNewPrivileges`/`PrivateTmp`/`ProtectSystem=full`;
+`unattended-upgrades` patches the OS.
 
 **Accepted risks** (deliberate, revisit-dated — not oversights):
 
 | Risk | Why accepted for now | Remediation path |
 |---|---|---|
 | Everything runs as **root**, agent included | Single-purpose box; spec §7 acknowledges it; L0 = no write credentials to abuse | §12 S1 (dedicated user) |
-| Open firewall | Attack surface is sshd + one gateway port; key-only auth | §12 S2/S3 |
+| ~~Open firewall~~ | **Resolved 2026-06-09** — UFW deny-in + fail2ban + key-only sshd | — |
 | Anon-readable aggregate RPC | No PII; counts are near-public; key is public anyway | §12 S6 (revisit trigger) |
 | One bot token shared by gateway + CMO scripts | Same trust domain today (same box, same operator) | §12 S5 (rotation/split) |
 
@@ -459,28 +477,33 @@ re-run this section's analysis before that happens, per spec §7 and §13.
 
 ## 12. Possible improvements
 
+> **Status update 2026-06-09 (same-day improvements pass):** R1–R6, R8, S2–S4, S7, C1, C3 are
+> **implemented**; P1 is built (PR #128, deploy-sequenced); P3 verified healthy. Remaining open:
+> the items below without a ✅ — chiefly the C2 Plausible decision, S1 non-root migration, R9
+> Hetzner snapshots, and the Phase-2 preparation items (C6–C8, P2, P4, P5).
+
 Top five by leverage:
 
-| # | Item | Why first | Effort |
+| # | Item | Why first | Status |
 |---|---|---|---|
-| 1 | **R1** — git remote/backup for `/root/marketing` | Only copy of the repo is one VPS disk | S |
-| 2 | **R3** — failure alerting via Telegram | Silent-failure mode is the worst kind for a "trust me" system | S |
-| 3 | **P1** — UTM instrumentation in chem-irl | The CMO is attribution-blind until this lands (`WAITLIST_AUDIT.md` P0) | M |
-| 4 | **C2** — settle Plausible Cloud-vs-CE | Blocks half the Sense loop (§9 decision box) | S (decision) / L (CE build) |
-| 5 | **S1** — dedicated non-root user for CMO timers | Cheapest meaningful privilege reduction before Phase 2 | M |
+| 1 | **R1** — git remote/backup for `/root/marketing` | Only copy of the repo was one VPS disk | ✅ Done — private repo + deploy key + nightly push |
+| 2 | **R3** — failure alerting via Telegram | Silent-failure mode is the worst kind for a "trust me" system | ✅ Done — `cmo-alert@` armed (`.env`-gated) |
+| 3 | **P1** — UTM instrumentation in chem-irl | The CMO is attribution-blind until this lands (`WAITLIST_AUDIT.md` P0) | 🟡 Built — PR #128; merge + `db push` + fn deploy pending |
+| 4 | **C2** — settle Plausible Cloud-vs-CE | Blocks half the Sense loop (§9 decision box) | ⏳ Open — founder decision |
+| 5 | **S1** — dedicated non-root user for CMO timers | Cheapest meaningful privilege reduction before Phase 2 | ⏳ Open |
 
 ### 12.1 Reliability
 
 | ID | What | Why / how | Effort | Priority |
 |---|---|---|---|---|
-| R1 | Push `/root/marketing` to a private GitHub repo (or nightly `git bundle` scp'd off-box) | Disk loss/corruption currently destroys code+history+data with no recovery path | S | **P0** |
-| R2 | Back up `data/cmo.db` (nightly copy off-box, or to the same private repo via `sqlite3 .backup`/Python) | Metrics history becomes irreplaceable the day collection starts | S | P1 |
-| R3 | `OnFailure=` drop-in on both services firing a `curl` to the Telegram API ("collect failed — check journal"), or a weekly dead-man's-switch | Failures currently land only in journald; nobody is notified | S | **P0** |
-| R4 | Confirm journald persistence (`Storage=persistent`) | User-unit logs shouldn't vanish on reboot mid-investigation | S | P2 |
-| R5 | `RandomizedDelaySec=` on the timers | Avoid thundering-herd-at-06:00 patterns as more jobs accrue | S | P3 |
-| R6 | Pin versions in `requirements.txt` | `requests`/`pytest` float today; a bad upgrade breaks silently at next venv rebuild | S | P2 |
-| R7 | Normalize the Python version story (pin 3.14 as supported, or align docs) | Plan says 3.12, box runs 3.14 — freeze the ambiguity | S | P3 |
-| R8 | Host monitoring (disk/RAM threshold → Telegram alert) | 3.7 GiB box; ClickHouse experiments or log growth could starve the gateway | M | P2 |
+| R1 | Push `/root/marketing` to a private GitHub repo (or nightly `git bundle` scp'd off-box) | Disk loss/corruption currently destroys code+history+data with no recovery path | S | ✅ Done 2026-06-09 |
+| R2 | Back up `data/cmo.db` (nightly copy off-box, or to the same private repo via `sqlite3 .backup`/Python) | Metrics history becomes irreplaceable the day collection starts | S | ✅ Done 2026-06-09 |
+| R3 | `OnFailure=` drop-in on both services firing a `curl` to the Telegram API ("collect failed — check journal"), or a weekly dead-man's-switch | Failures currently land only in journald; nobody is notified | S | ✅ Done 2026-06-09 |
+| R4 | Confirm journald persistence (`Storage=persistent`) | User-unit logs shouldn't vanish on reboot mid-investigation | S | ✅ Verified 2026-06-09 (was already persistent) |
+| R5 | `RandomizedDelaySec=` on the timers | Avoid thundering-herd-at-06:00 patterns as more jobs accrue | S | ✅ Done 2026-06-09 |
+| R6 | Pin versions in `requirements.txt` | `requests`/`pytest` float today; a bad upgrade breaks silently at next venv rebuild | S | ✅ Done 2026-06-09 |
+| R7 | Normalize the Python version story (pin 3.14 as supported, or align docs) | Plan says 3.12, box runs 3.14 — freeze the ambiguity | S | ✅ Done 2026-06-09 (3.14 recorded as supported — §6/§13) |
+| R8 | Host monitoring (disk/RAM threshold → Telegram alert) | 3.7 GiB box; ClickHouse experiments or log growth could starve the gateway | M | ✅ Done 2026-06-09 |
 | R9 | Hetzner-level snapshots/backup plan for the whole box | OpenClaw config + workspace + credentials are also single-copy | S | P1 |
 
 ### 12.2 Security
@@ -488,20 +511,20 @@ Top five by leverage:
 | ID | What | Why | Effort | Priority |
 |---|---|---|---|---|
 | S1 | Run CMO units as a dedicated non-root user | Least privilege; contains a compromised connector | M | P1 (pre-Phase-2: P0) |
-| S2 | Enable UFW (allow 22, optionally 18789 from tailnet only) | Default-deny beats ACCEPT-all even on a small box | S | P1 |
-| S3 | fail2ban for sshd | Root SSH on a public IPv4 gets hammered | S | P2 |
-| S4 | systemd hardening on cmo units (`ProtectSystem=strict`, `PrivateTmp=`, `ReadWritePaths=/root/marketing`) | Cheap syscall/filesystem containment | S | P2 |
+| S2 | Enable UFW (allow 22, optionally 18789 from tailnet only) | Default-deny beats ACCEPT-all even on a small box | S | ✅ Done 2026-06-09 |
+| S3 | fail2ban for sshd | Root SSH on a public IPv4 gets hammered | S | ✅ Done 2026-06-09 |
+| S4 | systemd hardening on cmo units (`ProtectSystem=strict`, `PrivateTmp=`, `ReadWritePaths=/root/marketing`) | Cheap syscall/filesystem containment | S | ✅ Done 2026-06-09 (verified via PAUSED dry-starts) |
 | S5 | Secrets rotation procedure + split bot tokens if blast radius grows | One leaked token currently = gateway AND CMO | M | P2 |
 | S6 | Define the RPC-exposure revisit trigger (e.g. waitlist > 1k, press attention, or any PII-adjacent field added) | "Accepted risk" needs an expiry condition, not a shrug | S | P1 |
-| S7 | Verify `PasswordAuthentication no` in sshd config | Recon couldn't confirm explicit setting; key-only should be explicit | S | P1 |
+| S7 | Verify `PasswordAuthentication no` in sshd config | Recon couldn't confirm explicit setting; key-only should be explicit | S | ✅ Done 2026-06-09 (PasswordAuthentication no) |
 
 ### 12.3 Code
 
 | ID | What | Why | Effort | Priority |
 |---|---|---|---|---|
-| C1 | Fix the "+0 wk" first-old-snapshot delta label (`digest._delta` should return no-delta when prev row == cur row) | Misleading on the first digest after history crosses 7 days; found in final code review | S | P3 |
+| C1 | Fix the "+0 wk" first-old-snapshot delta label (`digest._delta` should return no-delta when prev row == cur row) | Misleading on the first digest after history crosses 7 days; found in final code review | S | ✅ Done 2026-06-09 (regression-tested) |
 | C2 | Plausible decision + possible v1→v2 migration of `connectors/plausible.py` | §9 decision box; v2 (`/api/v2/query`) is where Plausible is headed | S–L | **P0** (decision) |
-| C3 | Retention policy for `raw_snapshots` (e.g. keep 90 days) | Unbounded JSON blobs on a small disk | S | P3 |
+| C3 | Retention policy for `raw_snapshots` (e.g. keep 90 days) | Unbounded JSON blobs on a small disk | S | ✅ Done 2026-06-09 (90-day prune in run_collect) |
 | C4 | Use or drop the `dims` column | Dead schema invites confusion; spec §12 intended per-dimension metrics | S | P3 |
 | C5 | Structured logging (one JSON line per connector run with status/duration/row-counts) | Makes R3 alerting and later dashboards trivial | S | P2 |
 | C6 | LLM-written digest narrative (template stays as fallback) | `TENSORIX_API_KEY` is already on the box; spec kept Phase 0/1 template-only deliberately | M | P2 (Phase 1.5) |
@@ -512,9 +535,9 @@ Top five by leverage:
 
 | ID | What | Why | Effort | Priority |
 |---|---|---|---|---|
-| P1 | **UTM instrumentation** through form → `waitlist-signup` edge fn → RPC → `waitlist_signups` | The standing P0 from `WAITLIST_AUDIT.md` (repo root): channel attribution is impossible today; spec §11.3 absorbs it as foundational | M | **P0** |
+| P1 | **UTM instrumentation** through form → `waitlist-signup` edge fn → RPC → `waitlist_signups` | The standing P0 from `WAITLIST_AUDIT.md` (repo root): channel attribution is impossible today; spec §11.3 absorbs it as foundational | M | 🟡 PR #128 open — merge + db push + fn deploy pending |
 | P2 | Social read-connectors (Reddit, Threads, X read-tier; IG/TikTok after account/app approval) | Completes the Sense surface; blocked on developer apps + tokens (spec §8) | M each | P1 |
-| P3 | Audit `RESEND_API_KEY` + Resend audiences | The other `WAITLIST_AUDIT.md` P0: unset key = silently broken confirmations; also prerequisite for the Phase 3 newsletter | S | **P0** |
+| P3 | Audit `RESEND_API_KEY` + Resend audiences | The other `WAITLIST_AUDIT.md` P0: unset key = silently broken confirmations; also prerequisite for the Phase 3 newsletter | S | ✅ Verified healthy 2026-06-09 (RESEND_API_KEY + audiences + FROM all set) |
 | P4 | Phases 2–4: content engine → publishing → learn loop, with the L0→L3 autonomy ramp per surface | The designed path (spec §14–§15: Create wk 4–6, Distribute wk 6–9, Learn wk 9–12 against the Dublin GTM curve); each phase gets its own plan before build | L | Scheduled |
 | P5 | Configure the "brand copy → Claude" model route on the gateway | Spec §4 principle 7; today only Tensorix models exist — fine for analytics, not for voice-critical copy | S | P1 (pre-Phase-2) |
 
@@ -527,9 +550,9 @@ One consolidated list — if something on this box surprises you, check here fir
 - **The Telegram bot token is in `openclaw.json`** (`channels.telegram.botToken`), not in `~/.openclaw/.env` and not in `credentials/` — the build plan's Task 11 says otherwise and is wrong.
 - **Python is 3.14.4**, not the plan's 3.12.
 - **The Plausible connector targets Stats API v1**; the live account's API version/plan is unverified, and on Plausible Cloud the Stats API is paid (§9 decision box).
-- **Digest "+0 wk" artifact** on a metric's first >7-day-old snapshot — cosmetic, self-correcting (§12 C1).
+- ~~Digest "+0 wk" artifact~~ — **fixed 2026-06-09**: stale-only metrics now render no delta (regression test in `tests/test_digest.py`).
 - **Chat id `5355963011` is a log-derived candidate**, not configured fact — verify before trusting (§9 step 2).
-- **`/root/marketing` has no git remote** — nothing on this box is backed up anywhere (§12 R1/R9). Do not assume otherwise.
+- **`/root/marketing` pushes nightly (06:30 UTC) to the private GitHub repo `chem-irl-marketing`** via a write deploy key (`~/.ssh/marketing_deploy`, ssh alias `github-marketing`). Box-level Hetzner snapshots (§12 R9) remain unconfigured.
 - **`data/cmo.db` does not exist** until the first successful collect; `store.connect` creates it on demand.
 - **Running `run_collect` without a Plausible key is a supported degraded mode** — waitlist still collects; the run exits 1 and logs an ERROR line for the plausible connector. Expected, not broken.
 
