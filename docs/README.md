@@ -26,6 +26,7 @@ Organized documentation for the Chem IRL dating app.
 ## Infrastructure
 
 - **[Cloudflare Setup](./infrastructure/CLOUDFLARE_SETUP.md)**
+- **[OpenClaw CMO VPS](./infrastructure/OPENCLAW_CMO_VPS.md)** — Hetzner box running the OpenClaw agent platform + Autonomous CMO (architecture, current state, go-live runbook, improvements)
 - **[Security Audit](./infrastructure/SECURITY_AUDIT.md)**
 
 ## Per-app & data docs
@@ -38,7 +39,7 @@ Organized documentation for the Chem IRL dating app.
 
 - **[Dublin Launch Plan](./DUBLIN_LAUNCH_PLAN.md)** — GTM strategy; active reference for marketing work
 - **[Iris — Phase 1 Verification](./iris/PHASE_1_VERIFICATION.md)** — AI-concierge feature checkpoint
-- **[Autonomous CMO](./superpowers/)** — design spec + implementation plan (in-flight)
+- **[Autonomous CMO](./superpowers/)** — design spec + implementation plan (in-flight); as-built VPS doc under [Infrastructure](./infrastructure/OPENCLAW_CMO_VPS.md)
 
 ## Archive
 

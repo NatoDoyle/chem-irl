@@ -3,6 +3,7 @@
 **Status:** DRAFT for review · **Date:** 2026-06-09 · **Owner:** Nathan Doyle
 **Runtime:** OpenClaw `2026.6.1` on Hetzner VPS `OpenClaw` (188.245.123.146, Ubuntu 26.04, root)
 **Related docs:** `docs/DUBLIN_LAUNCH_PLAN.md`, `brand/MESSAGES.md`, `brand/PRODUCT.md`, `WAITLIST_AUDIT.md`, `App Plans/Marketing Plan…`, `App Plans/Brand & Growth…`
+**As-built / operations:** [docs/infrastructure/OPENCLAW_CMO_VPS.md](../../infrastructure/OPENCLAW_CMO_VPS.md) — the living doc for what is actually deployed on the VPS
 
 > This spec defines a system that **runs outside this repo** (on the VPS) but **acts on this repo** (blog/newsletter via PR) and on Chem IRL's external marketing surfaces. It is intentionally phased: a north-star vision delivered as independently-useful increments. Nothing here is built until this design is approved.
 
