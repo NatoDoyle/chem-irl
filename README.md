@@ -104,6 +104,10 @@ bun run docs:check
 ### Website
 - Deploy to Vercel (static export)
 
+## Contributing
+
+See **[CONTRIBUTING.md](./CONTRIBUTING.md)** for the development workflow — worktree-first git, quality gates, and where the docs live. [CLAUDE.md](./CLAUDE.md) is the detailed source of truth.
+
 ## License
 
 Private - All rights reserved
