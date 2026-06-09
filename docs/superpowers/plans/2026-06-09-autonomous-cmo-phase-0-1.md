@@ -1166,6 +1166,8 @@ Expected: all tests pass.
 
 ## Execution Handoff
 
+> **Executed 2026-06-09.** As-built state, deviations from this plan (Python version, Telegram token location, `sqlite3` CLI), and the go-live runbook live in [docs/infrastructure/OPENCLAW_CMO_VPS.md](../../infrastructure/OPENCLAW_CMO_VPS.md).
+
 Plan complete and saved to `docs/superpowers/plans/2026-06-09-autonomous-cmo-phase-0-1.md`. Two execution options:
 
 1. **Subagent-Driven (recommended)** — dispatch a fresh subagent per task, review between tasks, fast iteration.
