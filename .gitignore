@@ -40,7 +40,12 @@ next-env.d.ts
 
 # editors/IDE
 .cursor/
-.claude/
+
+# Claude Code: share hooks + project settings, keep local state/secrets out
+.claude/*
+!.claude/settings.json
+!.claude/hooks/
+.claude/settings.local.json
 
 # superpowers brainstorm artifacts
 .superpowers/

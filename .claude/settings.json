@@ -1,0 +1,28 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Edit|Write|NotebookEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": ".claude/hooks/block-edit-on-main.sh"
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": ".claude/hooks/block-push-to-main.sh"
+          },
+          {
+            "type": "command",
+            "command": ".claude/hooks/enforce-branch-hygiene.sh"
+          }
+        ]
+      }
+    ]
+  }
+}
