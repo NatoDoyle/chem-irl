@@ -198,13 +198,12 @@ Mobile app uses `EXPO_PUBLIC_*` env vars loaded via Expo. See `mobile/.env.examp
 
 **Worktrees are the default.** Every change goes in its own worktree off fresh `origin/main`. The primary checkout (`/Users/nathandoyle/Projects/Dating App/chem-irl/`) stays on `main` and is **not** edited — work happens in `.worktrees/<branch>/` only. No exceptions, including trivial fixes.
 
-- Never work directly on `main`, and never run `git checkout -b` / `git switch -c` from the primary checkout — the hygiene hook will block it. Use `git worktree add -b <branch> .worktrees/<dir> origin/main` instead (see **Worktree workflow** below).
+- Create a worktree for the change off fresh `origin/main`: `git worktree add -b <branch> .worktrees/<dir> origin/main` (see **Worktree workflow** below). Creating a branch in the primary checkout (`git checkout -b` / `git switch -c`) is blocked by the hygiene hook.
 - Branch naming (applies to the worktree's branch): `fix/<desc>`, `feat/<desc>`, `chore/<desc>`.
 - Commit prefixes: `fix:`, `feat:`, `chore:`, `test:`, `docs:`
 - One logical change per commit; no mixed concerns.
 - Prefer PR + squash merge. Do not merge into `main` locally.
 - If `main` diverges from `origin/main`, stop and ask before resolving.
-- Keep at most 3 active worktrees. After merge, run `git worktree remove` + delete the branch (local + remote). Abandoned work: tag `archive/<branch>` first, then `git worktree remove --force` + `git branch -D`.
 - **Never `--delete-branch` (or `git push origin --delete`) a branch that is the base of other open PRs.** Deleting a stacked PR's base auto-closes its dependents, and GitHub will not let them be reopened (the base ref is gone). Check `gh pr list --base <branch>` first; if anything targets it, retarget those to `main` (`gh pr edit <n> --base main`) or merge them, then delete. See the 2026-05-19 lesson.
 - Read `agent_docs/git_workflow.md` for full details.
 
@@ -214,7 +213,7 @@ Mobile app uses `EXPO_PUBLIC_*` env vars loaded via Expo. See `mobile/.env.examp
 - `block-push-to-main.sh` — blocks `git push` when the shell's CWD is on `main`.
 - `enforce-branch-hygiene.sh` — runs on `git checkout -b` / `git switch -c`. **Always blocks the command when run from the primary checkout** (use `git worktree add -b ... origin/main` instead). Inside a worktree it still blocks if the working tree is dirty and warns if the local branch count exceeds 5.
 
-If a hook blocks a tool call, the fix is almost always "create or switch to a feature branch first," not bypassing the hook.
+If a hook blocks a tool call, the fix is almost always "create or move to a worktree first," not bypassing the hook.
 
 ### Worktree workflow
 
