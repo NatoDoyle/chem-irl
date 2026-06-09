@@ -1,5 +1,8 @@
 -- Row Level Security Policies for Chem IRL
 -- Based on Security Pack v1 and Functional Spec v3
+--
+-- ⚠️ REFERENCE ONLY — deployed RLS lives in supabase/migrations/. This file is
+-- a design snapshot and may lag what's applied. Apply changes via `supabase db push`.
 
 -- Drop existing policies if they exist (allows re-running this script)
 DO $$

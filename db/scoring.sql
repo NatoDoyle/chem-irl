@@ -1,6 +1,9 @@
 -- Scoring Engine Functions for Chem IRL
 -- Implements Action Speed, Profile Quality, and Reliability scoring
 --
+-- ⚠️ REFERENCE ONLY — deployed scoring functions live in supabase/migrations/.
+-- This file is a design snapshot and may lag what's applied.
+--
 -- DEPRECATED (v1): Functions below (update_daily_action_speed, apply_action_speed_bonus,
 -- get_proposal_response_bonus, get_first_proposal_bonus, update_profile_quality,
 -- update_reliability) are superseded by the event-sourced scoring v2 system.

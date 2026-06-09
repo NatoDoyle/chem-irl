@@ -78,6 +78,8 @@ Copy-paste commands for setting up the development environment from scratch.
 
 ## 2. Database SQL Execution Order
 
+> ⚠️ **For first-time bootstrap of a brand-new, empty project only.** `supabase/migrations/` is the source of truth for the deployed schema; the `db/*.sql` files are reference snapshots that may lag. For any existing or linked project, apply changes with `supabase db push` — do **not** paste `db/*.sql` into the SQL Editor, as it can drift from or overwrite applied migrations.
+
 Run these SQL files in Supabase SQL Editor in this exact order:
 
 ### Step 1: Schema

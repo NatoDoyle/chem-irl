@@ -1,5 +1,7 @@
 # Postmark Setup with Cloudflare Email Routing
 
+> ⚠️ **Outdated — the app sends transactional email via Resend, not Postmark** (see `supabase/functions/waitlist-signup` and `waitlist-confirm`, which use `RESEND_API_KEY`). Postmark was never wired up. Kept for the Cloudflare email-routing steps only; ignore the Postmark-specific instructions.
+
 Since you've set up Cloudflare email routing, you can now use Postmark! Here's how:
 
 ## Step 1: Sign Up for Postmark
