@@ -6,6 +6,18 @@ on:
   push:
     branches: [main, master]
 
+# Least-privilege: every job here only reads the repo (type-check, lint, build,
+# tests). Pin the default GITHUB_TOKEN to read-only so a compromised action
+# can't push commits, open releases, or mutate the repo.
+permissions:
+  contents: read
+
+# Cancel superseded in-progress runs on the same ref so rapid pushes / force
+# pushes don't pile up redundant builds.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   mobile:
     name: Mobile App
