@@ -4,6 +4,8 @@
 **Project**: Chem IRL - Dating App  
 **Status**: MVP Complete (Mobile App), Static Marketing Site (Web)
 
+> ⚠️ **Partially superseded — verify against `CLAUDE.md` and `supabase/migrations/` before relying on any detail.** Known-stale claims in this doc: auth is **OTP code entry**, not magic links; payments ship via **in-app purchase / RevenueCat** (token economy), not "planned Stripe"; transactional email uses **Resend**, not Postmark; proposal expiry and daily scoring **are** automated via **pg_cron** (see `db/AUTOMATION.md`), not "deferred"; and `db/*.sql` are reference snapshots — the deployed schema and RPCs live in `supabase/migrations/`.
+
 ## Corrections Made
 
 ### Version Verifications

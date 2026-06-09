@@ -1,5 +1,7 @@
 # Server-Side Automation Guide
 
+> ℹ️ **Reference / explanation, not a manual setup step.** The pg_cron jobs described here are codified in `supabase/migrations/` and applied via `supabase db push`. Use this doc to understand the automation; don't hand-run the SQL on a project that already has the migrations applied.
+
 This document explains the automated database jobs for proposal expiry and daily scoring.
 
 ## Overview

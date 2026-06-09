@@ -1,5 +1,9 @@
 -- Chem IRL Database Schema
 -- Based on Functional Spec v3 and Data Pack v1
+--
+-- ⚠️ REFERENCE ONLY — the deployed schema lives in supabase/migrations/.
+-- This file is a design snapshot and may lag what's applied. Don't paste it
+-- into a live project; apply changes via `supabase db push`.
 
 -- Enable required extensions
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
