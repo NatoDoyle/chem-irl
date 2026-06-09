@@ -1,91 +1,53 @@
 # Documentation Index
 
-This directory contains organized documentation for the Chem IRL dating app project.
+Organized documentation for the Chem IRL dating app.
 
-## Quick Links
+> **Start here:** the root [`../README.md`](../README.md) (project overview + quick start) and [`../CLAUDE.md`](../CLAUDE.md) — the authoritative reference for architecture, workflow, and conventions. The product definition lives in [`../brand/PRODUCT.md`](../brand/PRODUCT.md).
 
-### 📖 Main Documentation
-- **[Complete Documentation](./archive/DOCUMENTATION.md)** - Full technical documentation
-- **[Architecture Plan](./archive/ARCHITECTURE_PIVOT_PLAN.md)** - Architecture decisions and pivot plan
-- **[Pivot Quick Start](./archive/PIVOT_QUICK_START.md)** - Quick reference for app-first pivot
+## Setup
 
-### 🚀 Deployment
-- **[Deployment Guide](./deployment/DEPLOYMENT_GUIDE.md)** - Complete deployment guide
-- **[Deployment Checklist](./deployment/DEPLOYMENT_CHECKLIST.md)** - Pre-deployment checklist
-- **[Vercel Setup](./deployment/VERCEL_SINGLE_PROJECT_SETUP.md)** - Vercel configuration
-- **[Deployment Troubleshooting](./deployment/DEPLOYMENT_TROUBLESHOOTING.md)** - Common deployment issues
+- **[Database Setup](./setup/DATABASE_SETUP.md)** — schema bootstrap and migration workflow
+- **[Supabase Setup](./setup/SUPABASE_SETUP.md)** — Supabase connection for the web/Vercel app
+- **[Cloudflare Email Routing](./setup/POSTMARK_CLOUDFLARE_SETUP.md)** — email routing (note: transactional email now uses Resend, not Postmark — see the file's banner)
 
-### ⚙️ Setup
-- **[Supabase Setup](./setup/SUPABASE_SETUP.md)** - Supabase connection and configuration
-- **[Postmark/Cloudflare Setup](./setup/POSTMARK_CLOUDFLARE_SETUP.md)** - Email and CDN configuration
-- **[Database Setup](./setup/DATABASE_SETUP.md)** - Database migrations and setup
+## Development
 
-### 💻 Development
-- **[Development Guide](./development/DEVELOPING.md)** - Development workflow and best practices
-- **[Git Troubleshooting](./development/GIT_PUSH_TROUBLESHOOTING.md)** - Git push issues and solutions
-- **[Repo State Explanation](./development/REPO_STATE_SYSTEM_EXPLANATION.md)** - System state management
+- **[Development Guide](./development/DEVELOPING.md)** — local environment setup, copy-paste commands
+- **[Git Push Troubleshooting](./development/GIT_PUSH_TROUBLESHOOTING.md)**
+- **[Repo State Explanation](./development/REPO_STATE_SYSTEM_EXPLANATION.md)** — system overview (partially superseded; see its banner)
 
-### 🏗️ Infrastructure
-- **[Cloudflare Setup](./infrastructure/CLOUDFLARE_SETUP.md)** - Cloudflare CDN configuration
-- **[Security Audit](./infrastructure/SECURITY_AUDIT.md)** - Security audit and recommendations
+## Deployment
 
-### 📱 Mobile App
-- **[Mobile App README](../mobile/README.md)** - Mobile app setup and development
-- See `mobile/docs/` for detailed mobile app documentation
+- **[Deployment Guide](./deployment/DEPLOYMENT_GUIDE.md)**
+- **[Deployment Checklist](./deployment/DEPLOYMENT_CHECKLIST.md)**
+- **[Vercel Single-Project Setup](./deployment/VERCEL_SINGLE_PROJECT_SETUP.md)**
+- **[Deployment Troubleshooting](./deployment/DEPLOYMENT_TROUBLESHOOTING.md)**
 
-### 🌐 Website
-- **[Website README](../web/README.md)** - Website setup and deployment
+## Infrastructure
 
-### 🗄️ Database
-- **[Database Automation](../db/AUTOMATION.md)** - Database automation scripts
+- **[Cloudflare Setup](./infrastructure/CLOUDFLARE_SETUP.md)**
+- **[Security Audit](./infrastructure/SECURITY_AUDIT.md)**
 
-### 📦 Archive
-Historical documentation and status files are in [`archive/`](./archive/).
+## Per-app & data docs
 
-## Documentation Structure
+- **[Mobile App README](../mobile/README.md)** — plus detailed guides in [`../mobile/docs/`](../mobile/docs/README.md)
+- **[Website README](../web/README.md)**
+- **[Database Automation](../db/AUTOMATION.md)** — pg_cron jobs (reference; the deployed jobs live in `supabase/migrations/`)
 
-```
-docs/
-├── README.md (this file)
-├── deployment/
-│   ├── DEPLOYMENT_GUIDE.md
-│   ├── DEPLOYMENT_CHECKLIST.md
-│   ├── VERCEL_SINGLE_PROJECT_SETUP.md
-│   └── DEPLOYMENT_TROUBLESHOOTING.md
-├── setup/
-│   ├── SUPABASE_SETUP.md
-│   └── POSTMARK_CLOUDFLARE_SETUP.md
-├── development/
-│   ├── DEVELOPING.md
-│   ├── GIT_PUSH_TROUBLESHOOTING.md
-│   └── REPO_STATE_SYSTEM_EXPLANATION.md
-├── infrastructure/
-│   ├── CLOUDFLARE_SETUP.md
-│   └── SECURITY_AUDIT.md
-└── archive/
-    ├── PHASE1_COMPLETE.md
-    ├── PHASE2_COMPLETE.md
-    ├── POLISH_COMPLETE.md
-    ├── CLEANUP_SUMMARY.md
-    ├── DEPLOYMENT_STATUS.md
-    ├── DEPENDENCY_STATUS.md
-    ├── LEGACY.md
-    └── web-LEGACY.md
-```
+## Plans & feature docs (point-in-time — read with caution)
 
-## Getting Started
+- **[Dublin Launch Plan](./DUBLIN_LAUNCH_PLAN.md)** — GTM strategy; active reference for marketing work
+- **[Iris — Phase 1 Verification](./iris/PHASE_1_VERIFICATION.md)** — AI-concierge feature checkpoint
+- **[Autonomous CMO](./superpowers/)** — design spec + implementation plan (in-flight)
 
-1. **New to the project?** Start with [`../README.md`](../README.md) and [`./archive/DOCUMENTATION.md`](./archive/DOCUMENTATION.md)
-2. **Setting up locally?** Follow [`./setup/DATABASE_SETUP.md`](./setup/DATABASE_SETUP.md) and platform-specific READMEs
-3. **Ready to deploy?** See [`deployment/DEPLOYMENT_GUIDE.md`](./deployment/DEPLOYMENT_GUIDE.md)
+## Archive
 
-## Documentation Quality
+Historical and superseded documents live in [`./archive/`](./archive/), kept for reference only. **If anything there conflicts with the current code or the active docs above, the active source wins.**
 
-Run the documentation link checker to validate all markdown links:
+## Validating links
 
 ```bash
 bun run docs:check
 ```
 
-This will check all markdown files (excluding archives) and report any broken links.
-
+Checks all markdown links (excluding `archive/`) and reports broken ones.
