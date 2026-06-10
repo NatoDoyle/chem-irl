@@ -11,14 +11,17 @@ import {
   Alert,
   AppState,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useRoute, useFocusEffect } from '@react-navigation/native';
+import { useRoute, useFocusEffect, useNavigation } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { supabase } from '../../lib/supabase/client';
 import { Message } from '../../lib/types';
 import { BRAND_COLORS, MIDNIGHT, TYPOGRAPHY, SPACING } from '../../config/brand';
 import { getErrorAlert, isRecoverableError } from '../../lib/errors';
 import { enqueue, processQueue, getQueueSize, QueuedMessage } from '../../lib/offlineQueue';
 import ConnectionStatus from '../../components/ConnectionStatus';
+import SafetyActionSheet from '../../components/SafetyActionSheet';
 import { sanitizeText } from '../../lib/sanitize';
 import { addBreadcrumb } from '../../lib/sentry';
 import { trackEvent } from '../../lib/analytics';
@@ -28,11 +31,17 @@ type ChatRouteParams = {
   matchId: string;
 };
 
+type ChatNavigationProp = NativeStackNavigationProp<any, 'Chat'>;
+
 export default function ChatScreen() {
   const insets = useSafeAreaInsets();
   const route = useRoute();
+  const navigation = useNavigation<ChatNavigationProp>();
   const { matchId } = route.params as ChatRouteParams;
   const flatListRef = useRef<FlatList>(null);
+
+  const [otherUserId, setOtherUserId] = useState<string | null>(null);
+  const [safetySheetVisible, setSafetySheetVisible] = useState(false);
 
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState('');
@@ -436,11 +445,29 @@ export default function ChatScreen() {
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data: { user } }) => {
+    let cancelled = false;
+    (async () => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (cancelled) return;
       setCurrentUserId(user?.id || null);
       currentUserIdRef.current = user?.id || null;
-    });
-  }, []);
+      if (!user) return;
+
+      // Load the match to determine the other participant (for safety actions).
+      const { data: matchData } = await supabase
+        .from('matches')
+        .select('user_a, user_b')
+        .eq('match_id', matchId)
+        .maybeSingle();
+      if (cancelled || !matchData) return;
+      setOtherUserId(matchData.user_a === user.id ? matchData.user_b : matchData.user_a);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [matchId]);
 
   // Merge queued messages with regular messages for display
   const allMessages = [...messages];
@@ -517,6 +544,26 @@ export default function ChatScreen() {
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       keyboardVerticalOffset={90}
     >
+      <View style={styles.headerRow}>
+        <AnimatedPressable
+          style={styles.headerButton}
+          onPress={() => navigation.goBack()}
+          haptic={false}
+          accessibilityLabel="Go back"
+        >
+          <Ionicons name="arrow-back" size={24} color={BRAND_COLORS.primary} />
+        </AnimatedPressable>
+        {otherUserId && (
+          <AnimatedPressable
+            style={styles.headerButton}
+            onPress={() => setSafetySheetVisible(true)}
+            haptic={false}
+            accessibilityLabel="Safety options"
+          >
+            <Ionicons name="ellipsis-vertical" size={22} color={BRAND_COLORS.text[700]} />
+          </AnimatedPressable>
+        )}
+      </View>
       <ConnectionStatus />
       {messages.length === 0 && !loading ? (
         <View style={styles.emptyContainer}>
@@ -574,6 +621,14 @@ export default function ChatScreen() {
           <Text style={styles.sendButtonText}>Send</Text>
         </AnimatedPressable>
       </View>
+      {otherUserId && (
+        <SafetyActionSheet
+          visible={safetySheetVisible}
+          onClose={() => setSafetySheetVisible(false)}
+          targetUserId={otherUserId}
+          onBlocked={() => navigation.navigate('MatchesList')}
+        />
+      )}
     </KeyboardAvoidingView>
   );
 }
@@ -582,6 +637,19 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: MIDNIGHT.bg,
+  },
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: SPACING.base,
+    height: 48,
+  },
+  headerButton: {
+    width: 40,
+    height: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   messagesList: {
     padding: SPACING.base,

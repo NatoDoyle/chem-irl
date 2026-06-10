@@ -9,6 +9,7 @@ import { supabase } from '../../lib/supabase/client';
 import { BRAND_COLORS, MIDNIGHT, TYPOGRAPHY, SPACING } from '../../config/brand';
 import { getErrorAlert } from '../../lib/errors';
 import AnimatedPressable from '../../components/ui/AnimatedPressable';
+import SafetyActionSheet from '../../components/SafetyActionSheet';
 import {
   INTENT_OPTIONS,
   FAMILY_PLANS_OPTIONS,
@@ -106,6 +107,7 @@ export default function ViewProfileScreen() {
   const [preferences, setPreferences] = useState<Preferences | undefined>();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [safetySheetVisible, setSafetySheetVisible] = useState(false);
 
   const loadProfile = useCallback(async () => {
     setError(null);
@@ -191,6 +193,14 @@ export default function ViewProfileScreen() {
         >
           <Ionicons name="arrow-back" size={24} color={BRAND_COLORS.primary} />
         </AnimatedPressable>
+        <AnimatedPressable
+          style={styles.backButton}
+          onPress={() => setSafetySheetVisible(true)}
+          haptic={false}
+          accessibilityLabel="Safety options"
+        >
+          <Ionicons name="ellipsis-vertical" size={22} color={BRAND_COLORS.text[700]} />
+        </AnimatedPressable>
       </View>
 
       {/* Hero photo + name. The first photo gets full width; this is the
@@ -264,6 +274,14 @@ export default function ViewProfileScreen() {
       {!hasRichContent && (
         <Text style={styles.sparseHint}>This profile hasn&apos;t added more details yet.</Text>
       )}
+
+      <SafetyActionSheet
+        visible={safetySheetVisible}
+        onClose={() => setSafetySheetVisible(false)}
+        targetUserId={userId}
+        targetName={name || undefined}
+        onBlocked={() => navigation.goBack()}
+      />
     </ScrollView>
   );
 }
@@ -283,6 +301,7 @@ const styles = StyleSheet.create({
   backButtonRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
     paddingHorizontal: SPACING.base,
     height: 48,
   },
