@@ -322,7 +322,7 @@ paid-plan feature. No API key is owned yet; see the decision box in §9.
 | CMO `.env` | plan Task 11 | ❌ | ❌ | `ls /root/marketing/.env` → absent |
 | First digest | plan Task 11 | ❌ | ❌ | Telegram has never received one |
 | Playbook + context pack | plan Task 12 | ✅ | ✅ (passive) | Files present, committed |
-| UTM capture (chem-irl) | improvement P1 | ✅ PR #128 | ❌ pending merge + `db push` + fn deploy | see PR's deploy-sequencing notes |
+| UTM capture (chem-irl) | improvement P1 | ✅ PR #128 | ✅ LIVE 2026-06-10 | migration applied (cols + `_v2` verified), `waitlist-signup` deployed + smoke-tested, web prod deploy READY |
 
 **Recorded deviations from the build plan** (the plan is a point-in-time doc — it stays unmodified;
 these corrections live here):
@@ -478,7 +478,7 @@ re-run this section's analysis before that happens, per spec §7 and §13.
 ## 12. Possible improvements
 
 > **Status update 2026-06-09 (same-day improvements pass):** R1–R6, R8, S2–S4, S7, C1, C3 are
-> **implemented**; P1 is built (PR #128, deploy-sequenced); P3 verified healthy. Remaining open:
+> **implemented**; P1 is LIVE end-to-end as of 2026-06-10 (PR #128); P3 verified healthy. Remaining open:
 > the items below without a ✅ — chiefly the C2 Plausible decision, S1 non-root migration, R9
 > Hetzner snapshots, and the Phase-2 preparation items (C6–C8, P2, P4, P5).
 
@@ -488,7 +488,7 @@ Top five by leverage:
 |---|---|---|---|
 | 1 | **R1** — git remote/backup for `/root/marketing` | Only copy of the repo was one VPS disk | ✅ Done — private repo + deploy key + nightly push |
 | 2 | **R3** — failure alerting via Telegram | Silent-failure mode is the worst kind for a "trust me" system | ✅ Done — `cmo-alert@` armed (`.env`-gated) |
-| 3 | **P1** — UTM instrumentation in chem-irl | The CMO is attribution-blind until this lands (`WAITLIST_AUDIT.md` P0) | 🟡 Built — PR #128; merge + `db push` + fn deploy pending |
+| 3 | **P1** — UTM instrumentation in chem-irl | The CMO is attribution-blind until this lands (`WAITLIST_AUDIT.md` P0) | ✅ LIVE 2026-06-10 — merged, migration applied, fn deployed |
 | 4 | **C2** — settle Plausible Cloud-vs-CE | Blocks half the Sense loop (§9 decision box) | ⏳ Open — founder decision |
 | 5 | **S1** — dedicated non-root user for CMO timers | Cheapest meaningful privilege reduction before Phase 2 | ⏳ Open |
 
@@ -535,7 +535,7 @@ Top five by leverage:
 
 | ID | What | Why | Effort | Priority |
 |---|---|---|---|---|
-| P1 | **UTM instrumentation** through form → `waitlist-signup` edge fn → RPC → `waitlist_signups` | The standing P0 from `WAITLIST_AUDIT.md` (repo root): channel attribution is impossible today; spec §11.3 absorbs it as foundational | M | 🟡 PR #128 open — merge + db push + fn deploy pending |
+| P1 | **UTM instrumentation** through form → `waitlist-signup` edge fn → RPC → `waitlist_signups` | The standing P0 from `WAITLIST_AUDIT.md` (repo root): channel attribution is impossible today; spec §11.3 absorbs it as foundational | M | ✅ LIVE 2026-06-10 (PR #128 merged → migration applied → fn deployed; end-to-end on prod) |
 | P2 | Social read-connectors (Reddit, Threads, X read-tier; IG/TikTok after account/app approval) | Completes the Sense surface; blocked on developer apps + tokens (spec §8) | M each | P1 |
 | P3 | Audit `RESEND_API_KEY` + Resend audiences | The other `WAITLIST_AUDIT.md` P0: unset key = silently broken confirmations; also prerequisite for the Phase 3 newsletter | S | ✅ Verified healthy 2026-06-09 (RESEND_API_KEY + audiences + FROM all set) |
 | P4 | Phases 2–4: content engine → publishing → learn loop, with the L0→L3 autonomy ramp per surface | The designed path (spec §14–§15: Create wk 4–6, Distribute wk 6–9, Learn wk 9–12 against the Dublin GTM curve); each phase gets its own plan before build | L | Scheduled |
