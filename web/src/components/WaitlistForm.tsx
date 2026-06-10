@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { useRouter } from 'next/navigation';
 import { trackEvent } from '@/lib/analytics';
+import { getStoredUtmParams } from '@/lib/utm';
 import {
   getReferrerFirstName,
   submitWaitlistSignup,
@@ -101,6 +102,9 @@ export function WaitlistForm() {
       consent_marketing: consentMarketing,
       consent_privacy: consentPrivacy,
       website: website || undefined,
+      // Channel attribution captured on landing (lib/utm.ts) — survives the
+      // `/` → `/download` hop via sessionStorage. Spreads nothing when absent.
+      ...getStoredUtmParams(),
     };
 
     const result = await submitWaitlistSignup(payload);

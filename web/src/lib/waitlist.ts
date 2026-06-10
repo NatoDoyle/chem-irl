@@ -39,6 +39,13 @@ export interface WaitlistSignupPayload {
   // Honeypot — set to non-empty to mark the submission as a bot.
   // Real users never see this field.
   website?: string;
+  // Channel attribution captured on landing (see lib/utm.ts). Older deployed
+  // edge functions ignore unknown body fields, so sending these is always safe.
+  utm_source?: string;
+  utm_medium?: string;
+  utm_campaign?: string;
+  utm_term?: string;
+  utm_content?: string;
 }
 
 export interface WaitlistSignupSuccess {
