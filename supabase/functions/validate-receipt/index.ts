@@ -72,6 +72,30 @@ const handler: EdgeHandler = async (req, ctx) => {
     });
   }
 
+  // --- Fail closed until real store-side verification exists ---
+  // The placeholder below TRUSTS the client's receipt and credits tokens, so
+  // it must only run on staging (STAGING_TRUST_RECEIPTS=true). In production
+  // (env unset) we return 503 rather than crediting tokens on an unverified
+  // receipt — "forgot to remove the staging override" should be louder than
+  // "credited a forged receipt". This mirrors validate-subscription. Remove
+  // this gate when the real Apple / Google verification (TODO below) lands.
+  if (Deno.env.get('STAGING_TRUST_RECEIPTS') !== 'true') {
+    console.error(
+      'validate-receipt: refusing to credit tokens without real store-side ' +
+        'verification. Set STAGING_TRUST_RECEIPTS=true on staging only.'
+    );
+    return new Response(
+      JSON.stringify({
+        error: 'receipt_validation_unavailable',
+        detail:
+          'Real App Store / Google Play receipt verification is not yet ' +
+          'implemented. On staging, set STAGING_TRUST_RECEIPTS=true to allow ' +
+          'placeholder behaviour during development.',
+      }),
+      { headers: { 'Content-Type': 'application/json' }, status: 503 }
+    );
+  }
+
   // --- Validate receipt ---
   // TODO: Production implementation — verify receipt with Apple App Store / Google Play:
   //   iOS:    POST to https://buy.itunes.apple.com/verifyReceipt (or sandbox URL)
