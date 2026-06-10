@@ -205,6 +205,7 @@ Mobile app uses `EXPO_PUBLIC_*` env vars loaded via Expo. See `mobile/.env.examp
 - Prefer PR + squash merge. Do not merge into `main` locally.
 - If `main` diverges from `origin/main`, stop and ask before resolving.
 - **Never `--delete-branch` (or `git push origin --delete`) a branch that is the base of other open PRs.** Deleting a stacked PR's base auto-closes its dependents, and GitHub will not let them be reopened (the base ref is gone). Check `gh pr list --base <branch>` first; if anything targets it, retarget those to `main` (`gh pr edit <n> --base main`) or merge them, then delete. See the 2026-05-19 lesson.
+- **Never chain branch/worktree cleanup in the same command as `gh pr merge`.** Merge, then independently verify `gh pr view --json state` returns `MERGED`, and only then delete anything — deleting the head branch of a still-open PR auto-closes it. (2026-06-10: a merge 401'd mid-GitHub-outage inside a chained command; the cleanup steps ran anyway, deleted the open PR's head branch, and auto-closed it. Recovered from the local object store.)
 - Read `agent_docs/git_workflow.md` for full details.
 
 ### Enforcement hooks
