@@ -1,6 +1,5 @@
 import type { Metadata, Viewport } from 'next';
 import { Inter, Libre_Caslon_Text } from 'next/font/google';
-import Script from 'next/script';
 import { Analytics } from '@vercel/analytics/next';
 import { SpeedInsights } from '@vercel/speed-insights/next';
 import { Nav } from '@/components/Nav';
@@ -59,7 +58,6 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const plausibleDomain = process.env.NEXT_PUBLIC_PLAUSIBLE_DOMAIN;
   return (
     <html lang="en">
       <body className={`${inter.variable} ${libreCaslon.variable} antialiased`}>
@@ -75,13 +73,6 @@ export default function RootLayout({
         <SearchOverlay />
         <Analytics />
         <SpeedInsights />
-        {plausibleDomain && (
-          <Script
-            data-domain={plausibleDomain}
-            src="https://plausible.io/js/script.outbound-links.js"
-            strategy="afterInteractive"
-          />
-        )}
       </body>
     </html>
   );

@@ -1,11 +1,10 @@
-// Tiny wrapper around `window.plausible(...)` so callers don't have to
-// guard for SSR or for environments where the Plausible script isn't
-// loaded. When NEXT_PUBLIC_PLAUSIBLE_DOMAIN is unset (dev, preview,
-// local builds), the script is never injected and `window.plausible`
-// is undefined — calls are silent no-ops.
-//
-// Plausible's API:
-//   window.plausible(eventName, { props: { key: value, ... } })
+// Analytics event seam. Originally a wrapper around `window.plausible(...)`;
+// Plausible was dropped on 2026-06-10 (see docs/infrastructure/
+// OPENCLAW_CMO_VPS.md §7.2), so its script is never injected and every call
+// here is a silent no-op. The wrapper and its call sites (form started/
+// submitted, share clicks) are kept deliberately: they mark exactly where
+// events fire, so a future provider (e.g. Vercel Analytics custom events)
+// only has to reimplement this one function.
 
 type EventProps = Record<string, string | number | boolean>;
 
