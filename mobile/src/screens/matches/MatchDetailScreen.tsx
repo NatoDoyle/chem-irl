@@ -12,6 +12,7 @@ import { getErrorAlert } from '../../lib/errors';
 import ProposalCard from '../../components/ProposalCard';
 import AnimatedPressable from '../../components/ui/AnimatedPressable';
 import GHButton from '../../components/ui/GHButton';
+import SafetyActionSheet from '../../components/SafetyActionSheet';
 
 const PHOTO_WIDTH = 200;
 const PHOTO_HEIGHT = 260;
@@ -31,6 +32,8 @@ export default function MatchDetailScreen() {
   const { matchId } = route.params as MatchDetailRouteParams;
 
   const [match, setMatch] = useState<Match | null>(null);
+  const [otherUserId, setOtherUserId] = useState<string | null>(null);
+  const [safetySheetVisible, setSafetySheetVisible] = useState(false);
   const [otherUserPhotos, setOtherUserPhotos] = useState<string[]>([]);
   const [otherUserName, setOtherUserName] = useState<string>('');
   const [otherUserBio, setOtherUserBio] = useState<string>('');
@@ -74,6 +77,7 @@ export default function MatchDetailScreen() {
 
       setMatch(matchData as Match);
       const otherUserId = matchData.user_a === user.id ? matchData.user_b : matchData.user_a;
+      setOtherUserId(otherUserId);
 
       // Load other user's profile (id = otherUserId; maybeSingle for missing profile)
       const { data: profile, error: profileError } = await supabase
@@ -232,7 +236,7 @@ export default function MatchDetailScreen() {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={{ paddingTop: insets.top }}>
-      {/* Back button */}
+      {/* Back button + safety options */}
       <View style={styles.backButtonRow}>
         <AnimatedPressable
           style={styles.backButton}
@@ -241,6 +245,16 @@ export default function MatchDetailScreen() {
         >
           <Ionicons name="arrow-back" size={24} color={BRAND_COLORS.primary} />
         </AnimatedPressable>
+        {otherUserId && (
+          <AnimatedPressable
+            style={styles.backButton}
+            onPress={() => setSafetySheetVisible(true)}
+            haptic={false}
+            accessibilityLabel="Safety options"
+          >
+            <Ionicons name="ellipsis-vertical" size={22} color={BRAND_COLORS.text[700]} />
+          </AnimatedPressable>
+        )}
       </View>
 
       {/* Profile section */}
@@ -352,6 +366,16 @@ export default function MatchDetailScreen() {
           ))}
         </View>
       )}
+
+      {otherUserId && (
+        <SafetyActionSheet
+          visible={safetySheetVisible}
+          onClose={() => setSafetySheetVisible(false)}
+          targetUserId={otherUserId}
+          targetName={otherUserName || undefined}
+          onBlocked={() => navigation.goBack()}
+        />
+      )}
     </ScrollView>
   );
 }
@@ -368,6 +392,7 @@ const styles = StyleSheet.create({
   backButtonRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
     paddingHorizontal: SPACING.base,
     height: 48,
   },

@@ -12,6 +12,29 @@ export type UserOrientation =
 export type MatchStatus = 'open' | 'expired' | 'closed' | 'unmatched';
 export type ProposalStatus = 'active' | 'expired' | 'confirmed' | 'reopened';
 
+// Safety: report categories. Must match the DB `report_category` enum exactly.
+export type ReportCategory =
+  | 'spam_scam'
+  | 'fake_impersonation'
+  | 'harassment_hate'
+  | 'threat_coercion'
+  | 'nudity'
+  | 'minor'
+  | 'off_platform_solicitation'
+  | 'other';
+
+// Ordered list of report categories with friendly labels for the report UI.
+export const REPORT_CATEGORIES: readonly { value: ReportCategory; label: string }[] = [
+  { value: 'spam_scam', label: 'Spam or scam' },
+  { value: 'fake_impersonation', label: 'Fake profile or impersonation' },
+  { value: 'harassment_hate', label: 'Harassment or hate' },
+  { value: 'threat_coercion', label: 'Threats or coercion' },
+  { value: 'nudity', label: 'Nudity or sexual content' },
+  { value: 'minor', label: 'Underage user' },
+  { value: 'off_platform_solicitation', label: 'Asking to move off-platform' },
+  { value: 'other', label: 'Something else' },
+];
+
 export interface User {
   user_id: string;
   email: string;

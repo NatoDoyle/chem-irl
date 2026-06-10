@@ -59,7 +59,11 @@ export type AnalyticsEvent =
   | 'verification_review_required'
   | 'verification_retry'
   // Account lifecycle
-  | 'account_deleted';
+  | 'account_deleted'
+  // Safety: block / unblock / report
+  | 'user_blocked'
+  | 'user_unblocked'
+  | 'report_submitted';
 
 export interface AnalyticsProperties {
   [key: string]: string | number | boolean | null | undefined;
