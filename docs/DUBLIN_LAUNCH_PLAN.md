@@ -149,6 +149,12 @@ Add `@supabase/supabase-js` to `web/package.json` via `bun add @supabase/supabas
 
 ### 2.5 Analytics
 
+> **Update 2026-06-10:** Plausible was **dropped** (decision C2 — see
+> [docs/infrastructure/OPENCLAW_CMO_VPS.md](./infrastructure/OPENCLAW_CMO_VPS.md), §7.2/§12).
+> Signup attribution now comes from first-party UTM capture on the waitlist (PR #128);
+> traffic eyeballing uses Vercel Web Analytics, already mounted in the site layout.
+> The Plausible items below are historical — do not install it.
+
 - **Plausible** (lightweight, GDPR-compliant, no cookie banner, EU-hosted). €9/mo for the basic plan — fits budget. Add via `<Script />` in `web/src/app/layout.tsx`.
 - Custom events: `waitlist_form_started`, `waitlist_form_submitted`, `waitlist_email_confirmed` (server-side from the confirm function via Plausible API), `referral_share_clicked`, `referral_landing_viewed`.
 - **PostHog free tier** (1M events/mo) optional; only add if you want funnel + replay. Defer to Phase B if budget is tight.

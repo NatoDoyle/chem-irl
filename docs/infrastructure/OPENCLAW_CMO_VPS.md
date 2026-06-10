@@ -78,16 +78,17 @@ anything to anyone except the founder's own Telegram. Content creation (Phase 2)
                               │  /root/marketing — git repo ──nightly push─┼───┼─► GitHub (private backup)  │
                               │   ├─ cmo/         Python 3.14 venv ────────┼───┼───┤                        │
                               │   ├─ data/cmo.db  (absent until 1st run)   │   │   │                        │
-                              │   ├─ PAUSED       kill-switch flag         │   │  Plausible Stats API v1    │
-                              │   └─ playbook.md · context/ · systemd/     │   │   site_id=chemirl.app ◄────┼─ (read-only)
+                              │   ├─ PAUSED       kill-switch flag         │   │  Plausible — DROPPED       │
+                              │   └─ playbook.md · context/ · systemd/     │   │   2026-06-10 (see §7.2)    │
                               │                                            │   │                            │
                               │  /root/.openclaw  — config · credentials · │   └────────────────────────────┘
                               │                     agent workspace        │
                               └────────────────────────────────────────────┘
 ```
 
-All four external calls are **read-only or founder-directed**: the two analytics sources are reads,
-Tensorix serves the interactive agent, and Telegram only ever sends to the paired operator chat.
+All external calls are **read-only or founder-directed**: the Supabase RPC is a read (Plausible was
+dropped 2026-06-10 — §7.2), Tensorix serves the interactive agent, Telegram only ever sends to the
+paired operator chat, and the nightly git push goes to the private backup repo.
 
 ### 3.2 The Sense data flow
 
@@ -102,7 +103,7 @@ Tensorix serves the interactive agent, and Telegram only ever sends to the paire
         ▼                                                  ▼
  per connector, fault-isolated:                    digest.build(conn, now_iso)
    waitlist.collect ─POST─► Supabase RPC             │ · weekly deltas (vs value ≤7d ago)
-   plausible.collect ─GET─► Plausible v1             │ · female share % vs GTM target
+   (plausible — unwired 2026-06-10, §7.2)            │ · female share % vs GTM target
         │                                            ▼
         ▼                                          notify.send_telegram
  SQLite  data/cmo.db                                 │ · chunks at 4,000 chars
@@ -219,8 +220,8 @@ suite proves wiring and parsing, not live credentials.
 | `cmo/store.py` | SQLite schema + reads/writes | `connect/init_schema/record/latest/value_on_or_before/save_raw/latest_raw` |
 | `cmo/webio.py` | Thin HTTP wrapper over `requests` | `get_json` / `post_json`, 20 s timeout, raises on non-2xx |
 | `cmo/connectors/waitlist.py` | Dublin waitlist metrics | `POST {SUPABASE_URL}/rest/v1/rpc/marketing_waitlist_snapshot` with anon key; records 8 metrics + raw payload |
-| `cmo/connectors/plausible.py` | Site analytics | Plausible Stats API **v1** (`/api/v1/stats/aggregate` + two breakdowns); records visitors/pageviews/duration + top sources/pages. Live account's API version unverified (§13) |
-| `cmo/run_collect.py` | Collector entrypoint (daily) | Checks `PAUSED` **before any work**; each connector runs fault-isolated (one failing cannot stop the other); prunes `raw_snapshots` >90 days; exit 1 if any failed |
+| `cmo/connectors/plausible.py` | Site analytics — **DORMANT** | Unwired from the collect path 2026-06-10 (C2: Plausible dropped). Module + mocked test kept so a Phase-2 revival is a one-line re-add to `run_collect.CONNECTORS` |
+| `cmo/run_collect.py` | Collector entrypoint (daily) | Checks `PAUSED` **before any work**; runs the **waitlist connector only** (plausible unwired 2026-06-10), fault-isolated; prunes `raw_snapshots` >90 days; exit 1 if any failed |
 | `cmo/digest.py` | Weekly digest text | Deltas vs the value ≤7 days ago; female-share % with the GTM target line; top sources/pages. Stale-only metrics render **no** delta (the "+0 wk" artifact was fixed + regression-tested 2026-06-09) |
 | `cmo/notify.py` | Telegram delivery | `sendMessage` to the configured operator chat only; chunks at 4,000 chars (under Telegram's 4,096 cap) |
 | `cmo/run_digest.py` | Digest entrypoint (weekly) | Same `PAUSED` gate; build → send → exit |
@@ -301,12 +302,15 @@ anon JWT and the modern `sb_publishable_…` key.
 read these aggregate Dublin counts. Accepted at current scale — the counts are near-public anyway
 (the waitlist page shows positions) and contain no PII. Revisit trigger in §12 S6.
 
-### 7.2 Plausible
+### 7.2 Site analytics — Plausible DROPPED (decision C2, 2026-06-10)
 
-The marketing site (`chemirl.app`) loads the **Plausible Cloud** tracking script in production
-(`web/src/app/layout.tsx`, gated on `NEXT_PUBLIC_PLAUSIBLE_DOMAIN`). Tracking requires no API key;
-**reading stats back does** — the CMO's connector uses the Stats API, which on Plausible Cloud is a
-paid-plan feature. No API key is owned yet; see the decision box in §9.
+Plausible was removed before go-live: the tracking script, env passthrough, and CSP allowances are
+gone from the marketing site, and the CMO's `plausible.py` connector is unwired from the collect
+path (kept dormant + tested for a possible Phase-2 revival). Rationale: first-party **UTM capture**
+(§7.1, live since 2026-06-10) answers signup attribution — the pre-launch money metric — and
+**Vercel Web Analytics** (already mounted in the site layout) covers traffic eyeballing for free.
+Vercel Analytics has **no read API**, so the digest's site section stays absent until a readable
+analytics source returns; revisit when the Phase-2 content engine needs content-performance data.
 
 ## 8. Deployment state: built vs live
 
@@ -343,18 +347,12 @@ Everything below runs over `ssh openclaw`. Status of prerequisites:
 | `TELEGRAM_OPERATOR_CHAT_ID` | 🟡 candidate `5355963011` | Verify via step 2 |
 | `SUPABASE_URL` | ✅ known | `https://nzbntzqodvuguitpciuj.supabase.co` |
 | `SUPABASE_ANON_KEY` | ✅ known | Either the anon JWT or the `sb_publishable_…` key (both verified working) |
-| `PLAUSIBLE_API_KEY` | ❌ **not owned** | Blocked on the decision box below |
-| `PLAUSIBLE_SITE_ID` | ✅ fixed | `chemirl.app` |
+| `PLAUSIBLE_API_KEY` | — n/a | Plausible dropped 2026-06-10 (C2) — connector unwired |
+| `PLAUSIBLE_SITE_ID` | — n/a | Plausible dropped 2026-06-10 (C2) |
 
-> **Decision required — Plausible Cloud vs self-host CE.** The connector reads the Stats API.
-> On **Plausible Cloud** (current setup) that API requires a paid plan — generate a key in the
-> plausible.io account and you're done (connector works as written, v1 endpoints). **Self-hosting
-> Plausible CE** makes the API free but means running Postgres + ClickHouse (feasible on this
-> 3.7 GiB box, but tight next to the gateway), changing the connector `BASE` to the self-hosted
-> URL, likely migrating v1 → v2 (`/api/v2/query`), and migrating the site's tracking script.
-> **The waitlist-only loop can go live first regardless** — `run_collect` fault-isolates per
-> connector, so a missing Plausible key degrades the digest (site section shows "—"), it doesn't
-> abort it.
+> **Resolved 2026-06-10 — Plausible dropped (C2, §7.2).** The Sense loop goes live
+> **waitlist-only**: `run_collect` runs the waitlist connector alone, exits 0 cleanly, and the
+> digest omits its site section until a readable analytics source returns.
 
 **Step 1 — create `.env` (writes the token without echoing it):**
 
@@ -369,15 +367,15 @@ with open('.env', 'w') as f:
     f.write("TELEGRAM_OPERATOR_CHAT_ID=5355963011\n")   # verify in step 2 before trusting
     f.write("SUPABASE_URL=https://nzbntzqodvuguitpciuj.supabase.co\n")
     f.write("SUPABASE_ANON_KEY=<paste anon or sb_publishable key>\n")
-    f.write("PLAUSIBLE_API_KEY=<paste, or leave empty to run waitlist-only>\n")
-    f.write("PLAUSIBLE_SITE_ID=chemirl.app\n")
+    f.write("PLAUSIBLE_API_KEY=\n")   # unused — Plausible dropped 2026-06-10 (C2)
+    f.write("PLAUSIBLE_SITE_ID=\n")
     f.write("TENSORIX_API_KEY=\n")
 print("wrote .env")
 PY
 chmod 600 .env && ls -la .env    # expect -rw-------
 ```
 
-Then edit the two `<paste …>` placeholders (`nano .env`).
+Then edit the one `<paste …>` placeholder (`nano .env`).
 
 **Step 2 — confirm the operator chat id.** Send the bot a DM ("ping"), then:
 
@@ -394,8 +392,7 @@ The `"id"` shown for your DM is the operator chat id — fix `.env` if it differ
 
 ```bash
 cd /root/marketing && . .venv/bin/activate && python -m cmo.run_collect
-# expect: "[cmo] collected: waitlist" (+ "collected: plausible" if key present; an ERROR line for
-# a missing/wrong Plausible key is expected in waitlist-only mode — exit code 1 is fine then)
+# expect: "[cmo] collected: waitlist" and exit 0 (plausible is unwired — no ERROR lines)
 python - <<'PY'
 import sqlite3
 conn = sqlite3.connect('data/cmo.db')
@@ -479,8 +476,8 @@ re-run this section's analysis before that happens, per spec §7 and §13.
 
 > **Status update 2026-06-09 (same-day improvements pass):** R1–R6, R8, S2–S4, S7, C1, C3 are
 > **implemented**; P1 is LIVE end-to-end as of 2026-06-10 (PR #128); P3 verified healthy. Remaining open:
-> the items below without a ✅ — chiefly the C2 Plausible decision, S1 non-root migration, R9
-> Hetzner snapshots, and the Phase-2 preparation items (C6–C8, P2, P4, P5).
+> the items below without a ✅ — chiefly S1 non-root migration, R9 Hetzner snapshots, and the
+> Phase-2 preparation items (C6–C8, P2, P4, P5). **C2 was decided 2026-06-10: Plausible dropped.**
 
 Top five by leverage:
 
@@ -489,7 +486,7 @@ Top five by leverage:
 | 1 | **R1** — git remote/backup for `/root/marketing` | Only copy of the repo was one VPS disk | ✅ Done — private repo + deploy key + nightly push |
 | 2 | **R3** — failure alerting via Telegram | Silent-failure mode is the worst kind for a "trust me" system | ✅ Done — `cmo-alert@` armed (`.env`-gated) |
 | 3 | **P1** — UTM instrumentation in chem-irl | The CMO is attribution-blind until this lands (`WAITLIST_AUDIT.md` P0) | ✅ LIVE 2026-06-10 — merged, migration applied, fn deployed |
-| 4 | **C2** — settle Plausible Cloud-vs-CE | Blocks half the Sense loop (§9 decision box) | ⏳ Open — founder decision |
+| 4 | **C2** — settle Plausible Cloud-vs-CE | Blocks half the Sense loop (§9 decision box) | ✅ Decided 2026-06-10 — **dropped** (Vercel Analytics for eyeballing; revisit at Phase 2) |
 | 5 | **S1** — dedicated non-root user for CMO timers | Cheapest meaningful privilege reduction before Phase 2 | ⏳ Open |
 
 ### 12.1 Reliability
@@ -523,7 +520,7 @@ Top five by leverage:
 | ID | What | Why | Effort | Priority |
 |---|---|---|---|---|
 | C1 | Fix the "+0 wk" first-old-snapshot delta label (`digest._delta` should return no-delta when prev row == cur row) | Misleading on the first digest after history crosses 7 days; found in final code review | S | ✅ Done 2026-06-09 (regression-tested) |
-| C2 | Plausible decision + possible v1→v2 migration of `connectors/plausible.py` | §9 decision box; v2 (`/api/v2/query`) is where Plausible is headed | S–L | **P0** (decision) |
+| C2 | Plausible decision + possible v1→v2 migration of `connectors/plausible.py` | §9 decision box; v2 (`/api/v2/query`) is where Plausible is headed | S–L | ✅ Decided 2026-06-10 — dropped; connector unwired/dormant; revisit at Phase 2 |
 | C3 | Retention policy for `raw_snapshots` (e.g. keep 90 days) | Unbounded JSON blobs on a small disk | S | ✅ Done 2026-06-09 (90-day prune in run_collect) |
 | C4 | Use or drop the `dims` column | Dead schema invites confusion; spec §12 intended per-dimension metrics | S | P3 |
 | C5 | Structured logging (one JSON line per connector run with status/duration/row-counts) | Makes R3 alerting and later dashboards trivial | S | P2 |
@@ -549,12 +546,12 @@ One consolidated list — if something on this box surprises you, check here fir
 - **No `sqlite3` CLI** — inspect `data/cmo.db` with the venv Python one-liner (§10).
 - **The Telegram bot token is in `openclaw.json`** (`channels.telegram.botToken`), not in `~/.openclaw/.env` and not in `credentials/` — the build plan's Task 11 says otherwise and is wrong.
 - **Python is 3.14.4**, not the plan's 3.12.
-- **The Plausible connector targets Stats API v1**; the live account's API version/plan is unverified, and on Plausible Cloud the Stats API is paid (§9 decision box).
+- **Plausible was dropped 2026-06-10 (C2)** — `connectors/plausible.py` is unwired and dormant; the site runs Vercel Web Analytics instead (eyeball-only, no read API).
 - ~~Digest "+0 wk" artifact~~ — **fixed 2026-06-09**: stale-only metrics now render no delta (regression test in `tests/test_digest.py`).
 - **Chat id `5355963011` is a log-derived candidate**, not configured fact — verify before trusting (§9 step 2).
 - **`/root/marketing` pushes nightly (06:30 UTC) to the private GitHub repo `chem-irl-marketing`** via a write deploy key (`~/.ssh/marketing_deploy`, ssh alias `github-marketing`). Box-level Hetzner snapshots (§12 R9) remain unconfigured.
 - **`data/cmo.db` does not exist** until the first successful collect; `store.connect` creates it on demand.
-- **Running `run_collect` without a Plausible key is a supported degraded mode** — waitlist still collects; the run exits 1 and logs an ERROR line for the plausible connector. Expected, not broken.
+- **`run_collect` runs the waitlist connector only** (clean exit 0); the digest emits no site section when no site metrics exist.
 
 ## 14. Related documents
 
