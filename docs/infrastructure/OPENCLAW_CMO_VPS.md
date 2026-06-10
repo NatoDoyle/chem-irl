@@ -1,6 +1,6 @@
 # OpenClaw CMO VPS — Architecture & Operations
 
-**Type:** Living ops doc · **Last verified:** 2026-06-09 · **Owner:** Nathan Doyle
+**Type:** Living ops doc · **Last verified:** 2026-06-10 (go-live) · **Owner:** Nathan Doyle
 **Host:** Hetzner VPS `OpenClaw` · `188.245.123.146` · access: `ssh openclaw`
 
 > State sections (§1, §4–§8) describe the box **as observed on the Last verified date** — when you
@@ -28,17 +28,18 @@ rationale; the [Phase 0/1 build plan](../superpowers/plans/2026-06-09-autonomous
 | OpenClaw gateway | ✅ LIVE | `openclaw-gateway.service` (user unit), v2026.6.1, port 18789 |
 | Telegram bot | ✅ LIVE | `@Natosopenclawbot`, DM-only, processed messages 2026-06-09 |
 | CMO code (`/root/marketing`) | ✅ BUILT | 13 commits, 12/12 unit tests green (all HTTP mocked) |
-| CMO timers | 🟡 PARTIAL | backup (06:30) + health (07:00) timers **enabled**; collect/digest installed but **not enabled** — gated on go-live (§9) |
-| CMO `.env` | ❌ MISSING | No secrets on the box for the CMO yet |
-| CMO database (`data/cmo.db`) | ❌ ABSENT | Nothing has ever collected |
+| CMO timers | ✅ ALL ENABLED | collect daily 06:01 · digest Mon 08:04 · backup 06:31 · health 07:04 (all UTC, randomized delay) |
+| CMO `.env` | ✅ Present (600) | Created at go-live 2026-06-10; bot token reused from `openclaw.json` |
+| CMO database (`data/cmo.db`) | ✅ COLLECTING | First real collect 2026-06-10 (8 waitlist metrics/day) |
 | `marketing_waitlist_snapshot()` RPC | ✅ LIVE in prod | Merged PR #116, applied + verified 2026-06-09 |
 | Kill-switch (`PAUSED` flag) | ✅ Mechanism in place | Flag not currently set (nothing to pause yet) |
 | Backups for `/root/marketing` | ✅ Off-box | Private repo `NatoDoyle/chem-irl-marketing` (write deploy key) + nightly snapshot push |
 | Failure alerting | ✅ Armed | `OnFailure=` → Telegram via `cmo-alert@` (`.env`-gated no-op until go-live) |
 | Host security | ✅ Hardened | UFW deny-in (22 only) · fail2ban (sshd) · key-only SSH (password auth off) |
 
-**Verdict:** the Sense loop is code-complete but dormant. §9 is the go-live path; §13 lists the
-gotchas to read before touching anything.
+**Verdict:** the Sense loop is **LIVE** (went live 2026-06-10, waitlist-only): daily collect, weekly
+Monday digest to the founder's Telegram, failure alerting armed and proven. §13 lists the gotchas
+to read before touching anything.
 
 ## 2. Purpose & goals
 
@@ -190,9 +191,9 @@ read-only; required before Phase 2 content work.
 > §9 step 1 extracts it from there.
 
 **Telegram.** Bot `@Natosopenclawbot`, live (gateway logs show inbound messages on 2026-06-09).
-The channel is DM-only with a paired-operator allowlist. The founder's numeric chat id is **not
-recorded anywhere in config**; gateway logs suggest `5355963011` as a strong candidate
-(`telegram:5355963011` inbound entries) — treat as **unverified until §9 step 2 confirms it**.
+The channel is DM-only with a paired-operator allowlist. The founder's numeric chat id is `5355963011` —
+**confirmed 2026-06-10 against the DM allowlist itself** (`credentials/telegram-default-allowFrom.json`,
+the authoritative paired-operator source) and live-verified by the first digest delivery.
 
 **Agent workspace.** `/root/.openclaw/workspace` is a git-tracked directory holding the agent's
 self-state: `AGENTS.md` (operating instructions), `SOUL.md` / `IDENTITY.md` (persona), `MEMORY.md`
@@ -319,12 +320,12 @@ analytics source returns; revisit when the Phase-2 content engine needs content-
 | OpenClaw gateway | — | — | ✅ | `systemctl --user is-active` → `active`; v2026.6.1 |
 | Telegram bot | — | — | ✅ | Inbound messages in gateway journal |
 | `marketing_waitlist_snapshot` RPC | spec §11 | PR #116 | ✅ prod | Live call returned the 8-key payload |
-| `cmo` package + tests | plan Tasks 1–9 | ✅ 13 commits | ❌ never run live | `pytest -q` → `12 passed`; `data/` empty |
-| Collect/digest timers | plan Task 10 | ✅ installed | ❌ not enabled | gated on `.env` — §9 step 5 |
+| `cmo` package + tests | plan Tasks 1–9 | ✅ | ✅ LIVE since 2026-06-10 | `pytest -q` → `12 passed`; first real collect + digest succeeded |
+| Collect/digest timers | plan Task 10 | ✅ | ✅ enabled 2026-06-10 | next: daily 06:01 UTC / Mon 08:04 UTC |
 | Off-box backup (repo + DB snapshot) | improvement R1/R2 | ✅ | ✅ nightly 06:30 UTC | `cmo-backup.timer` enabled; pushes verified 2026-06-09 |
 | Failure alerting + health check | improvements R3/R8 | ✅ | ✅ armed (`.env`-gated) | `cmo-alert@` + `cmo-health.timer` (07:00 UTC) |
-| CMO `.env` | plan Task 11 | ❌ | ❌ | `ls /root/marketing/.env` → absent |
-| First digest | plan Task 11 | ❌ | ❌ | Telegram has never received one |
+| CMO `.env` | plan Task 11 | ✅ | ✅ | present, `-rw-------`, all vars set (Plausible keys empty by design) |
+| First digest | plan Task 11 | ✅ | ✅ sent 2026-06-10 | `[cmo] digest sent`; delivered from @Natosopenclawbot; alert path also live-proven |
 | Playbook + context pack | plan Task 12 | ✅ | ✅ (passive) | Files present, committed |
 | UTM capture (chem-irl) | improvement P1 | ✅ PR #128 | ✅ LIVE 2026-06-10 | migration applied (cols + `_v2` verified), `waitlist-signup` deployed + smoke-tested, web prod deploy READY |
 
@@ -339,12 +340,15 @@ these corrections live here):
 
 ## 9. Go-live runbook (first real Sense cycle)
 
+> **Executed 2026-06-10 — the system is live (waitlist-only).** Steps kept as the rebuild/recovery
+> reference. Chat id was confirmed via the DM allowlist (stronger than step 2's `getUpdates` path).
+
 Everything below runs over `ssh openclaw`. Status of prerequisites:
 
 | Prerequisite | Status | Where it comes from |
 |---|---|---|
 | `TELEGRAM_BOT_TOKEN` | ✅ on the box | Extract from `openclaw.json` (step 1) — do **not** create a second bot |
-| `TELEGRAM_OPERATOR_CHAT_ID` | 🟡 candidate `5355963011` | Verify via step 2 |
+| `TELEGRAM_OPERATOR_CHAT_ID` | ✅ confirmed `5355963011` | Matched the DM allowlist (`credentials/telegram-default-allowFrom.json`) |
 | `SUPABASE_URL` | ✅ known | `https://nzbntzqodvuguitpciuj.supabase.co` |
 | `SUPABASE_ANON_KEY` | ✅ known | Either the anon JWT or the `sb_publishable_…` key (both verified working) |
 | `PLAUSIBLE_API_KEY` | — n/a | Plausible dropped 2026-06-10 (C2) — connector unwired |
@@ -548,9 +552,9 @@ One consolidated list — if something on this box surprises you, check here fir
 - **Python is 3.14.4**, not the plan's 3.12.
 - **Plausible was dropped 2026-06-10 (C2)** — `connectors/plausible.py` is unwired and dormant; the site runs Vercel Web Analytics instead (eyeball-only, no read API).
 - ~~Digest "+0 wk" artifact~~ — **fixed 2026-06-09**: stale-only metrics now render no delta (regression test in `tests/test_digest.py`).
-- **Chat id `5355963011` is a log-derived candidate**, not configured fact — verify before trusting (§9 step 2).
+- Chat id `5355963011` is **confirmed** (DM allowlist + live digest delivery, 2026-06-10).
 - **`/root/marketing` pushes nightly (06:30 UTC) to the private GitHub repo `chem-irl-marketing`** via a write deploy key (`~/.ssh/marketing_deploy`, ssh alias `github-marketing`). Box-level Hetzner snapshots (§12 R9) remain unconfigured.
-- **`data/cmo.db` does not exist** until the first successful collect; `store.connect` creates it on demand.
+- `data/cmo.db` exists and grows daily since 2026-06-10; it is gitignored but snapshotted off-box by the nightly backup.
 - **`run_collect` runs the waitlist connector only** (clean exit 0); the digest emits no site section when no site metrics exist.
 
 ## 14. Related documents
