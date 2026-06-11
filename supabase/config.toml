@@ -38,6 +38,20 @@ verify_jwt = false
 # the shared WAITLIST_ALLOWED_ORIGINS allowlist.
 verify_jwt = false
 
+[functions.waitlist-nudge]
+# Disable JWT verification — webhook endpoint (like `push`): the CMO
+# scheduler on the OpenClaw VPS authenticates with the x-webhook-secret
+# header (WAITLIST_NUDGE_SECRET). Sends the one-time D7 referral nudge
+# via service-role RPCs; supports {"dry_run": true} for copy preview.
+verify_jwt = false
+
+[functions.waitlist-unsubscribe]
+# Disable JWT verification — function is reached by the List-Unsubscribe
+# link/one-click POST from lifecycle emails. The HMAC signature in the
+# link (WAITLIST_UNSUB_SECRET) IS the proof of identity; flips
+# consent_marketing off and redirects to /waitlist/unsubscribed.
+verify_jwt = false
+
 # Authenticated mobile-client functions below. JWT verification is on by
 # default (no `verify_jwt = false`); the function bodies still re-check
 # auth.uid() against the operation they perform.
