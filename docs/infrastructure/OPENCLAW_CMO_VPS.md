@@ -1,6 +1,6 @@
 # OpenClaw CMO VPS — Architecture & Operations
 
-**Type:** Living ops doc · **Last verified:** 2026-06-10 (go-live) · **Owner:** Nathan Doyle
+**Type:** Living ops doc · **Last verified:** 2026-06-11 (growth-automation pass) · **Owner:** Nathan Doyle
 **Host:** Hetzner VPS `OpenClaw` · `188.245.123.146` · access: `ssh openclaw`
 
 > State sections (§1, §4–§8) describe the box **as observed on the Last verified date** — when you
@@ -28,18 +28,23 @@ rationale; the [Phase 0/1 build plan](../superpowers/plans/2026-06-09-autonomous
 | OpenClaw gateway | ✅ LIVE | `openclaw-gateway.service` (user unit), v2026.6.1, port 18789 |
 | Telegram bot | ✅ LIVE | `@Natosopenclawbot`, DM-only, processed messages 2026-06-09 |
 | CMO code (`/root/marketing`) | ✅ BUILT | 13 commits, 12/12 unit tests green (all HTTP mocked) |
-| CMO timers | ✅ ALL ENABLED | collect daily 06:01 · digest Mon 08:04 · backup 06:31 · health 07:04 (all UTC, randomized delay) |
+| CMO timers | ✅ SIX ENABLED | collect 06:01 daily · nudge 10:00 daily · digest Mon 08:04 · listen Mon 07:30 · backup 06:31 · health 07:04 (UTC, randomized delay) |
 | CMO `.env` | ✅ Present (600) | Created at go-live 2026-06-10; bot token reused from `openclaw.json` |
 | CMO database (`data/cmo.db`) | ✅ COLLECTING | First real collect 2026-06-10 (8 waitlist metrics/day) |
-| `marketing_waitlist_snapshot()` RPC | ✅ LIVE in prod | Merged PR #116, applied + verified 2026-06-09 |
+| Snapshot RPCs (v1 + **v2**) | ✅ LIVE in prod | v2 adds per-utm_source/referral/share-channel splits (PR #140) — digest Channels section |
+| Lifecycle email (D7 nudge) | ✅ LIVE | Consent-gated, idempotent, HMAC unsubscribe (PR #141); first batch sent + verified 2026-06-11 |
+| Reddit listening | ✅ LIVE | Logged-out RSS, 4 subs, Mon 07:30 → digest Listening section |
+| LLM digest narrative | ✅ LIVE | Tensorix glm-5.1 "read + 3 actions", template fallback (C6) |
+| UTM link/QR generator | ✅ | `python -m cmo.links <source>` → tagged URL + qr/<slug>.png |
 | Kill-switch (`PAUSED` flag) | ✅ Mechanism in place | Flag not currently set (nothing to pause yet) |
 | Backups for `/root/marketing` | ✅ Off-box | Private repo `NatoDoyle/chem-irl-marketing` (write deploy key) + nightly snapshot push |
 | Failure alerting | ✅ Armed | `OnFailure=` → Telegram via `cmo-alert@` (`.env`-gated no-op until go-live) |
 | Host security | ✅ Hardened | UFW deny-in (22 only) · fail2ban (sshd) · key-only SSH (password auth off) |
 
-**Verdict:** the Sense loop is **LIVE** (went live 2026-06-10, waitlist-only): daily collect, weekly
-Monday digest to the founder's Telegram, failure alerting armed and proven. §13 lists the gotchas
-to read before touching anything.
+**Verdict:** the Sense loop is **LIVE and growth-automated** (2026-06-11 pass): daily collect with
+per-channel attribution, daily D7 referral nudges, weekly reddit listening, and a Monday digest
+with an LLM read + 3 recommended actions. Remaining Phase-2 piece: the content engine (blocked on
+a founder GitHub PAT). §13 lists the gotchas to read before touching anything.
 
 ## 2. Purpose & goals
 
@@ -225,7 +230,11 @@ suite proves wiring and parsing, not live credentials.
 | `cmo/run_collect.py` | Collector entrypoint (daily) | Checks `PAUSED` **before any work**; runs the **waitlist connector only** (plausible unwired 2026-06-10), fault-isolated; prunes `raw_snapshots` >90 days; exit 1 if any failed |
 | `cmo/digest.py` | Weekly digest text | Deltas vs the value ≤7 days ago; female-share % with the GTM target line; top sources/pages. Stale-only metrics render **no** delta (the "+0 wk" artifact was fixed + regression-tested 2026-06-09) |
 | `cmo/notify.py` | Telegram delivery | `sendMessage` to the configured operator chat only; chunks at 4,000 chars (under Telegram's 4,096 cap) |
-| `cmo/run_digest.py` | Digest entrypoint (weekly) | Same `PAUSED` gate; build → send → exit |
+| `cmo/run_digest.py` | Digest entrypoint (weekly) | Same `PAUSED` gate; build → optional LLM narrative (`narrate.py`) → send |
+| `cmo/narrate.py` | LLM "read + 3 actions" | Tensorix glm-5.1; sees ONLY the rendered digest; any failure → template-only (never blocks the send) |
+| `cmo/links.py` | UTM link + QR generator | `python -m cmo.links <source> [medium] [campaign]` → tagged URL + `qr/<slug>.png` |
+| `cmo/run_nudge.py` | D7 nudge trigger (daily) | `PAUSED`-gated POST to the `waitlist-nudge` edge fn (webhook secret); sending/marking stays server-side |
+| `cmo/connectors/listen.py` | Reddit listening (weekly) | Logged-out **RSS** (`top.rss` — the `.json` endpoints 403 datacenter IPs); 4 subs, fault-isolated, round-robin interleave |
 
 ### 6.2 Store schema
 
@@ -278,7 +287,17 @@ Append-only time series; "latest value" and "value on or before <ts>" are the tw
 The **only** chem-irl artifact the VPS touches is one RPC, plus the Plausible property for the
 marketing site.
 
-### 7.1 `public.marketing_waitlist_snapshot()`
+### 7.0 Lifecycle email (D7 nudge) — LIVE 2026-06-11
+
+`waitlist-nudge` + `waitlist-unsubscribe` edge functions (PR #141): consent-gated batch
+(`consent_marketing` + confirmed + ≥7d + un-nudged), Resend sends with RFC 8058 one-click
+unsubscribe, HMAC-signed unsubscribe links that flip consent off, idempotent mark-only-NULL
+tracking. Triggered by this box (`cmo-nudge.timer`, daily 10:00 UTC) — the box holds only the
+webhook secret; PII and the service-role key stay server-side. Verified live: first batch
+(founder's 2 test rows) delivered, re-run found 0 eligible, unsubscribe round-trip + tampered-sig
+rejection both confirmed.
+
+### 7.1 `public.marketing_waitlist_snapshot()` — and `_v2`
 
 Aggregate-only, anon-callable, `SECURITY DEFINER`, no PII — returns one JSON object:
 
@@ -556,6 +575,9 @@ One consolidated list — if something on this box surprises you, check here fir
 - **`/root/marketing` pushes nightly (06:30 UTC) to the private GitHub repo `chem-irl-marketing`** via a write deploy key (`~/.ssh/marketing_deploy`, ssh alias `github-marketing`). Box-level Hetzner snapshots (§12 R9) remain unconfigured.
 - `data/cmo.db` exists and grows daily since 2026-06-10; it is gitignored but snapshotted off-box by the nightly backup.
 - **`run_collect` runs the waitlist connector only** (clean exit 0); the digest emits no site section when no site metrics exist.
+- **`~/.openclaw/.env` contains TWO `TENSORIX_API_KEY` lines** — the 16-char `tx_…` one is dead; the 25-char `sk-v…` one works. Anything reading that file must take the working one.
+- **glm-5.1 is a reasoning model**: thinking tokens count against `max_tokens`; small budgets return `content: null` on HTTP 200. `narrate.py` budgets 1500 tokens and treats null content as failure.
+- **Reddit `.json` endpoints 403 this datacenter IP; the `top.rss` Atom feeds work** (no scores in RSS). Never log in to reddit from this box (§7.2 rationale).
 
 ## 14. Related documents
 
