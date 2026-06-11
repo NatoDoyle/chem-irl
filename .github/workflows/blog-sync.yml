@@ -1,0 +1,99 @@
+# Blog Inbox Sync — the CMO's only path into this repo.
+#
+# The marketing automation on the OpenClaw VPS holds NO credential for this
+# repo. It drops .mdx drafts into its own repo's blog-inbox/ (chem-irl-
+# marketing, which this workflow reads with a read-only deploy key). This
+# workflow validates them with .github/scripts/validate_blog_inbox.py — code
+# the CMO cannot modify — builds the site as a gate, and commits ONLY
+# web/content/blog/*.mdx to main. Worst case under full VPS compromise: a
+# pure-markdown blog post. See docs/infrastructure/OPENCLAW_CMO_VPS.md.
+
+name: Blog Inbox Sync
+
+on:
+  schedule:
+    - cron: '17 * * * *' # hourly — publish latency ≤ ~1h
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Validate + build only; publish nothing'
+        type: boolean
+        default: false
+
+permissions:
+  contents: write # this workflow's whole job is committing blog posts
+
+concurrency:
+  group: blog-inbox-sync
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Fetch blog inbox (read-only deploy key)
+        env:
+          DEPLOY_KEY: ${{ secrets.MARKETING_INBOX_DEPLOY_KEY }}
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s\n' "$DEPLOY_KEY" > ~/.ssh/inbox_key
+          chmod 600 ~/.ssh/inbox_key
+          ssh-keyscan -t ed25519 github.com >> ~/.ssh/known_hosts 2>/dev/null
+          GIT_SSH_COMMAND="ssh -i ~/.ssh/inbox_key -o IdentitiesOnly=yes" \
+            git clone --depth 1 git@github.com:NatoDoyle/chem-irl-marketing.git /tmp/marketing
+          rm -f ~/.ssh/inbox_key
+
+      - name: Validate inbox (path jail + schema + markdown-only)
+        id: validate
+        run: |
+          python3 .github/scripts/validate_blog_inbox.py /tmp/marketing/blog-inbox web/content/blog | tee /tmp/validate.out
+          grep '^CHANGED=' /tmp/validate.out | sed 's/^CHANGED=/changed=/' >> "$GITHUB_OUTPUT"
+
+      - name: Stop if nothing to publish
+        id: gate
+        run: |
+          if [ "${{ steps.validate.outputs.changed }}" = "[]" ]; then
+            echo "publish=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "publish=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Copy posts into the site
+        if: steps.gate.outputs.publish == 'true'
+        run: |
+          echo '${{ steps.validate.outputs.changed }}' | python3 -c '
+          import json, shutil, sys
+          for name in json.load(sys.stdin):
+              shutil.copy(f"/tmp/marketing/blog-inbox/{name}", f"web/content/blog/{name}")
+              print("staged", name)'
+
+      - name: Build gate (a post that breaks the site never lands)
+        if: steps.gate.outputs.publish == 'true'
+        uses: oven-sh/setup-bun@v2
+
+      - name: Build site with new posts
+        if: steps.gate.outputs.publish == 'true'
+        working-directory: web
+        run: |
+          bun install --frozen-lockfile
+          bun run build
+
+      - name: Publish to main
+        if: steps.gate.outputs.publish == 'true' && inputs.dry_run != true
+        run: |
+          git config user.name 'cmo-blog-sync[bot]'
+          git config user.email 'cmo-blog-sync@users.noreply.github.com'
+          git add web/content/blog/
+          git commit -m "blog: publish from CMO inbox — ${{ steps.validate.outputs.changed }}"
+          for attempt in 1 2 3; do
+            git push origin HEAD:main && exit 0
+            git pull --rebase origin main
+          done
+          echo "push failed after retries" >&2
+          exit 1
+
+      - name: Dry-run summary
+        if: inputs.dry_run == true
+        run: echo "DRY RUN — validation + build passed for ${{ steps.validate.outputs.changed }}; nothing published."
