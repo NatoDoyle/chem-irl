@@ -7,6 +7,7 @@ import { BRAND_COLORS, MIDNIGHT, TYPOGRAPHY } from '../config/brand';
 import { supabase } from '../lib/supabase/client';
 import { getEntitlement } from '../lib/subscription';
 import { hasSeenPitch } from '../lib/iris/pitchSeen';
+import AgeDobScreen from '../screens/onboarding/AgeDobScreen';
 import GenderIdentityScreen from '../screens/onboarding/GenderIdentityScreen';
 import InterestedInScreen from '../screens/onboarding/InterestedInScreen';
 import HeightScreen from '../screens/onboarding/HeightScreen';
@@ -34,6 +35,10 @@ import IrisPitchScreen from '../screens/iris/IrisPitchScreen';
 const PHOTO_VERIFICATION_ENABLED = process.env.EXPO_PUBLIC_ENABLE_PHOTO_VERIFICATION === 'true';
 
 export type OnboardingStackParamList = {
+  // Mandatory 18+ date-of-birth gate — always the first on-track step.
+  // No skip; CONTINUE requires a picked date, and the users_dob_18_plus
+  // CHECK constraint re-enforces the boundary server-side.
+  AgeDob: undefined;
   GenderIdentity: undefined;
   InterestedIn: undefined;
   Height: undefined;
@@ -58,15 +63,16 @@ export type OnboardingStackParamList = {
   ProfileReview: undefined;
   // Iris screens are off-track optional surfaces. Deliberately not in
   // SCREEN_ORDER so the step counter on the question screens stays at
-  // "X of 17".
+  // "X of 18".
   // - IrisPitch: post-signup paywall pitch, shown once per user-device
-  //   pair before GenderIdentity. See useInitialOnboardingRoute below.
+  //   pair before AgeDob. See useInitialOnboardingRoute below.
   // - IrisInterview: bio-writing helper reachable from ProfileReview.
   IrisPitch: undefined;
   IrisInterview: undefined;
 };
 
 const SCREEN_ORDER: (keyof OnboardingStackParamList)[] = [
+  'AgeDob',
   'GenderIdentity',
   'InterestedIn',
   'Height',
@@ -100,7 +106,7 @@ const TOTAL_STEPS = SCREEN_ORDER.length;
 //   2. Already saw the pitch on this device → skip pitch.
 //   3. Otherwise → show IrisPitch.
 //
-// On any failure we fall back to GenderIdentity rather than blocking
+// On any failure we fall back to AgeDob rather than blocking
 // onboarding behind an entitlement check.
 function useInitialOnboardingRoute(): keyof OnboardingStackParamList | null {
   const [route, setRoute] = useState<keyof OnboardingStackParamList | null>(null);
@@ -113,20 +119,20 @@ function useInitialOnboardingRoute(): keyof OnboardingStackParamList | null {
           data: { user },
         } = await supabase.auth.getUser();
         if (!user) {
-          if (!cancelled) setRoute('GenderIdentity');
+          if (!cancelled) setRoute('AgeDob');
           return;
         }
         const entitlement = await getEntitlement();
         if (cancelled) return;
         if (entitlement.allowed) {
-          setRoute('GenderIdentity');
+          setRoute('AgeDob');
           return;
         }
         const seen = await hasSeenPitch(user.id);
         if (cancelled) return;
-        setRoute(seen ? 'GenderIdentity' : 'IrisPitch');
+        setRoute(seen ? 'AgeDob' : 'IrisPitch');
       } catch {
-        if (!cancelled) setRoute('GenderIdentity');
+        if (!cancelled) setRoute('AgeDob');
       }
     })();
     return () => {
@@ -179,6 +185,7 @@ export default function OnboardingNavigator() {
       }}
     >
       <Stack.Screen name="IrisPitch" component={IrisPitchScreen} options={{ headerShown: false }} />
+      <Stack.Screen name="AgeDob" component={AgeDobScreen} />
       <Stack.Screen name="GenderIdentity" component={GenderIdentityScreen} />
       <Stack.Screen name="InterestedIn" component={InterestedInScreen} />
       <Stack.Screen name="Height" component={HeightScreen} />

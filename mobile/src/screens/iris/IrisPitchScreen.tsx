@@ -3,11 +3,11 @@
 // Renders as the first screen of OnboardingNavigator immediately after
 // signup_completed flips to true (i.e. after the email OTP is verified
 // in EmailCodeVerifyScreen). Off-track — not in SCREEN_ORDER, so the
-// step counter on subsequent question screens still reads "1 of 17".
+// step counter on subsequent question screens still reads "1 of 18".
 //
 // Whichever of the three actions the user takes (start trial, subscribe,
 // dismiss), we record the pitch as seen via markPitchSeen() and replace
-// the current route with GenderIdentity so the back button doesn't bring
+// the current route with AgeDob so the back button doesn't bring
 // the user back to the pitch.
 //
 // Skipped entirely (resolved upstream in OnboardingNavigator) when the
@@ -62,7 +62,7 @@ export default function IrisPitchScreen() {
         await markPitchSeen(user.id);
       }
     } finally {
-      navigation.replace('GenderIdentity');
+      navigation.replace('AgeDob');
     }
   }, [navigation]);
 
