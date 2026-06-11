@@ -41,7 +41,9 @@ export interface User {
   phone?: string;
   created_at: string;
   updated_at: string;
-  dob: string;
+  // Null until the AgeDob onboarding step writes it (the signup trigger
+  // inserts NULL; the users_dob_18_plus CHECK enforces 18+ on write).
+  dob: string | null;
   gender: UserGender;
   orientation: UserOrientation;
   city_id: string;

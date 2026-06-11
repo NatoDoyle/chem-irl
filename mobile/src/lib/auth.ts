@@ -55,7 +55,10 @@ export async function verifyEmailOTP(email: string, token: string, isSignup: boo
 }
 
 /**
- * Complete signup by updating profile with full_name and signup_completed
+ * Complete signup by updating profile with full_name and signup_completed.
+ * Also records terms acceptance: the SignUpEmail screen blocks Continue
+ * until the 18+/Terms checkbox is ticked, so reaching this call is the
+ * acceptance act — persisted here because no authed session exists earlier.
  */
 export async function completeSignup(fullName: string) {
   try {
@@ -69,11 +72,13 @@ export async function completeSignup(fullName: string) {
 
     addBreadcrumb('Completing signup', 'auth', 'info', { userId: user.id });
 
-    // Update profile with full_name and signup_completed
+    // Update profile with full_name, signup_completed, and terms acceptance
     const { error } = await supabase.from('profiles').upsert({
       id: user.id,
       full_name: fullName.trim(),
       signup_completed: true,
+      terms_accepted: true,
+      terms_accepted_at: new Date().toISOString(),
     });
 
     if (error) {

@@ -77,7 +77,7 @@ describe('Auth Functions', () => {
   });
 
   describe('completeSignup', () => {
-    it('should update profile with full_name and signup_completed', async () => {
+    it('should update profile with full_name, signup_completed, and terms acceptance', async () => {
       const mockUser = { id: 'user-123' };
       const mockUpsert = jest.fn().mockResolvedValue({ error: null });
 
@@ -92,10 +92,14 @@ describe('Auth Functions', () => {
       const result = await completeSignup('John Doe');
 
       expect(supabase.from).toHaveBeenCalledWith('profiles');
+      // The SignUpEmail screen blocks Continue until the 18+/ToS checkbox is
+      // ticked, so completing signup IS the recorded acceptance.
       expect(mockUpsert).toHaveBeenCalledWith({
         id: 'user-123',
         full_name: 'John Doe',
         signup_completed: true,
+        terms_accepted: true,
+        terms_accepted_at: expect.stringMatching(/^\d{4}-\d{2}-\d{2}T/),
       });
       expect(result.success).toBe(true);
     });

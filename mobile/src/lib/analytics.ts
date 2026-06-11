@@ -25,6 +25,7 @@ export type AnalyticsEvent =
   | 'photo_deleted'
   | 'profile_updated'
   | 'onboarding_completed'
+  | 'onboarding_age_completed'
   | 'onboarding_gender_completed'
   | 'onboarding_orientation_completed'
   | 'onboarding_height_completed'
