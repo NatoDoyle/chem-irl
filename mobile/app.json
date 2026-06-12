@@ -13,7 +13,7 @@
       "backgroundColor": "#0D0F14"
     },
     "ios": {
-      "supportsTablet": true,
+      "supportsTablet": false,
       "bundleIdentifier": "app.chemirl.mobile"
     },
     "android": {
@@ -24,7 +24,8 @@
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
       "package": "app.chemirl.mobile",
-      "permissions": ["android.permission.RECORD_AUDIO"]
+      "permissions": [],
+      "blockedPermissions": ["android.permission.RECORD_AUDIO"]
     },
     "web": {
       "favicon": "./assets/favicon.png"
@@ -40,7 +41,9 @@
       [
         "expo-image-picker",
         {
-          "photosPermission": "Allow Chem IRL to access your photos to upload profile pictures."
+          "photosPermission": "Allow Chem IRL to access your photos to upload profile pictures.",
+          "cameraPermission": "Allow Chem IRL to use the camera to take profile photos and your verification selfie.",
+          "microphonePermission": false
         }
       ],
       "@react-native-community/datetimepicker",
