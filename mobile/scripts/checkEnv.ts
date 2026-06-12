@@ -59,6 +59,25 @@ function checkEnv(): EnvCheckResult {
     }
   }
 
+  // Production builds: config that fails silently at runtime if absent.
+  const appEnv = process.env.EXPO_PUBLIC_ENVIRONMENT;
+  if (appEnv === 'production') {
+    // Without the EAS project id, getExpoPushTokenAsync never yields a
+    // token — push registration fails silently and no notifications are
+    // delivered. Hard error so a broken production build can't ship.
+    const projectId = process.env.EXPO_PUBLIC_PROJECT_ID;
+    if (!projectId || projectId.trim() === '') {
+      errors.push(
+        'Missing required env var for production: EXPO_PUBLIC_PROJECT_ID (EAS project id — must match extra.eas.projectId in app.json; push notifications silently fail without it)'
+      );
+    }
+    if (!sentryDsn || sentryDsn.trim() === '') {
+      warnings.push(
+        'EXPO_PUBLIC_SENTRY_DSN is not set. Production crash reporting will be disabled.'
+      );
+    }
+  }
+
   return {
     passed: errors.length === 0,
     errors,
