@@ -332,3 +332,241 @@ export async function googleVerifyProduct(
     },
   };
 }
+
+// --- Subscriptions ----------------------------------------------------------
+
+export type SubscriptionStatus = 'trialing' | 'active' | 'grace_period' | 'expired' | 'cancelled';
+
+export interface VerifiedSubscription {
+  status: SubscriptionStatus;
+  currentPeriodEndsAt: string | null;
+  trialEndsAt: string | null;
+  // Verified stable id: Apple originalTransactionId / Google purchaseToken.
+  originalTransactionId: string;
+  productId: string;
+  environment: string;
+}
+
+export type SubscriptionVerifyResult = { ok: true; sub: VerifiedSubscription } | StoreVerifyFailure;
+
+/**
+ * Verify a Chem Plus subscription on iOS. The client's JWS is decoded only
+ * for a transactionId; the verified transaction (fetched from Apple) yields
+ * the trusted originalTransactionId — NEVER the client's claim, otherwise a
+ * caller could submit someone else's originalTransactionId and inherit
+ * their entitlement. Subscription status then comes from Apple's
+ * Get-All-Subscription-Statuses endpoint on the same environment host.
+ *
+ * Apple status ints: 1 active, 2 expired, 3 billing retry, 4 billing grace
+ * period, 5 revoked (refund). offerType 1 on an active sub = intro offer →
+ * 'trialing'.
+ */
+export async function appleVerifySubscription(
+  jwsFromClient: string,
+  expectedProductId: string
+): Promise<SubscriptionVerifyResult> {
+  const claimed = decodeJwsPayload(jwsFromClient);
+  const claimedTxId = typeof claimed?.transactionId === 'string' ? claimed.transactionId : '';
+  if (!claimedTxId) {
+    return { ok: false, reason: 'invalid_receipt', detail: 'no transactionId in receipt JWS' };
+  }
+
+  let token: string;
+  try {
+    token = await appleApiJwt();
+  } catch (err) {
+    return {
+      ok: false,
+      reason: 'store_unavailable',
+      detail: `apple jwt signing failed: ${err instanceof Error ? err.message : 'unknown'}`,
+    };
+  }
+  const authHeaders = { Authorization: `Bearer ${token}` };
+
+  for (const host of [APPLE_PROD_HOST, APPLE_SANDBOX_HOST]) {
+    let txRes: Response;
+    try {
+      txRes = await fetch(`${host}/inApps/v1/transactions/${encodeURIComponent(claimedTxId)}`, {
+        headers: authHeaders,
+      });
+    } catch (err) {
+      return {
+        ok: false,
+        reason: 'store_unavailable',
+        detail: `apple fetch failed: ${err instanceof Error ? err.message : 'unknown'}`,
+      };
+    }
+    if (txRes.status === 404) continue; // try the sandbox host
+    if (!txRes.ok) {
+      return { ok: false, reason: 'store_unavailable', detail: `apple responded ${txRes.status}` };
+    }
+
+    const txBody = (await txRes.json()) as { signedTransactionInfo?: unknown };
+    const txPayload =
+      typeof txBody.signedTransactionInfo === 'string'
+        ? decodeJwsPayload(txBody.signedTransactionInfo)
+        : null;
+    if (!txPayload) {
+      return { ok: false, reason: 'store_unavailable', detail: 'unparseable apple transaction' };
+    }
+    if (txPayload.bundleId !== APP_BUNDLE_ID) {
+      return { ok: false, reason: 'invalid_receipt', detail: 'bundleId mismatch' };
+    }
+    if (txPayload.productId !== expectedProductId) {
+      return {
+        ok: false,
+        reason: 'invalid_receipt',
+        detail: `transaction is for ${String(txPayload.productId)}, not a subscription`,
+      };
+    }
+
+    const verifiedOriginalId = String(txPayload.originalTransactionId ?? claimedTxId);
+
+    // Current status for the verified subscription, from the same host.
+    let statusRes: Response;
+    try {
+      statusRes = await fetch(
+        `${host}/inApps/v1/subscriptions/${encodeURIComponent(verifiedOriginalId)}`,
+        { headers: authHeaders }
+      );
+    } catch (err) {
+      return {
+        ok: false,
+        reason: 'store_unavailable',
+        detail: `apple status fetch failed: ${err instanceof Error ? err.message : 'unknown'}`,
+      };
+    }
+    if (!statusRes.ok) {
+      return {
+        ok: false,
+        reason: 'store_unavailable',
+        detail: `apple statuses responded ${statusRes.status}`,
+      };
+    }
+
+    const statusBody = (await statusRes.json()) as {
+      environment?: unknown;
+      data?: Array<{ lastTransactions?: Array<Record<string, unknown>> }>;
+    };
+    const lastTransactions = (statusBody.data ?? []).flatMap((g) => g.lastTransactions ?? []);
+    const entry =
+      lastTransactions.find((t) => t.originalTransactionId === verifiedOriginalId) ??
+      lastTransactions[0];
+    if (!entry) {
+      return { ok: false, reason: 'invalid_receipt', detail: 'no subscription status found' };
+    }
+
+    const lastPayload =
+      typeof entry.signedTransactionInfo === 'string'
+        ? decodeJwsPayload(entry.signedTransactionInfo)
+        : null;
+    const expiresMs =
+      typeof lastPayload?.expiresDate === 'number' ? lastPayload.expiresDate : null;
+    const offerType = typeof lastPayload?.offerType === 'number' ? lastPayload.offerType : null;
+    const statusInt = typeof entry.status === 'number' ? entry.status : 0;
+
+    let status: SubscriptionStatus;
+    if (statusInt === 1) status = offerType === 1 ? 'trialing' : 'active';
+    else if (statusInt === 3 || statusInt === 4) status = 'grace_period';
+    else if (statusInt === 5) status = 'cancelled';
+    else status = 'expired';
+
+    const expiresIso = expiresMs ? new Date(expiresMs).toISOString() : null;
+    return {
+      ok: true,
+      sub: {
+        status,
+        currentPeriodEndsAt: expiresIso,
+        trialEndsAt: status === 'trialing' ? expiresIso : null,
+        originalTransactionId: verifiedOriginalId,
+        productId: expectedProductId,
+        environment: String(statusBody.environment ?? txPayload.environment ?? 'Unknown'),
+      },
+    };
+  }
+
+  return {
+    ok: false,
+    reason: 'invalid_receipt',
+    detail: 'transaction not found in production or sandbox',
+  };
+}
+
+/**
+ * Verify a Chem Plus subscription on Android via purchases.subscriptionsv2.
+ * The endpoint is keyed by purchaseToken, so the productId comes from
+ * GOOGLE'S response (lineItems), not the client. CANCELED with a future
+ * expiry stays 'active' (auto-renew off but the paid period is still owed);
+ * 'cancelled' is reserved for revocations on the Apple side.
+ */
+export async function googleVerifySubscription(
+  purchaseToken: string,
+  expectedProductId: string
+): Promise<SubscriptionVerifyResult> {
+  const token = await googleAccessToken();
+  if (!token) {
+    return {
+      ok: false,
+      reason: 'store_unavailable',
+      detail: 'google auth failed (check GOOGLE_PLAY_SERVICE_ACCOUNT secret)',
+    };
+  }
+
+  const url =
+    `https://androidpublisher.googleapis.com/androidpublisher/v3/applications/` +
+    `${ANDROID_PACKAGE_NAME}/purchases/subscriptionsv2/tokens/${encodeURIComponent(purchaseToken)}`;
+
+  let res: Response;
+  try {
+    res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
+  } catch (err) {
+    return {
+      ok: false,
+      reason: 'store_unavailable',
+      detail: `google fetch failed: ${err instanceof Error ? err.message : 'unknown'}`,
+    };
+  }
+  if (res.status === 400 || res.status === 404) {
+    return { ok: false, reason: 'invalid_receipt', detail: `google responded ${res.status}` };
+  }
+  if (!res.ok) {
+    return { ok: false, reason: 'store_unavailable', detail: `google responded ${res.status}` };
+  }
+
+  const body = (await res.json()) as {
+    subscriptionState?: unknown;
+    testPurchase?: unknown;
+    lineItems?: Array<{ productId?: unknown; expiryTime?: unknown }>;
+  };
+
+  const line = (body.lineItems ?? []).find((l) => l.productId === expectedProductId);
+  if (!line) {
+    return {
+      ok: false,
+      reason: 'invalid_receipt',
+      detail: `token does not belong to ${expectedProductId}`,
+    };
+  }
+
+  const expiryIso = typeof line.expiryTime === 'string' ? line.expiryTime : null;
+  const expiryFuture = expiryIso !== null && Date.parse(expiryIso) > Date.now();
+  const state = String(body.subscriptionState ?? '');
+
+  let status: SubscriptionStatus;
+  if (state === 'SUBSCRIPTION_STATE_ACTIVE') status = 'active';
+  else if (state === 'SUBSCRIPTION_STATE_IN_GRACE_PERIOD') status = 'grace_period';
+  else if (state === 'SUBSCRIPTION_STATE_CANCELED') status = expiryFuture ? 'active' : 'expired';
+  else status = 'expired'; // EXPIRED / ON_HOLD / PAUSED / PENDING etc.
+
+  return {
+    ok: true,
+    sub: {
+      status,
+      currentPeriodEndsAt: expiryIso,
+      trialEndsAt: null,
+      originalTransactionId: purchaseToken,
+      productId: expectedProductId,
+      environment: body.testPurchase != null ? 'test' : 'production',
+    },
+  };
+}
