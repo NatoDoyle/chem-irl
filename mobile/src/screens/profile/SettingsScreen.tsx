@@ -199,6 +199,11 @@ export default function SettingsScreen() {
           />
         </Section>
 
+        <SectionHeader title="Support" />
+        <Section>
+          <Row label="Contact Support" external onPress={() => openURL(`${BRAND.url}/support`)} />
+        </Section>
+
         <SectionHeader title="Legal" />
         <Section>
           <Row label="Privacy Policy" external onPress={() => openURL(`${BRAND.url}/privacy`)} />
