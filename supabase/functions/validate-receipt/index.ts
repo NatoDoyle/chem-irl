@@ -1,12 +1,47 @@
-// Supabase Edge Function: Validate IAP Receipt
-// Receives a purchase receipt, validates it (placeholder), credits tokens to user.
+// Supabase Edge Function: Validate IAP Receipt (token packs — consumables)
+//
+// Receives the platform purchase token from mobile (iOS: StoreKit 2 JWS,
+// Android: Play purchaseToken — both arrive as `receipt`), verifies it
+// STORE-SIDE, and credits tokens idempotently via the
+// credit_tokens_for_purchase RPC (migration 20260612142749).
+//
+// Verification paths, in priority order:
+//   1. Store credentials configured → real verification:
+//        iOS: App Store Server API (prod host, sandbox fallback — TestFlight
+//             and App Review run in sandbox); the product id is taken from
+//             APPLE'S verified payload, never the client.
+//        Android: Play Developer API purchases.products.get (Google rejects
+//             token/product mismatches); requires purchaseState == 0.
+//      This path IGNORES STAGING_TRUST_RECEIPTS entirely — a leaked staging
+//      flag can no longer reopen the trust-the-client hole once creds exist.
+//   2. No credentials + STAGING_TRUST_RECEIPTS=true → staging-only trusting
+//      path (still credited through the idempotent RPC).
+//   3. Otherwise → 503 fail-closed (unchanged since F6).
+//
+// Idempotency (C2): keyed on the VERIFIED Apple transactionId / Google
+// orderId. Retries, restore-purchases replays, and races credit exactly once
+// (RPC claims UNIQUE (platform, transaction_id) first).
+//
+// Response contract (unchanged for the client):
+//   200 { success: true, new_balance, tokens_added }   — tokens_added is 0
+//        when the transaction was already credited (restore/retry).
+//   400 { error: 'invalid_receipt' | ... }              — reject; client surfaces.
+//   502 { error: 'store_verification_failed' }          — transient; the client
+//        does NOT finishTransaction, so the purchase listener re-fires later.
+//   503 { error: 'receipt_validation_unavailable' }     — not configured.
+//
+// Required secrets for path 1: APPLE_IAP_ISSUER_ID, APPLE_IAP_KEY_ID,
+// APPLE_IAP_PRIVATE_KEY, GOOGLE_PLAY_SERVICE_ACCOUNT (see _shared/store-verify.ts).
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { withObservability, type EdgeHandler } from '../_shared/observability.ts';
 import {
-  withObservability,
-  type EdgeHandler,
-} from '../_shared/observability.ts';
+  appleVerifyTransaction,
+  googleVerifyProduct,
+  isAppleConfigured,
+  isGoogleConfigured,
+} from '../_shared/store-verify.ts';
 
 // Map product IDs to token amounts
 const PRODUCT_TOKEN_MAP: Record<string, number> = {
@@ -15,22 +50,17 @@ const PRODUCT_TOKEN_MAP: Record<string, number> = {
   chem_tokens_25: 25,
 };
 
+type CreditResult = { credited: boolean; new_balance: number };
+
 const handler: EdgeHandler = async (req, ctx) => {
-  // Only allow POST
   if (req.method !== 'POST') {
-    return new Response(JSON.stringify({ error: 'Method not allowed' }), {
-      headers: { 'Content-Type': 'application/json' },
-      status: 405,
-    });
+    return json({ error: 'Method not allowed' }, 405);
   }
 
   // --- Authenticate the calling user via JWT ---
   const authHeader = req.headers.get('Authorization');
   if (!authHeader) {
-    return new Response(JSON.stringify({ error: 'Missing Authorization header' }), {
-      headers: { 'Content-Type': 'application/json' },
-      status: 401,
-    });
+    return json({ error: 'Missing Authorization header' }, 401);
   }
 
   const supabase = createClient(
@@ -45,132 +75,116 @@ const handler: EdgeHandler = async (req, ctx) => {
   } = await supabase.auth.getUser();
 
   if (authError || !user) {
-    return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-      headers: { 'Content-Type': 'application/json' },
-      status: 401,
-    });
+    return json({ error: 'Unauthorized' }, 401);
   }
   ctx.user_id = user.id;
 
   // --- Parse request body ---
   const { receipt, platform, productId } = await req.json();
 
-  if (!receipt || !platform) {
-    return new Response(
-      JSON.stringify({ error: 'Missing required fields: receipt, platform' }),
-      {
-        headers: { 'Content-Type': 'application/json' },
-        status: 400,
-      }
-    );
+  if (!receipt || typeof receipt !== 'string' || !platform) {
+    return json({ error: 'Missing required fields: receipt, platform' }, 400);
   }
-
   if (platform !== 'ios' && platform !== 'android') {
-    return new Response(JSON.stringify({ error: 'Invalid platform. Must be ios or android' }), {
-      headers: { 'Content-Type': 'application/json' },
-      status: 400,
-    });
+    return json({ error: 'Invalid platform. Must be ios or android' }, 400);
   }
 
-  // --- Fail closed until real store-side verification exists ---
-  // The placeholder below TRUSTS the client's receipt and credits tokens, so
-  // it must only run on staging (STAGING_TRUST_RECEIPTS=true). In production
-  // (env unset) we return 503 rather than crediting tokens on an unverified
-  // receipt — "forgot to remove the staging override" should be louder than
-  // "credited a forged receipt". This mirrors validate-subscription. Remove
-  // this gate when the real Apple / Google verification (TODO below) lands.
-  if (Deno.env.get('STAGING_TRUST_RECEIPTS') !== 'true') {
-    console.error(
-      'validate-receipt: refusing to credit tokens without real store-side ' +
-        'verification. Set STAGING_TRUST_RECEIPTS=true on staging only.'
-    );
-    return new Response(
-      JSON.stringify({
-        error: 'receipt_validation_unavailable',
-        detail:
-          'Real App Store / Google Play receipt verification is not yet ' +
-          'implemented. On staging, set STAGING_TRUST_RECEIPTS=true to allow ' +
-          'placeholder behaviour during development.',
-      }),
-      { headers: { 'Content-Type': 'application/json' }, status: 503 }
-    );
-  }
-
-  // --- Validate receipt ---
-  // TODO: Production implementation — verify receipt with Apple App Store / Google Play:
-  //   iOS:    POST to https://buy.itunes.apple.com/verifyReceipt (or sandbox URL)
-  //   Android: Use Google Play Developer API to verify purchase token
-  // For now, trust the receipt and extract the product ID from the request.
-  // In production, the product ID should come from the validated receipt, not the client.
-
-  const resolvedProductId = productId || extractProductIdFromReceipt(receipt);
-  const tokenAmount = PRODUCT_TOKEN_MAP[resolvedProductId];
-
-  if (!tokenAmount) {
-    return new Response(JSON.stringify({ error: `Unknown product: ${resolvedProductId}` }), {
-      headers: { 'Content-Type': 'application/json' },
-      status: 400,
-    });
-  }
-
-  // --- Credit tokens using service role (bypasses RLS) ---
   const adminClient = createClient(
     Deno.env.get('SUPABASE_URL')!,
     Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
   );
 
-  // Upsert token balance: insert if new, add to existing balance
-  const { data: currentRow } = await adminClient
-    .from('tokens')
-    .select('balance')
-    .eq('user_id', user.id)
-    .maybeSingle();
+  // --- Path 1: real store-side verification -------------------------------
+  const configured = platform === 'ios' ? isAppleConfigured() : isGoogleConfigured();
 
-  const previousBalance = currentRow?.balance ?? 0;
-  const newBalance = previousBalance + tokenAmount;
+  if (configured) {
+    if (platform === 'ios') {
+      const result = await appleVerifyTransaction(receipt);
+      if (!result.ok) {
+        console.error('validate-receipt: apple verification failed', result);
+        return result.reason === 'invalid_receipt'
+          ? json({ error: 'invalid_receipt', detail: result.detail }, 400)
+          : json({ error: 'store_verification_failed' }, 502);
+      }
 
-  const { error: upsertError } = await adminClient.from('tokens').upsert(
-    {
-      user_id: user.id,
-      balance: newBalance,
-      updated_at: new Date().toISOString(),
-    },
-    { onConflict: 'user_id' }
-  );
+      // Product id comes from Apple's verified payload — never the client.
+      const tokenAmount = PRODUCT_TOKEN_MAP[result.tx.productId];
+      if (!tokenAmount) {
+        return json({ error: `Unknown product: ${result.tx.productId}` }, 400);
+      }
 
-  if (upsertError) {
-    console.error('Token upsert failed:', upsertError);
-    return new Response(JSON.stringify({ error: 'Failed to credit tokens' }), {
-      headers: { 'Content-Type': 'application/json' },
-      status: 500,
+      return creditViaRpc(adminClient, {
+        userId: user.id,
+        platform,
+        transactionId: result.tx.transactionId,
+        productId: result.tx.productId,
+        amount: tokenAmount,
+        environment: result.tx.environment,
+      });
+    }
+
+    // Android: the product id must be a known SKU before we ask Google;
+    // Google then validates that the token actually belongs to it.
+    const claimedProductId = typeof productId === 'string' ? productId : '';
+    const tokenAmount = PRODUCT_TOKEN_MAP[claimedProductId];
+    if (!tokenAmount) {
+      return json({ error: `Unknown product: ${claimedProductId}` }, 400);
+    }
+
+    const result = await googleVerifyProduct(receipt, claimedProductId);
+    if (!result.ok) {
+      console.error('validate-receipt: google verification failed', result);
+      return result.reason === 'invalid_receipt'
+        ? json({ error: 'invalid_receipt', detail: result.detail }, 400)
+        : json({ error: 'store_verification_failed' }, 502);
+    }
+
+    return creditViaRpc(adminClient, {
+      userId: user.id,
+      platform,
+      transactionId: result.tx.orderId,
+      productId: claimedProductId,
+      amount: tokenAmount,
+      environment: result.tx.purchaseType === 0 ? 'test' : 'production',
     });
   }
 
-  // Record the transaction
-  const { error: txError } = await adminClient.from('token_transactions').insert({
-    user_id: user.id,
-    amount: tokenAmount,
-    reason: 'purchase',
-    product_id: resolvedProductId,
-    platform,
-    receipt_hash: simpleHash(receipt),
-  });
+  // --- Path 2: staging-only trusting fallback (no store creds present) ----
+  if (Deno.env.get('STAGING_TRUST_RECEIPTS') === 'true') {
+    const resolvedProductId =
+      typeof productId === 'string' && productId
+        ? productId
+        : extractProductIdFromReceipt(receipt);
+    const tokenAmount = PRODUCT_TOKEN_MAP[resolvedProductId];
+    if (!tokenAmount) {
+      return json({ error: `Unknown product: ${resolvedProductId}` }, 400);
+    }
 
-  if (txError) {
-    // Non-fatal: tokens are already credited; log and continue
-    console.error('Token transaction record failed:', txError);
+    return creditViaRpc(adminClient, {
+      userId: user.id,
+      platform,
+      transactionId: `staging_${simpleHash(receipt)}`,
+      productId: resolvedProductId,
+      amount: tokenAmount,
+      environment: 'staging-trusted',
+    });
   }
 
-  return new Response(
-    JSON.stringify({
-      success: true,
-      new_balance: newBalance,
-      tokens_added: tokenAmount,
-    }),
+  // --- Path 3: fail closed (unchanged since F6) ----------------------------
+  console.error(
+    'validate-receipt: refusing to credit tokens — store credentials not ' +
+      'configured (APPLE_IAP_* / GOOGLE_PLAY_SERVICE_ACCOUNT) and ' +
+      'STAGING_TRUST_RECEIPTS is not enabled.'
+  );
+  return json(
     {
-      headers: { 'Content-Type': 'application/json' },
-      status: 200,
-    }
+      error: 'receipt_validation_unavailable',
+      detail:
+        'Store-side receipt verification is not configured for this platform. ' +
+        'Set the APPLE_IAP_* / GOOGLE_PLAY_SERVICE_ACCOUNT secrets (production) ' +
+        'or STAGING_TRUST_RECEIPTS=true (staging only).',
+    },
+    503
   );
 };
 
@@ -178,10 +192,52 @@ serve(withObservability(handler, { name: 'validate-receipt' }));
 
 // --- Helpers ---
 
+async function creditViaRpc(
+  adminClient: ReturnType<typeof createClient>,
+  args: {
+    userId: string;
+    platform: 'ios' | 'android';
+    transactionId: string;
+    productId: string;
+    amount: number;
+    environment: string;
+  }
+): Promise<Response> {
+  const { data, error } = await adminClient.rpc('credit_tokens_for_purchase', {
+    p_user_id: args.userId,
+    p_platform: args.platform,
+    p_transaction_id: args.transactionId,
+    p_product_id: args.productId,
+    p_amount: args.amount,
+    p_store_environment: args.environment,
+  });
+
+  if (error) {
+    console.error('validate-receipt: credit_tokens_for_purchase failed', error);
+    return json({ error: 'Failed to credit tokens' }, 500);
+  }
+
+  const result = data as unknown as CreditResult;
+  return json(
+    {
+      success: true,
+      new_balance: result.new_balance,
+      tokens_added: result.credited ? args.amount : 0,
+    },
+    200
+  );
+}
+
+function json(body: unknown, status: number): Response {
+  return new Response(JSON.stringify(body), {
+    headers: { 'Content-Type': 'application/json' },
+    status,
+  });
+}
+
 /**
- * Placeholder: extract product ID from receipt data.
- * In production, this comes from the validated receipt response from Apple/Google.
- * For now, attempt to find a known product ID in the receipt string.
+ * Staging-only: best-effort product id recovery from an opaque receipt blob
+ * when the client omitted productId. Never used on the verified paths.
  */
 function extractProductIdFromReceipt(receipt: string): string {
   for (const productId of Object.keys(PRODUCT_TOKEN_MAP)) {
@@ -192,7 +248,7 @@ function extractProductIdFromReceipt(receipt: string): string {
   return '';
 }
 
-/** Simple hash for receipt deduplication (not cryptographic) */
+/** Simple hash for staging receipt deduplication (not cryptographic) */
 function simpleHash(str: string): string {
   let hash = 0;
   for (let i = 0; i < str.length; i++) {
