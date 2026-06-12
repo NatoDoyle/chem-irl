@@ -211,7 +211,7 @@ Mobile app uses `EXPO_PUBLIC_*` env vars loaded via Expo. See `mobile/.env.examp
 ### Enforcement hooks
 `.claude/hooks/` runs on `PreToolUse` to enforce the rules above:
 - `block-edit-on-main.sh` — blocks `Edit`/`Write`/`NotebookEdit` when the target file's working tree is on `main` (worktree-aware: resolves the branch from the file's directory, not the shell CWD).
-- `block-push-to-main.sh` — blocks `git push` when the shell's CWD is on `main`.
+- `block-push-to-main.sh` — blocks **local** `git push` when the shell's CWD is on `main`. Quoted payloads are stripped before matching, so remote-repo pushes on other machines (e.g. `ssh openclaw '… && git push …'`) and quoted strings that merely mention `git push` are out of its jurisdiction and allowed. Wrapping a real local push in quotes to evade it counts as bypassing a hook (forbidden).
 - `enforce-branch-hygiene.sh` — runs on `git checkout -b` / `git switch -c`. **Always blocks the command when run from the primary checkout** (use `git worktree add -b ... origin/main` instead). Inside a worktree it still blocks if the working tree is dirty and warns if the local branch count exceeds 5.
 
 If a hook blocks a tool call, the fix is almost always "create or move to a worktree first," not bypassing the hook.
