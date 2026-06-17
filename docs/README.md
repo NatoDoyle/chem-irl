@@ -29,6 +29,12 @@ Organized documentation for the Chem IRL dating app.
 - **[OpenClaw CMO VPS](./infrastructure/OPENCLAW_CMO_VPS.md)** — Hetzner box running the OpenClaw agent platform + Autonomous CMO (architecture, current state, go-live runbook, improvements)
 - **[Security Audit](./infrastructure/SECURITY_AUDIT.md)**
 
+## Operations (launch + trust & safety)
+
+- **[Moderation Runbook](./operations/MODERATION_RUNBOOK.md)** — how reports are received, triaged, and actioned; 24h SLA queries; enforcement + durable-ban procedure
+- **[App Review Compliance Pack](./operations/APP_REVIEW_COMPLIANCE.md)** — dating/UGC App Review checklist mapped to shipped features; reviewer-notes script; the OTP demo-account setup
+- **[DSAR Runbook](./operations/DSAR_RUNBOOK.md)** — GDPR access/portability/erasure handling, with the per-user export query
+
 ## Per-app & data docs
 
 - **[Mobile App README](../mobile/README.md)** — plus detailed guides in [`../mobile/docs/`](../mobile/docs/README.md)
