@@ -34,6 +34,7 @@ Organized documentation for the Chem IRL dating app.
 - **[Moderation Runbook](./operations/MODERATION_RUNBOOK.md)** — how reports are received, triaged, and actioned; 24h SLA queries; enforcement + durable-ban procedure
 - **[App Review Compliance Pack](./operations/APP_REVIEW_COMPLIANCE.md)** — dating/UGC App Review checklist mapped to shipped features; reviewer-notes script; the OTP demo-account setup
 - **[DSAR Runbook](./operations/DSAR_RUNBOOK.md)** — GDPR access/portability/erasure handling, with the per-user export query
+- **[DPIA + Article 30 Records](./operations/DPIA.md)** — mandatory data-protection impact assessment (special-category data + profiling + location) and the processing-activities register; DRAFT for DPO/legal review
 
 ## Per-app & data docs
 
