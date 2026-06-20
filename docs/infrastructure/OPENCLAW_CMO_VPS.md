@@ -1,6 +1,6 @@
 # OpenClaw CMO VPS — Architecture & Operations
 
-**Type:** Living ops doc · **Last verified:** 2026-06-17 (Learn-loop pass) · **Owner:** Nathan Doyle
+**Type:** Living ops doc · **Last verified:** 2026-06-20 (content-grounding pass) · **Owner:** Nathan Doyle
 **Host:** Hetzner VPS `OpenClaw` · `188.245.123.146` · access: `ssh openclaw`
 
 > State sections (§1, §4–§8) describe the box **as observed on the Last verified date** — when you
@@ -28,7 +28,7 @@ rationale; the [Phase 0/1 build plan](../superpowers/plans/2026-06-09-autonomous
 | OpenClaw gateway | ✅ LIVE | `openclaw-gateway.service` (user unit), v2026.6.1, port 18789 |
 | Telegram bot | ✅ LIVE | `@Natosopenclawbot`, DM-only, paired operator chat 5355963011 |
 | CMO code (`/root/marketing`) | ✅ LIVE | 28 unit tests green (all HTTP mocked); running autonomously since 2026-06-10 |
-| CMO timers | ✅ SEVEN ENABLED | collect 06:01 + nudge 10:00 daily · listen Mon 07:30 · digest Mon 08:02 · **strategy Mon 08:30** · backup 06:31 · health 07:04 (UTC, randomized delay) |
+| CMO timers | ✅ EIGHT ENABLED | collect 06:01 + blog-index 06:15 + backup 06:31 + health 07:04 + nudge 10:00 daily · listen Mon 07:30 · digest Mon 08:02 · **strategy Mon 08:30** (UTC, randomized delay) |
 | CMO `.env` | ✅ Present (600) | bot token + Supabase anon + Tensorix key (25-char `sk-v…`) + nudge secret |
 | CMO database (`data/cmo.db`) | ✅ COLLECTING | Daily waitlist + weekly listening snapshots |
 | Snapshot RPCs (v1 + **v2**) | ✅ LIVE in prod | v2 adds per-utm_source/referral/share-channel splits (PR #140) — digest Channels section |
@@ -384,6 +384,12 @@ imports/`{}`-expressions, ≥1500-char body, all-or-nothing), build-gates the si
 post. Authority is L1 — the agent drafts in Telegram and the founder approves before it writes to the
 inbox; the jail is the backstop, not the process. E2E verified: valid dry-run green, attack post
 rejected in CI.
+
+**Not-repeating-itself:** the CMO has no chem-irl checkout, so `cmo/refresh_blog_index.py` reads the
+**public** repo over HTTP and writes `context/PUBLISHED_POSTS.md` — every live post's slug, category,
+primaryQuestion, citableClaim, and entities (49 posts at last refresh; daily `cmo-blogindex.timer` +
+a mandatory pre-draft refresh). The playbook requires the agent to consult it before drafting so it
+never reuses a question, contradicts a prior claim, or fails to internally link.
 
 ## 8. Deployment state: built vs live
 
