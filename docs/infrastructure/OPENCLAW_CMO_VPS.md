@@ -1,6 +1,6 @@
 # OpenClaw CMO VPS — Architecture & Operations
 
-**Type:** Living ops doc · **Last verified:** 2026-06-20 (content-grounding pass) · **Owner:** Nathan Doyle
+**Type:** Living ops doc · **Last verified:** 2026-06-20 (Bronto observability wired) · **Owner:** Nathan Doyle
 **Host:** Hetzner VPS `OpenClaw` · `188.245.123.146` · access: `ssh openclaw`
 
 > State sections (§1, §4–§8) describe the box **as observed on the Last verified date** — when you
@@ -21,13 +21,13 @@ rationale; the [Phase 0/1 build plan](../superpowers/plans/2026-06-09-autonomous
 
 ## 1. At a glance
 
-| Component | State (2026-06-17) | Detail |
+| Component | State (2026-06-20) | Detail |
 |---|---|---|
 | Host | ✅ UP | Hetzner, Ubuntu 26.04 LTS, 2 vCPU / 3.7 GiB / 75 GiB (5% used) |
 | Access | ✅ Working | `ssh openclaw` → root, key `~/.ssh/openclaw_hetzner` |
 | OpenClaw gateway | ✅ LIVE | `openclaw-gateway.service` (user unit), v2026.6.1, port 18789 |
 | Telegram bot | ✅ LIVE | `@Natosopenclawbot`, DM-only, paired operator chat 5355963011 |
-| CMO code (`/root/marketing`) | ✅ LIVE | 28 unit tests green (all HTTP mocked); running autonomously since 2026-06-10 |
+| CMO code (`/root/marketing`) | ✅ LIVE | 35 unit tests green (all HTTP mocked); running autonomously since 2026-06-10 |
 | CMO timers | ✅ EIGHT ENABLED | collect 06:01 + blog-index 06:15 + backup 06:31 + health 07:04 + nudge 10:00 daily · listen Mon 07:30 · digest Mon 08:02 · **strategy Mon 08:30** (UTC, randomized delay) |
 | CMO `.env` | ✅ Present (600) | bot token + Supabase anon + Tensorix key (25-char `sk-v…`) + nudge secret |
 | CMO database (`data/cmo.db`) | ✅ COLLECTING | Daily waitlist + weekly listening snapshots |
@@ -41,6 +41,7 @@ rationale; the [Phase 0/1 build plan](../superpowers/plans/2026-06-09-autonomous
 | Kill-switch (`PAUSED` flag) | ✅ Mechanism in place | Flag not currently set (nothing to pause yet) |
 | Backups for `/root/marketing` | ✅ Off-box | Private repo `NatoDoyle/chem-irl-marketing` (write deploy key) + nightly snapshot push |
 | Failure alerting | ✅ Armed | `OnFailure=` → Telegram via `cmo-alert@` (`.env`-gated no-op until go-live) |
+| Observability | ✅ Structured + shipped | Every job emits one JSON event → journald **and** Bronto ingest (service `chem-irl-cmo`); Alex queries history via the Bronto MCP (§5, §10, §12 C5) |
 | Host security | ✅ Hardened | UFW deny-in (22 only) · fail2ban (sshd) · key-only SSH (password auth off) |
 
 **Verdict:** the loop now spans **Sense → Synthesise → Create → Learn**, running autonomously. Each
@@ -193,7 +194,7 @@ read-only; required before Phase 2 content work.
 | `~/.openclaw/.env` | `TENSORIX_API_KEY` — **the only var in it** | `600` |
 | `~/.openclaw/openclaw.json` | Gateway auth token (`gateway.auth.token`) · **Telegram bot token** (`channels.telegram.botToken`) · Tensorix provider config · Bronto MCP URL + API-key header (`mcp.servers.bronto`) | `600`-class dir |
 | `~/.openclaw/credentials/` | `telegram-default-allowFrom.json` (DM allowlist) · `telegram-pairing.json` (pairing requests) — **no tokens here** | `600` |
-| `/root/marketing/.env` | CMO secrets — **does not exist yet** (§9 creates it) | — |
+| `/root/marketing/.env` | CMO secrets: Telegram bot token + operator chat id · Supabase URL + anon key · Tensorix key · nudge webhook secret · **Bronto ingest URL + API key + service** | `600` |
 
 > The Phase 0/1 build plan assumed the bot token lived in `~/.openclaw/.env` — **it doesn't**.
 > The authoritative location is `channels.telegram.botToken` inside `~/.openclaw/openclaw.json`.
@@ -209,9 +210,17 @@ self-state: `AGENTS.md` (operating instructions), `SOUL.md` / `IDENTITY.md` (per
 (persistent memory), `USER.md` (operator profile). The CMO playbook deliberately lives **outside**
 this workspace, in `/root/marketing/`, so marketing state and agent state stay separable.
 
-**Observability.** A **Bronto MCP server** is configured on the gateway (`mcp.servers.bronto` —
-URL + API-key header), giving the agent log/observability tooling. The CMO scripts themselves do
-plain stdout/stderr → journald (§10), with no alerting (§12 R3).
+**Observability.** Two halves, one Bronto key. **(1) Query** — a **Bronto MCP server** on the gateway
+(`mcp.servers.bronto`, URL + API-key header) gives the agent log-search tooling
+(`bronto__search_logs` / `bronto__timeseries` / `bronto__get_datasets`). **(2) Emit** — every CMO job
+(`collect`/`digest`/`nudge`/`listen`) writes one structured JSON event via `cmo/obs.py` to **journald
+and** Bronto's HTTP ingest (`POST ingestion.eu.bronto.io`, NDJSON, service `chem-irl-cmo`), carrying
+that run's metrics (collect ships total/confirmed/female/failures). The ship is **fail-open** — a
+Bronto outage logs to stderr and never breaks the job. The same API key serves both directions; it
+lives in `/root/marketing/.env` (`BRONTO_INGEST_URL` / `BRONTO_API_KEY` / `BRONTO_SERVICE`). The
+playbook tells the agent to query this history when a metric moves in the weekly strategy loop (§7.4).
+Wired + verified end-to-end 2026-06-20 (C5, §12.3); active failure *alerting* on top of it is still
+§12 R3.
 
 ## 6. The CMO system (`/root/marketing`)
 
@@ -219,7 +228,7 @@ A standalone git repo (13 commits; remote: **private GitHub `NatoDoyle/chem-irl-
 write-scoped deploy key — the nightly backup timer pushes code + a DB snapshot off-box) containing
 a dependency-light Python package. Venv at `.venv/` on **Python 3.14.4** (the plan specified 3.12;
 3.14 is what `apt` provided — recorded deviation, no functional impact). Only two dependencies,
-pinned: `requests==2.34.2`, `pytest==9.0.3`. Test suite: **12/12 green**, all HTTP mocked — the
+pinned: `requests==2.34.2`, `pytest==9.0.3`. Test suite: **35/35 green**, all HTTP mocked — the
 suite proves wiring and parsing, not live credentials.
 
 ### 6.1 Module inventory
@@ -452,6 +461,9 @@ with open('.env', 'w') as f:
     f.write("PLAUSIBLE_API_KEY=\n")   # unused — Plausible dropped 2026-06-10 (C2)
     f.write("PLAUSIBLE_SITE_ID=\n")
     f.write("TENSORIX_API_KEY=\n")
+    f.write("BRONTO_INGEST_URL=https://ingestion.eu.bronto.io\n")
+    f.write("BRONTO_API_KEY=<paste Bronto API key — same as the MCP>\n")
+    f.write("BRONTO_SERVICE=chem-irl-cmo\n")
 print("wrote .env")
 PY
 chmod 600 .env && ls -la .env    # expect -rw-------
@@ -524,11 +536,14 @@ end-to-end during the build) or `systemctl --user disable --now cmo-collect.time
 | Kill-switch state | `ls -la /root/marketing/PAUSED 2>/dev/null \|\| echo "not paused"` |
 | Timer state | `systemctl --user list-timers \| grep cmo` |
 | CMO job logs | `journalctl --user -u cmo-collect -n 50` · `journalctl --user -u cmo-digest -n 50` |
+| Query event history (Bronto) | Ask Alex over Telegram, or via the Bronto MCP: `bronto__search_logs` / `bronto__timeseries`, service `chem-irl-cmo` |
 | Inspect the DB | `cd /root/marketing && .venv/bin/python -c "import sqlite3;[print(r) for r in sqlite3.connect('data/cmo.db').execute('select surface,metric,value,captured_at from metric_snapshots order by id desc limit 10')]"` |
 | Box health | `df -h /` · `free -h` · `systemctl --user list-units --failed` |
 
-Logging is stdout/stderr → journald only. **Nothing alerts on failure** — a broken connector
-fails silently until someone reads the journal or notices a thin digest (§12 R3).
+Each job also emits one structured JSON event to journald **and** Bronto (§5), so run history and
+failures (`status:"error"`) stay queryable after the fact. There is still no *active* alert push on
+failure beyond the armed `OnFailure=` Telegram hook — a broken connector won't page you; you query
+Bronto or read the journal (§12 R3).
 
 ## 11. Security posture & accepted risks
 
@@ -605,7 +620,7 @@ Top five by leverage:
 | C2 | Plausible decision + possible v1→v2 migration of `connectors/plausible.py` | §9 decision box; v2 (`/api/v2/query`) is where Plausible is headed | S–L | ✅ Decided 2026-06-10 — dropped; connector unwired/dormant; revisit at Phase 2 |
 | C3 | Retention policy for `raw_snapshots` (e.g. keep 90 days) | Unbounded JSON blobs on a small disk | S | ✅ Done 2026-06-09 (90-day prune in run_collect) |
 | C4 | Use or drop the `dims` column | Dead schema invites confusion; spec §12 intended per-dimension metrics | S | P3 |
-| C5 | Structured logging (one JSON line per connector run with status/duration/row-counts) | Makes R3 alerting and later dashboards trivial | S | P2 |
+| C5 | Structured logging (one JSON line per connector run with status/duration/row-counts) | Makes R3 alerting and later dashboards trivial | S | ✅ Done 2026-06-20 — `cmo/obs.py` → journald + Bronto ingest (§5); Alex queries via the Bronto MCP |
 | C6 | LLM-written digest narrative (template stays as fallback) | `TENSORIX_API_KEY` is already on the box; spec kept Phase 0/1 template-only deliberately | M | P2 (Phase 1.5) |
 | C7 | Context-pack refresh mechanism (scp from repo on change, or a checksum warning in the digest) | `context/*.md` are 2026-06-09 copies; brand voice drift = off-brand CMO outputs later | S | P1 (before Phase 2) |
 | C8 | MCP-wrap the connectors | Spec §5.2's end-state: every connector call visible/loggable as an agent tool | M | P2 (Phase 1.5–2) |
