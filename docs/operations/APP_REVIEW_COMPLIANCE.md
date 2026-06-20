@@ -51,7 +51,9 @@ Immediate, no support-ticket detour — exactly what the guideline wants.
 Auth is email OTP with no passwords — a reviewer cannot receive our
 codes. **Before TestFlight Beta App Review (T1.7):**
 
-1. Create a dedicated review account (e.g. `review@chemirl.app`).
+1. Use the dedicated review account **`reviewy@chemirl.app`** (note the
+   spelling — `reviewy`, with a y; distinct from the `safety@chemirl.app`
+   moderator account). It must do a one-time OTP sign-in to exist.
 2. Configure a **fixed test OTP** for it in Supabase Auth (test
    addresses with predefined codes), so the printed code always works.
 3. Complete its profile fully (photos, completed onboarding) so the

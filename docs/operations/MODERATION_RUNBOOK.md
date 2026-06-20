@@ -26,12 +26,19 @@ chain, and the 24-hour SLA stamped on every report.
 ## Who moderates
 
 Moderator access is gated on a row in `public.moderators` (RLS policies on
-`reports`/`enforcements` check it — audit findings F4/F4b). **The table is
-currently empty**; seed before beta:
+`reports`/`enforcements` check it — audit findings F4/F4b). The designated
+moderator account is the dedicated role address **`safety@chemirl.app`**
+(not a personal dating profile, so it never enters discovery and survives
+independent of any personal account).
+
+**The account must do a one-time OTP sign-in in the app first** — that mints
+the `auth.users` row the seed references (it need not finish onboarding).
+**The table is currently empty**; seed before beta:
 
 ```sql
+-- Seeds by email so you don't have to look up the uuid:
 INSERT INTO public.moderators (user_id)
-VALUES ('<auth.users id of the moderator>');
+SELECT id FROM auth.users WHERE email = 'safety@chemirl.app';
 ```
 
 Until a web admin exists, moderation runs through Supabase Studio (SQL
