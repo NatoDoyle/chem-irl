@@ -59,7 +59,8 @@ SELECT jsonb_build_object(
   'blocks_made',    (SELECT jsonb_agg(to_jsonb(b)) FROM public.blocks b WHERE b.blocker_id = :uid),
   'reports_made',   (SELECT jsonb_agg(to_jsonb(r)) FROM public.reports r WHERE r.reporter_id = :uid),
   'push_tokens',    (SELECT jsonb_agg(to_jsonb(pt)) FROM public.push_tokens pt WHERE pt.user_id = :uid),
-  'surveys',        (SELECT jsonb_agg(to_jsonb(sv)) FROM public.surveys sv WHERE sv.user_id = :uid)
+  'surveys',        (SELECT jsonb_agg(to_jsonb(sv)) FROM public.surveys sv WHERE sv.user_id = :uid),
+  'analytics_events', (SELECT jsonb_agg(to_jsonb(ae)) FROM public.analytics_events ae WHERE ae.user_id = :uid)
 ) AS export;
 ```
 

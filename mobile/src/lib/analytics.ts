@@ -1,14 +1,14 @@
 /**
- * Analytics utilities for tracking user actions
+ * Analytics utilities for tracking user actions.
  *
- * Provides a simple analytics interface that can be extended with
- * PostHog, Mixpanel, or other analytics SDKs in the future.
- * Currently logs to console in development, can be extended to
- * send to analytics service in production.
+ * Decision D1: behavioural analytics are stored Supabase-native (our own
+ * EU Postgres `analytics_events` table) rather than a third-party SDK, to
+ * minimise processor/transfer surface. trackEvent logs to console in dev
+ * and writes to the table in production (fire-and-forget).
  */
 
-// Lazy import analytics SDK if configured (e.g., PostHog, Mixpanel)
-// For now, we'll use a simple interface that can be extended
+import { Platform } from 'react-native';
+import { supabase } from './supabase/client';
 
 export type AnalyticsEvent =
   | 'user_signed_up'
@@ -70,51 +70,65 @@ export interface AnalyticsProperties {
   [key: string]: string | number | boolean | null | undefined;
 }
 
-let analyticsEnabled = false;
-
 /**
- * Track an analytics event
+ * Track an analytics event. In development this logs to the console only
+ * (so dev activity never pollutes the events table). In production it
+ * writes to `analytics_events` fire-and-forget — analytics must never
+ * block or break a user flow.
  */
 export function trackEvent(event: AnalyticsEvent, properties?: AnalyticsProperties): void {
   if (__DEV__) {
-    // Log to console in development
     console.log('[Analytics]', event, properties || {});
+    return;
   }
+  void recordEvent(event, properties);
+}
 
-  // In production, send to analytics service
-  if (analyticsEnabled) {
-    // TODO: Send to analytics SDK (PostHog, Mixpanel, etc.)
-    // Example:
-    // posthog.capture(event, properties);
+/**
+ * Write a single event to the Supabase-native `analytics_events` table for
+ * the currently authenticated user. No-ops when there is no session (we
+ * only record authenticated events) and swallows all errors. Exposed
+ * separately from trackEvent so the write can be awaited in tests.
+ */
+export async function recordEvent(
+  event: AnalyticsEvent,
+  properties?: AnalyticsProperties
+): Promise<void> {
+  try {
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+    const userId = session?.user?.id;
+    if (!userId) return;
+
+    await supabase.from('analytics_events').insert({
+      user_id: userId,
+      event,
+      properties: properties ?? {},
+      platform: Platform.OS,
+    });
+  } catch {
+    // Analytics must never break a user flow.
   }
 }
 
 /**
- * Identify a user (set user properties)
+ * Identify a user. Retained for call-site compatibility; under the
+ * Supabase-native model each event already carries user_id, so there is no
+ * separate identity to set. Logs in dev for traceability.
  */
 export function identifyUser(userId: string, properties?: AnalyticsProperties): void {
   if (__DEV__) {
     console.log('[Analytics] Identify user:', userId, properties || {});
   }
-
-  if (analyticsEnabled) {
-    // TODO: Identify user in analytics SDK
-    // Example:
-    // posthog.identify(userId, properties);
-  }
 }
 
 /**
- * Reset user identity (on logout)
+ * Reset analytics identity on logout. No-op under the Supabase-native model
+ * (identity is per-event user_id). Logs in dev for traceability.
  */
 export function resetUser(): void {
   if (__DEV__) {
     console.log('[Analytics] Reset user');
-  }
-
-  if (analyticsEnabled) {
-    // TODO: Reset user in analytics SDK
-    // Example:
-    // posthog.reset();
   }
 }
