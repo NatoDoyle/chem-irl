@@ -346,6 +346,13 @@ async function sendConfirmationEmail(args: ConfirmationEmailArgs): Promise<void>
   const statusUrl = args.referralCode
     ? `${successBase}?code=${encodeURIComponent(args.referralCode)}`
     : null;
+  // Directly shareable invite link — same canonical format as the D7
+  // waitlist-nudge (chemirl.app/download?ref=…). Including it here starts
+  // the referral loop at signup instead of waiting for the success page or
+  // the day-7 nudge. Secondary to the confirm CTA below.
+  const shareUrl = args.referralCode
+    ? `https://chemirl.app/download?ref=${encodeURIComponent(args.referralCode)}`
+    : null;
 
   const greeting = args.firstName ? `Hey ${args.firstName},` : 'Hey,';
   const positionLine = args.position
@@ -365,17 +372,23 @@ async function sendConfirmationEmail(args: ConfirmationEmailArgs): Promise<void>
   <p style="color:#475569;font-size:14px;">Or copy this link into your browser:<br><span style="word-break:break-all;">${confirmUrl}</span></p>
   ${
     statusUrl
-      ? `<p style="color:#475569;font-size:14px;">Check your spot and grab your referral link any time:<br><a href="${statusUrl}" style="color:#0F766E;word-break:break-all;">${statusUrl}</a></p>`
+      ? `<p style="color:#475569;font-size:14px;">Check your spot any time:<br><a href="${statusUrl}" style="color:#0F766E;word-break:break-all;">${statusUrl}</a></p>`
+      : ''
+  }
+  ${
+    shareUrl
+      ? `<p style="color:#475569;font-size:14px;">Want to move up? You climb the list for every friend who joins with your invite link:<br><a href="${shareUrl}" style="color:#0F766E;word-break:break-all;">${shareUrl}</a></p>`
       : ''
   }
   <hr style="border:none;border-top:1px solid #E2E8F0;margin:32px 0;">
   <p style="color:#475569;font-size:12px;">If you didn't sign up for Chem IRL, you can ignore this email — your address won't be added to anything.</p>
 </body></html>`;
 
-  const statusText = statusUrl
-    ? `\nCheck your spot and grab your referral link any time:\n${statusUrl}\n`
+  const statusText = statusUrl ? `\nCheck your spot any time:\n${statusUrl}\n` : '';
+  const shareText = shareUrl
+    ? `\nWant to move up? You climb the list for every friend who joins with your invite link:\n${shareUrl}\n`
     : '';
-  const text = `${greeting}\n\n${positionLine} Confirm your email:\n${confirmUrl}\n${statusText}\nIf you didn't sign up for Chem IRL, ignore this email.\n`;
+  const text = `${greeting}\n\n${positionLine} Confirm your email:\n${confirmUrl}\n${statusText}${shareText}\nIf you didn't sign up for Chem IRL, ignore this email.\n`;
 
   // Feature flag: if Resend isn't wired up yet, log the payload and bail.
   if (!apiKey) {
