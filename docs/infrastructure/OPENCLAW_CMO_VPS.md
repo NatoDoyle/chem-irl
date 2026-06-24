@@ -63,11 +63,13 @@ channels. The full vision, success criteria, and explicit non-goals are
 that the founder's weekly involvement shrinks to reading one digest, approving a content queue, and
 occasional redirection.
 
-What is on this box today is **Phase 0/1 ("Sense") only**: collect waitlist + site analytics into a
-local store and send a weekly Telegram digest. The system's authority level is
-**L0 — read-only analyst** on the spec's trust ramp (spec §9.1): it cannot post, publish, or send
-anything to anyone except the founder's own Telegram. Content creation (Phase 2), publishing
-(Phase 3), and the learn loop / autonomy ramp (Phase 4) are designed but not built.
+As of mid-2026 the loop spans **Sense → Synthesise → Create → Learn** (§1): it collects waitlist
+metrics + listening into a local store, sends a weekly LLM-narrated digest, runs a weekly strategy
+loop that re-ranks the content plan, and publishes blog posts through a credential-free jail. Its
+authority on the spec's trust ramp (spec §9.1) is **L1 (draft-and-approve) for blog posts** and
+**L0 (read-only) everywhere else** — it never posts to social or messages users; the only public
+surface it can touch is the blog, gated on founder approval (§7.5). Still not built: social
+distribution (Phase 3 — blocked on developer apps) and the autonomy ramp beyond L1 (Phase 4).
 
 ## 3. Architecture
 
@@ -86,7 +88,7 @@ anything to anyone except the founder's own Telegram. Content creation (Phase 2)
                               │   │                                        │   │                            │
                               │   ├─ cmo-backup/-health timers (enabled)   │   │  Supabase PostgREST        │
                               │   └─ [cmo-collect/-digest timers]          │   │   marketing_waitlist_      │
-                              │       ┄┄ installed, not enabled (§9) ┄┄    │   │   snapshot() RPC (anon)    │
+                              │       ┄┄ all enabled 2026-06-10 (§9) ┄┄    │   │   snapshot() RPC (anon)    │
                               │  /root/marketing — git repo ──nightly push─┼───┼─► GitHub (private backup)  │
                               │   ├─ cmo/         Python 3.14 venv ────────┼───┼───┤                        │
                               │   ├─ data/cmo.db  (absent until 1st run)   │   │   │                        │
@@ -123,7 +125,7 @@ paired operator chat, and the nightly git push goes to the private backup repo.
    raw_snapshots                                     ▼
                                             founder's Telegram DM
 
- * timer files exist in /root/marketing/systemd/ but are NOT installed/enabled — see §9 step 5
+ * LIVE since 2026-06-10: both timers are installed + enabled (§9 step 5; full schedule in §6.3).
 ```
 
 ### 3.3 Mapping to the spec's component model
@@ -131,18 +133,19 @@ paired operator chat, and the nightly git push goes to the private backup repo.
 The spec ([§5](../superpowers/specs/2026-06-09-autonomous-cmo-design.md)) names five components.
 As-built status:
 
-| Spec component | As-built (Phase 0/1) |
+| Spec component | As-built (current) |
 |---|---|
-| CMO Orchestrator | The OpenClaw `main` agent (§5 below). Runs CMO scripts via its exec tool per `playbook.md`; not yet re-prompted as a dedicated CMO persona |
-| Connectors | `cmo/connectors/waitlist.py` + `plausible.py` — plain Python modules, **not** yet MCP-wrapped (§12 C8) |
+| CMO Orchestrator | The OpenClaw `main` agent, now the **"Alex" CMO persona** (workspace `IDENTITY`/`MEMORY`/`AGENTS`). Runs `cmo` scripts via its exec tool per `playbook.md` |
+| Connectors | `waitlist.py` + `listen.py` (+ dormant `plausible.py`) and BrowserUse research (§6.5) — plain Python, **not** yet MCP-wrapped (§12 C8) |
 | Marketing Store | SQLite at `data/cmo.db` (spec §18 decision ⑤ adopted) — two of the spec §12 tables exist (`metric_snapshots`, `raw_snapshots`) |
-| Scheduler | systemd user timers — written, not installed (§9) |
-| Control plane (Telegram) | The existing hardened DM channel; founder asks the agent to run playbook commands. No `cmo …` command vocabulary built yet |
+| Scheduler | systemd user timers — **8 enabled** + research installed-off (§6.3) |
+| Control plane (Telegram) | The hardened DM channel; founder asks Alex to run the playbook's `cmo …` commands (collect/digest/links/browse/research/serp/factcheck — §6.4 / §10) |
 
-**Not on this box yet:** anything from Phases 2–4 (content engine, publishing connectors,
-newsletter automation, experiments), MCP-wrapped connectors, the spec's "brand copy → Claude" model
-route, social read-connectors, and the `content_items`/`post_log`/`research_notes`/`experiments`
-tables from spec §12.
+**Live now:** Create (blog publishing, §7.5) and Learn (strategy loop, §7.4) at **L1**, plus BrowserUse
+research (§6.5). **Not on this box yet:** social distribution (Phase 3 — blocked on developer apps),
+newsletter automation, MCP-wrapped connectors (§12 C8), the "brand copy → Claude" model route
+(§12 P5), and the `content_items`/`post_log`/`experiments` tables from spec §12 (research currently
+lands in `raw_snapshots`).
 
 ## 4. The host
 
