@@ -1,6 +1,6 @@
 # OpenClaw CMO VPS — Architecture & Operations
 
-**Type:** Living ops doc · **Last verified:** 2026-06-20 (Bronto observability wired) · **Owner:** Nathan Doyle
+**Type:** Living ops doc · **Last verified:** 2026-06-24 (BrowserUse web + market research) · **Owner:** Nathan Doyle
 **Host:** Hetzner VPS `OpenClaw` · `188.245.123.146` · access: `ssh openclaw`
 
 > State sections (§1, §4–§8) describe the box **as observed on the Last verified date** — when you
@@ -21,15 +21,15 @@ rationale; the [Phase 0/1 build plan](../superpowers/plans/2026-06-09-autonomous
 
 ## 1. At a glance
 
-| Component | State (2026-06-20) | Detail |
+| Component | State (2026-06-24) | Detail |
 |---|---|---|
 | Host | ✅ UP | Hetzner, Ubuntu 26.04 LTS, 2 vCPU / 3.7 GiB / 75 GiB (5% used) |
 | Access | ✅ Working | `ssh openclaw` → root, key `~/.ssh/openclaw_hetzner` |
 | OpenClaw gateway | ✅ LIVE | `openclaw-gateway.service` (user unit), v2026.6.1, port 18789 |
 | Telegram bot | ✅ LIVE | `@Natosopenclawbot`, DM-only, paired operator chat 5355963011 |
-| CMO code (`/root/marketing`) | ✅ LIVE | 35 unit tests green (all HTTP mocked); running autonomously since 2026-06-10 |
-| CMO timers | ✅ EIGHT ENABLED | collect 06:01 + blog-index 06:15 + backup 06:31 + health 07:04 + nudge 10:00 daily · listen Mon 07:30 · digest Mon 08:02 · **strategy Mon 08:30** (UTC, randomized delay) |
-| CMO `.env` | ✅ Present (600) | bot token + Supabase anon + Tensorix key (25-char `sk-v…`) + nudge secret |
+| CMO code (`/root/marketing`) | ✅ LIVE | 43 unit tests green (all HTTP mocked); running autonomously since 2026-06-10 |
+| CMO timers | ✅ EIGHT ENABLED | collect 06:01 + blog-index 06:15 + backup 06:31 + health 07:04 + nudge 10:00 daily · listen Mon 07:30 · digest Mon 08:02 · **strategy Mon 08:30** (UTC, randomized delay). Plus **research Mon 07:00 — installed, NOT enabled** (weekly BrowserUse spend is opt-in, §6.5) |
+| CMO `.env` | ✅ Present (600) | bot token + Supabase anon + Tensorix key (25-char `sk-v…`) + nudge secret + Bronto + **BrowserUse** keys |
 | CMO database (`data/cmo.db`) | ✅ COLLECTING | Daily waitlist + weekly listening snapshots |
 | Snapshot RPCs (v1 + **v2**) | ✅ LIVE in prod | v2 adds per-utm_source/referral/share-channel splits (PR #140) — digest Channels section |
 | Lifecycle email (D7 nudge) | ✅ LIVE | Consent-gated, idempotent, HMAC unsubscribe (PR #141); first batch sent + verified 2026-06-11 |
@@ -37,6 +37,7 @@ rationale; the [Phase 0/1 build plan](../superpowers/plans/2026-06-09-autonomous
 | LLM digest narrative | ✅ LIVE | Tensorix glm-5.1 "read + 3 actions", template fallback (C6) |
 | **Strategy loop (Learn)** | ✅ LIVE | Weekly agent turn (Mon 08:30) re-ranks the content plan within mandate + Telegrams a strategy delta (§7.4); verified W1–W3 |
 | **Blog publishing** | ✅ LIVE | CMO drafts → `blog-inbox/` → chem-irl `blog-sync` workflow validates (markdown jail) + publishes (PR #144, §7.5) |
+| **Web + market research** | ✅ LIVE | BrowserUse cloud browser: `cmo.browse` (ad-hoc) + structured `cmo.research` (competitor / Dublin-scene / AEO) → digest; `cmo.serp` / `cmo.factcheck` on-demand (§6.5). Replaces the dead gateway web_search |
 | UTM link/QR generator | ✅ | `python -m cmo.links <source>` → tagged URL + qr/<slug>.png |
 | Kill-switch (`PAUSED` flag) | ✅ Mechanism in place | Flag not currently set (nothing to pause yet) |
 | Backups for `/root/marketing` | ✅ Off-box | Private repo `NatoDoyle/chem-irl-marketing` (write deploy key) + nightly snapshot push |
@@ -194,7 +195,7 @@ read-only; required before Phase 2 content work.
 | `~/.openclaw/.env` | `TENSORIX_API_KEY` — **the only var in it** | `600` |
 | `~/.openclaw/openclaw.json` | Gateway auth token (`gateway.auth.token`) · **Telegram bot token** (`channels.telegram.botToken`) · Tensorix provider config · Bronto MCP URL + API-key header (`mcp.servers.bronto`) | `600`-class dir |
 | `~/.openclaw/credentials/` | `telegram-default-allowFrom.json` (DM allowlist) · `telegram-pairing.json` (pairing requests) — **no tokens here** | `600` |
-| `/root/marketing/.env` | CMO secrets: Telegram bot token + operator chat id · Supabase URL + anon key · Tensorix key · nudge webhook secret · **Bronto ingest URL + API key + service** | `600` |
+| `/root/marketing/.env` | CMO secrets: Telegram bot token + operator chat id · Supabase URL + anon key · Tensorix key · nudge webhook secret · **Bronto ingest URL + API key + service** · **BrowserUse API key** | `600` |
 
 > The Phase 0/1 build plan assumed the bot token lived in `~/.openclaw/.env` — **it doesn't**.
 > The authoritative location is `channels.telegram.botToken` inside `~/.openclaw/openclaw.json`.
@@ -227,9 +228,10 @@ Wired + verified end-to-end 2026-06-20 (C5, §12.3); active failure *alerting* o
 A standalone git repo (13 commits; remote: **private GitHub `NatoDoyle/chem-irl-marketing`** via a
 write-scoped deploy key — the nightly backup timer pushes code + a DB snapshot off-box) containing
 a dependency-light Python package. Venv at `.venv/` on **Python 3.14.4** (the plan specified 3.12;
-3.14 is what `apt` provided — recorded deviation, no functional impact). Only two dependencies,
-pinned: `requests==2.34.2`, `pytest==9.0.3`. Test suite: **35/35 green**, all HTTP mocked — the
-suite proves wiring and parsing, not live credentials.
+3.14 is what `apt` provided — recorded deviation, no functional impact). Pinned deps in
+`requirements.txt`: `requests`, `pytest`, and `browser-use-sdk==3.8.4` (the cloud research client —
+pulls only `httpx`+`pydantic`; the browser runs off-box, §6.5). Test suite: **43/43 green**, all HTTP
+mocked — the suite proves wiring and parsing, not live credentials.
 
 ### 6.1 Module inventory
 
@@ -250,6 +252,9 @@ suite proves wiring and parsing, not live credentials.
 | `cmo/connectors/listen.py` | Listening (weekly) | Logged-out **RSS**: 6 reddit subs (`top.rss` — `.json` 403s datacenter IPs) + Google News queries; 3s gap + one retry (429s are shard-flaky); fault-isolated, round-robin interleave |
 | `cmo/strategy_delivery.py` | Strategy-delta delivery | Parses `openclaw agent --json` (stdout is polluted with `[agents/tool-policy]` lines), extracts `payloads[].text`, Telegrams it; empty reply → exit 1 → alert |
 | `scripts/strategy_loop.sh` | Weekly Learn loop (§7.4) | One agent turn against the playbook's Strategy-loop procedure → captures the reply → delivers the strategy delta |
+| `cmo/browse.py` | Live web research (BrowserUse) | `python -m cmo.browse "<q>"` runs one cloud-browser task; prose to stdout, status/cost → stderr + Bronto. `research()` takes a pydantic `schema=` for typed output (§6.5) |
+| `cmo/research.py` | Structured market-research engine | Per-task BrowserUse run with a typed schema → JSON in `raw_snapshots` (`research:<kind>`) + a `research` obs event. Tasks: competitor_watch / dublin_scene / aeo_visibility / serp_recon / fact_check |
+| `cmo/run_research.py` · `cmo/serp.py` · `cmo/factcheck.py` | Research entrypoints | Weekly batch · on-demand SERP recon · on-demand draft fact-check |
 | `cmo/run_listen.py` · `cmo/run_collect.py` · `cmo/run_digest.py` | Entrypoints | Each `PAUSED`-gated; wired to a systemd timer |
 
 ### 6.2 Store schema
@@ -266,7 +271,7 @@ Append-only time series; "latest value" and "value on or before <ts>" are the tw
 
 ### 6.3 Scheduling & ops units (partially active)
 
-`systemd/` holds 8 unit files, all installed in `~/.config/systemd/user/`, all hardened
+`systemd/` holds 9 unit files, all installed in `~/.config/systemd/user/`, all hardened
 (`NoNewPrivileges`, `PrivateTmp`, `ProtectSystem=full`) and all timers carrying
 `RandomizedDelaySec=300`:
 
@@ -278,6 +283,9 @@ Append-only time series; "latest value" and "value on or before <ts>" are the tw
   remote.
 - `cmo-health.{service,timer}` (daily 07:00 UTC) — **enabled**. Runs `scripts/health.sh`:
   disk ≥80%, available RAM ≤300 MiB, or failed user units → Telegram alert.
+- `cmo-research.{service,timer}` (Mondays 07:00 UTC, before the digest) — **installed but NOT
+  enabled**. Runs the weekly BrowserUse research batch (§6.5); left off because each run spends
+  BrowserUse credits. Enable when ready: `systemctl --user enable --now cmo-research.timer`.
 - `cmo-alert@.service` — `OnFailure=` target for collect/digest/backup; runs
   `scripts/notify-failure.sh <unit>` which sends the unit name + last journal lines to the
   operator's Telegram. All alerting reads `.env` and is a logged no-op until go-live populates it.
@@ -304,6 +312,35 @@ and **`RESEARCH_SOURCES.md`** (the verified 4-tier research catalog — what to 
 content strategy itself lives in **`content-plan.md`** (pillars, cadence, AEO mechanics, agent-
 maintained brief backlog + changelog). The brand copies are point-in-time (2026-06-09) and do not
 track the repo originals (§12 C7).
+
+### 6.5 Agent web & market research (BrowserUse) — LIVE 2026-06-23
+
+The gateway agent's built-in `web_search`/`web_fetch` are **dead from this box**: there is no SearXNG
+configured, and the datacenter IP gets Cloudflare-403'd on most sites (the same wall reddit `.json`
+hits, §13). The fix is **BrowserUse cloud** — a rendered browser that runs in BrowserUse's cloud (so
+it sees JS and isn't IP-blocked) and only needs the box to make HTTP calls. The SDK `browser-use-sdk`
+is light (httpx+pydantic, **no Chromium**); the `BROWSER_USE_API_KEY` in `.env` pays for the cloud
+compute. Every call's cost lands in Bronto (a `browse`/`research` obs event).
+
+- **`cmo/browse.py`** — `python -m cmo.browse "<q>"`: one ad-hoc research task, findings to stdout.
+  `research(cfg, q, schema=Model)` returns a typed pydantic instance (`result.output`) when given a
+  schema, else the plain text.
+- **`cmo/research.py`** — the structured engine. Each task runs one BrowserUse task with a typed
+  output schema and stores `model_dump()` JSON in `raw_snapshots` under `research:<kind>`:
+  - `competitor_watch` — Tinder/Bumble/Hinge App Store IE pages + reviews + pricing → a so-what.
+  - `dublin_scene` — real low-key date spots + what's on this weekend (content fuel).
+  - `aeo_visibility` — for ~5 curated target questions, is `chemirl.app` surfaced, who ranks, the gap.
+  - `serp_recon` (on-demand, not stored) and `fact_check` (verify a draft's Dublin claims pre-publish).
+- **Digest** gained a **Research** section that surfaces the latest competitor/AEO/scene findings.
+- **Weekly batch** `cmo-research.timer` (Mon 07:00, before the digest) runs the three stored tasks —
+  **installed but NOT enabled**: weekly autospend (~$0.30–0.90/wk of BrowserUse) is founder-opt-in.
+  On-demand commands work now at zero recurring cost.
+
+**Boundary:** all of this is **L0 logged-out reading** — BrowserUse never logs into any account and
+never posts. It makes the agent a sharper analyst/writer; distribution stays manual/L1.
+
+Verified live 2026-06-23: `cmo.browse` extracted example.com's H1 (~$0.012); `cmo.serp` returned a
+typed SERP recon for a Dublin question (~$0.03), both shipping `cost` to Bronto.
 
 ## 7. Chem-irl integration points
 
@@ -530,6 +567,9 @@ end-to-end during the build) or `systemctl --user disable --now cmo-collect.time
 | Gateway logs | `journalctl --user -u openclaw-gateway -n 100 --no-pager` |
 | Collect now | `cd /root/marketing && .venv/bin/python -m cmo.run_collect` |
 | Send digest now | `cd /root/marketing && .venv/bin/python -m cmo.run_digest` |
+| Web research (ad-hoc) | `cd /root/marketing && .venv/bin/python -m cmo.browse "<question>"` |
+| Market research batch | `… -m cmo.run_research` (competitor + scene + AEO → digest; **spends BrowserUse credits**) |
+| SERP recon / fact-check | `… -m cmo.serp "<question>"` · `… -m cmo.factcheck blog-drafts/<slug>.mdx` |
 | Run the test suite | `cd /root/marketing && .venv/bin/pytest -q` |
 | **Pause everything** | `touch /root/marketing/PAUSED` |
 | Resume | `rm -f /root/marketing/PAUSED` |
@@ -656,6 +696,8 @@ One consolidated list — if something on this box surprises you, check here fir
 - **`~/.openclaw/.env` contains TWO `TENSORIX_API_KEY` lines** — the 16-char `tx_…` one is dead; the 25-char `sk-v…` one works. Anything reading that file must take the working one.
 - **glm-5.1 is a reasoning model**: thinking tokens count against `max_tokens`; small budgets return `content: null` on HTTP 200. `narrate.py` budgets 1500 tokens and treats null content as failure.
 - **Reddit `.json` endpoints 403 this datacenter IP; the `top.rss` Atom feeds work** (no scores in RSS). Never log in to reddit from this box (§7.2 rationale).
+- **The gateway agent's `web_search`/`web_fetch` are dead from this box** — no SearXNG, and the datacenter IP is Cloudflare-403'd. Use `cmo.browse` / `cmo.research` (BrowserUse cloud) for any live web lookup (§6.5).
+- **BrowserUse costs real money per call** (~1¢ trivial, a few ¢ per structured research task) on the `BROWSER_USE_API_KEY`; every call's cost is logged to Bronto. The SDK wraps `cost` in a pydantic RootModel and `status` in an enum — unwrap `.cost.root` / `.status.value` (the cmo wrappers already do).
 
 ## 14. Related documents
 
