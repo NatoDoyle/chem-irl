@@ -1,6 +1,6 @@
 # OpenClaw CMO VPS — Architecture & Operations
 
-**Type:** Living ops doc · **Last verified:** 2026-06-24 (BrowserUse web + market research) · **Owner:** Nathan Doyle
+**Type:** Living ops doc · **Last verified:** 2026-06-27 (full observability stack: emit · alert · agent-tracking · forensics · governance · cockpit) · **Owner:** Nathan Doyle
 **Host:** Hetzner VPS `OpenClaw` · `188.245.123.146` · access: `ssh openclaw`
 
 > State sections (§1, §4–§8) describe the box **as observed on the Last verified date** — when you
@@ -21,19 +21,19 @@ rationale; the [Phase 0/1 build plan](../superpowers/plans/2026-06-09-autonomous
 
 ## 1. At a glance
 
-| Component | State (2026-06-24) | Detail |
+| Component | State (2026-06-27) | Detail |
 |---|---|---|
 | Host | ✅ UP | Hetzner, Ubuntu 26.04 LTS, 2 vCPU / 3.7 GiB / 75 GiB (5% used) |
 | Access | ✅ Working | `ssh openclaw` → root, key `~/.ssh/openclaw_hetzner` |
 | OpenClaw gateway | ✅ LIVE | `openclaw-gateway.service` (user unit), v2026.6.1, port 18789 |
 | Telegram bot | ✅ LIVE | `@Natosopenclawbot`, DM-only, paired operator chat 5355963011 |
-| CMO code (`/root/marketing`) | ✅ LIVE | 43 unit tests green (all HTTP mocked); running autonomously since 2026-06-10 |
-| CMO timers | ✅ EIGHT ENABLED | collect 06:01 + blog-index 06:15 + backup 06:31 + health 07:04 + nudge 10:00 daily · listen Mon 07:30 · digest Mon 08:02 · **strategy Mon 08:30** (UTC, randomized delay). Plus **research Mon 07:00 — installed, NOT enabled** (weekly BrowserUse spend is opt-in, §6.5) |
+| CMO code (`/root/marketing`) | ✅ LIVE | 74 unit tests green (all HTTP mocked); 65 commits; running autonomously since 2026-06-10 |
+| CMO timers | ✅ ELEVEN ENABLED | collect 06:01 + blog-index 06:15 + backup 06:31 + health 07:04 + **alertcheck 07:33** + nudge 10:00 + **logship every 15 min** daily · listen Mon 07:30 · digest Mon 08:02 · **strategy Mon 08:30** · **insights Fri 16:03** (UTC, randomized delay). Plus **research Mon 07:00** + **trendsweep Thu 08:00** — installed, NOT enabled (weekly BrowserUse spend is opt-in, §6.5 / §6.6) |
 | CMO `.env` | ✅ Present (600) | bot token + Supabase anon + Tensorix key (25-char `sk-v…`) + nudge secret + Bronto + **BrowserUse** keys |
 | CMO database (`data/cmo.db`) | ✅ COLLECTING | Daily waitlist + weekly listening snapshots |
 | Snapshot RPCs (v1 + **v2**) | ✅ LIVE in prod | v2 adds per-utm_source/referral/share-channel splits (PR #140) — digest Channels section |
 | Lifecycle email (D7 nudge) | ✅ LIVE | Consent-gated, idempotent, HMAC unsubscribe (PR #141); first batch sent + verified 2026-06-11 |
-| Listening | ✅ LIVE | Logged-out **6 reddit subs + Google News RSS**, Mon 07:30 → digest Listening section (§7.3) |
+| Listening | ✅ LIVE | Logged-out **6 reddit subs + Google News RSS** (Mon 07:30) → digest; plus the **last30days** skill (engagement-ranked reddit/TikTok/IG via ScrapeCreators) Alex drives on demand (§6.6) |
 | LLM digest narrative | ✅ LIVE | Tensorix glm-5.1 "read + 3 actions", template fallback (C6) |
 | **Strategy loop (Learn)** | ✅ LIVE | Weekly agent turn (Mon 08:30) re-ranks the content plan within mandate + Telegrams a strategy delta (§7.4); verified W1–W3 |
 | **Blog publishing** | ✅ LIVE | CMO drafts → `blog-inbox/` → chem-irl `blog-sync` workflow validates (markdown jail) + publishes (PR #144, §7.5) |
@@ -41,8 +41,11 @@ rationale; the [Phase 0/1 build plan](../superpowers/plans/2026-06-09-autonomous
 | UTM link/QR generator | ✅ | `python -m cmo.links <source>` → tagged URL + qr/<slug>.png |
 | Kill-switch (`PAUSED` flag) | ✅ Mechanism in place | Flag not currently set (nothing to pause yet) |
 | Backups for `/root/marketing` | ✅ Off-box | Private repo `NatoDoyle/chem-irl-marketing` (write deploy key) + nightly snapshot push |
-| Failure alerting | ✅ Armed | `OnFailure=` → Telegram via `cmo-alert@` (`.env`-gated no-op until go-live) |
-| Observability | ✅ Structured + shipped | Every job emits one JSON event → journald **and** Bronto ingest (service `chem-irl-cmo`); Alex queries history via the Bronto MCP (§5, §10, §12 C5) |
+| Failure alerting | ✅ ACTIVE | Two layers: any `status:"error"` event → rate-limited Telegram (in-job **and** Alex's tool errors); daily `cmo-alertcheck` (07:33) for stale pipeline / female-share floor / **BrowserUse spend** / **dead-man's-switch** (§5) |
+| Observability | ✅ Full stack | Emit (every job + rich errors) → journald **and** Bronto ingest (service `chem-irl-cmo`) · query via the Bronto MCP · proactive **alerting** · weekly **founder cockpit**. Eight ways, one event stream (§5) |
+| Agent-behaviour tracking | ✅ LIVE | `logship` (every 15 min) forwards the gateway journal — Alex's DMs, tool calls/failures, security events — to Bronto as `agent` events + a rolling local log (§5) |
+| Weekly founder cockpit | ✅ LIVE | `insights` (Fri 16:03) replays the event stream → waitlist funnel + Alex analytics + actions + incidents → Telegram (§5) |
+| Spend + dead-man governance | ✅ LIVE | BrowserUse usage counter warns at 8/10 of the free quota before the 402; `alertcheck` pages if `nudge`/`logship` go silent (§5) |
 | Host security | ✅ Hardened | UFW deny-in (22 only) · fail2ban (sshd) · key-only SSH (password auth off) |
 
 **Verdict:** the loop now spans **Sense → Synthesise → Create → Learn**, running autonomously. Each
@@ -50,7 +53,9 @@ Monday the agent listens (reddit + Irish news), digests with an LLM read, **re-r
 plan against the week's trends within a defined mandate**, and Telegrams a strategy delta; it can
 publish blog posts through a credential-free jail; D7 referral nudges and per-channel attribution
 run continuously. Not yet automated: social posting (Phase 3, blocked on developer apps) and the
-autonomy ramp beyond L1. §7.4 is the Learn loop, §7.5 the publish path; §13 lists the gotchas.
+autonomy ramp beyond L1. Underneath all of it, **every action emits a structured Bronto event** — the
+spine that powers forensics, proactive alerts, spend + dead-man governance, agent-behaviour tracking,
+and a weekly founder cockpit (§5). §7.4 is the Learn loop, §7.5 the publish path; §13 lists the gotchas.
 
 ## 2. Purpose & goals
 
@@ -214,27 +219,65 @@ self-state: `AGENTS.md` (operating instructions), `SOUL.md` / `IDENTITY.md` (per
 (persistent memory), `USER.md` (operator profile). The CMO playbook deliberately lives **outside**
 this workspace, in `/root/marketing/`, so marketing state and agent state stay separable.
 
-**Observability.** Two halves, one Bronto key. **(1) Query** — a **Bronto MCP server** on the gateway
-(`mcp.servers.bronto`, URL + API-key header) gives the agent log-search tooling
-(`bronto__search_logs` / `bronto__timeseries` / `bronto__get_datasets`). **(2) Emit** — every CMO job
-(`collect`/`digest`/`nudge`/`listen`) writes one structured JSON event via `cmo/obs.py` to **journald
-and** Bronto's HTTP ingest (`POST ingestion.eu.bronto.io`, NDJSON, service `chem-irl-cmo`), carrying
-that run's metrics (collect ships total/confirmed/female/failures). The ship is **fail-open** — a
-Bronto outage logs to stderr and never breaks the job. The same API key serves both directions; it
-lives in `/root/marketing/.env` (`BRONTO_INGEST_URL` / `BRONTO_API_KEY` / `BRONTO_SERVICE`). The
-playbook tells the agent to query this history when a metric moves in the weekly strategy loop (§7.4).
-Wired + verified end-to-end 2026-06-20 (C5, §12.3); active failure *alerting* on top of it is still
-§12 R3.
+**Observability — the spine of the whole system.** [Bronto](https://bronto.io) is the agent's
+black-box recorder, queryable memory, and alarm system at once. For a headless agent nobody watches,
+the operative question is *"is it alive, honest, and working?"* — and Bronto answers it. Everything
+below runs off **one event stream** (service `chem-irl-cmo`) and **one API key** (in
+`/root/marketing/.env`: `BRONTO_INGEST_URL` / `BRONTO_API_KEY` / `BRONTO_SERVICE`; the same key also
+authenticates the MCP query side). The implementation is `cmo/obs.py` (build / ship / emit / exception
+/ guard), `cmo/logship.py` (agent forwarding), `cmo/run_alertcheck.py` (alerts), and `cmo/insights.py`
+(cockpit). Eight distinct jobs off that one pipe:
+
+1. **Emit (write path).** `obs.build_event(cfg, name, status, **fields)` makes a typed JSON event
+   (`timestamp`, `service`, `event`, `status`, + that run's metrics) and `obs.ship` writes it to
+   **journald** *and* POSTs NDJSON to `ingestion.eu.bronto.io` (`webio.post_raw`; headers
+   `x-bronto-api-key` + `x-bronto-service-name`). **Fail-open** — a Bronto outage logs to stderr and
+   never breaks the job. `obs.emit` = ship **+ alert-on-error**; `obs.ship` = the silent, high-volume
+   variant (used by `logship`). Collect ships total/confirmed/female/failures; browse ships `cost`.
+2. **Query (read path).** A **Bronto MCP server** on the gateway (`mcp.servers.bronto` in
+   `openclaw.json`) gives Alex `bronto__search_logs` / `bronto__timeseries` / `bronto__get_datasets`
+   over the `chem-irl-cmo` dataset. The playbook tells it to query history when a metric moves in the
+   weekly strategy loop (§7.4) and to render a live stats card on a "show me the numbers" DM.
+3. **Alert (proactive).** `obs.emit` on `status:"error"` fires a **rate-limited** (30 min/event,
+   statefile `data/.alert-<event>.ts`) Telegram alert — catching both in-job failures and Alex-run
+   tool errors that systemd `OnFailure=` cannot see. This is the active alerting R3 (§12) called for.
+4. **Daily anomaly check.** `cmo-alertcheck.timer` (07:33 UTC, §6.3) runs `run_alertcheck`: a stale
+   pipeline (collect > 36 h), the women-first metric under a 30% floor, plus #5 and #6 below.
+5. **Spend governance.** `browse._record_usage` logs each *successful* BrowserUse task to
+   `data/.usage-browseuse`; `alertcheck.check_spend` warns at **8 of the free plan's 10 tasks** — before
+   the next `402` (the quota Alex hit blind on 2026-06-27, §13). An autonomous agent with credits needs
+   a budget it enforces on itself.
+6. **Dead-man's-switch.** `alertcheck.check_deadman` reads each recurring job's *last-seen* event
+   (`insights.last_seen`) and pages if `nudge` (> 36 h) or `logship` (> 3 h) goes silent — the *absence*
+   of events is itself the signal. (`collect` is already covered by #4's staleness check.)
+7. **Agent-behaviour tracking.** `cmo/logship.py` + `cmo-logship.timer` (every 15 min) forward the
+   OpenClaw **gateway journal** — Alex's inbound DMs, tool calls + failures, security/auth events — to
+   Bronto as `agent` events (`kind`: inbound / tool / agent_turn / security / log), and *accumulate*
+   them into `data/agent-events.jsonl` (the gateway journal rotates fast, so the cockpit reads the
+   accumulation, not the journal). The agent itself was previously invisible to Bronto.
+8. **Rich error forensics.** `obs.exception(cfg, name, exc)` captures **what** (`error_type` + message),
+   **where** (`file:line:func`), and a `trace`; an `obs.guard(name)` decorator wraps every entrypoint so
+   an uncaught crash still becomes a structured event. You debug the headless box from the event itself.
+
+**The weekly cockpit closes the loop.** `cmo/insights.py` + `cmo-insights.timer` (Fri 16:03) *replay*
+the stream into one Telegram: waitlist funnel (cmo.db) + Alex's DMs / tool-calls / fail-rate
+(`agent-events.jsonl`) + actions taken + incidents (journald `[cmo.obs]` lines). Built incrementally —
+emit + MCP 2026-06-20 (C5, §12.3); alerting + coverage, agent-tracking + forensics, governance + cockpit
+all 2026-06-27 — which **fully closes §12 R3**. **Why it matters:** a silent cron, a quietly-drained API
+budget, and a hallucinated metric are the three failure modes that kill trust in an unattended agent;
+this stack makes each one loud. (A polished public walkthrough of all eight lives at the
+[Stacktree dashboard](https://stacktr.ee/p/uuqEfQg7yPZV0tr7YCdDw5/).)
 
 ## 6. The CMO system (`/root/marketing`)
 
-A standalone git repo (13 commits; remote: **private GitHub `NatoDoyle/chem-irl-marketing`** via a
+A standalone git repo (65 commits; remote: **private GitHub `NatoDoyle/chem-irl-marketing`** via a
 write-scoped deploy key — the nightly backup timer pushes code + a DB snapshot off-box) containing
 a dependency-light Python package. Venv at `.venv/` on **Python 3.14.4** (the plan specified 3.12;
 3.14 is what `apt` provided — recorded deviation, no functional impact). Pinned deps in
 `requirements.txt`: `requests`, `pytest`, and `browser-use-sdk==3.8.4` (the cloud research client —
-pulls only `httpx`+`pydantic`; the browser runs off-box, §6.5). Test suite: **43/43 green**, all HTTP
-mocked — the suite proves wiring and parsing, not live credentials.
+pulls only `httpx`+`pydantic`; the browser runs off-box, §6.5), plus `pyyaml` (parses the published-post
+index, §7.5). Test suite: **74/74 green**, all HTTP mocked — the suite proves wiring and parsing, not
+live credentials.
 
 ### 6.1 Module inventory
 
@@ -255,10 +298,16 @@ mocked — the suite proves wiring and parsing, not live credentials.
 | `cmo/connectors/listen.py` | Listening (weekly) | Logged-out **RSS**: 6 reddit subs (`top.rss` — `.json` 403s datacenter IPs) + Google News queries; 3s gap + one retry (429s are shard-flaky); fault-isolated, round-robin interleave |
 | `cmo/strategy_delivery.py` | Strategy-delta delivery | Parses `openclaw agent --json` (stdout is polluted with `[agents/tool-policy]` lines), extracts `payloads[].text`, Telegrams it; empty reply → exit 1 → alert |
 | `scripts/strategy_loop.sh` | Weekly Learn loop (§7.4) | One agent turn against the playbook's Strategy-loop procedure → captures the reply → delivers the strategy delta |
-| `cmo/browse.py` | Live web research (BrowserUse) | `python -m cmo.browse "<q>"` runs one cloud-browser task; prose to stdout, status/cost → stderr + Bronto. `research()` takes a pydantic `schema=` for typed output (§6.5) |
+| `cmo/browse.py` | Live web research (BrowserUse) | `python -m cmo.browse "<q>"` runs one cloud-browser task; prose to stdout, status/cost → stderr + Bronto. `research()` takes a pydantic `schema=` for typed output (§6.5); each successful task is logged to `data/.usage-browseuse` for the spend governor (§5) |
 | `cmo/research.py` | Structured market-research engine | Per-task BrowserUse run with a typed schema → JSON in `raw_snapshots` (`research:<kind>`) + a `research` obs event. Tasks: competitor_watch / dublin_scene / aeo_visibility / serp_recon / fact_check |
 | `cmo/run_research.py` · `cmo/serp.py` · `cmo/factcheck.py` | Research entrypoints | Weekly batch · on-demand SERP recon · on-demand draft fact-check |
 | `cmo/run_listen.py` · `cmo/run_collect.py` · `cmo/run_digest.py` | Entrypoints | Each `PAUSED`-gated; wired to a systemd timer |
+| `cmo/obs.py` | Observability core (§5) | `build_event` / `ship` / `emit` / `exception` / `guard`; journald + Bronto ingest, fail-open; CLI `python -m cmo.obs <event> [status] [k=v]` so shell jobs emit too |
+| `cmo/logship.py` · `cmo/run_logship.py` | Agent-behaviour forwarder (§5) | Gateway journal → Bronto `agent` events + accumulates `data/agent-events.jsonl` (cap 5,000); cursor `data/.gateway-cursor` |
+| `cmo/run_alertcheck.py` | Daily anomaly + spend + dead-man alerts (§5) | `check` (stale pipeline, female-share floor) + `check_spend` (BrowserUse 8/10) + `check_deadman` (silent `nudge`/`logship`) → Telegram |
+| `cmo/insights.py` · `cmo/run_insights.py` | Weekly founder cockpit (§5) | Funnel (cmo.db) + agent analytics (`agent-events.jsonl`) + actions + incidents → Telegram; `--no-send` to preview |
+| `cmo/trendsweep.py` · `cmo/run_trendsweep.py` | Mid-week trend sweep (§6.6) | last30days social + BrowserUse web (gather, fault-isolated) → one `--thinking off` synthesis turn → Telegram |
+| `cmo/refresh_blog_index.py` | Published-post grounding (§7.5) | Reads the public chem-irl repo → `context/PUBLISHED_POSTS.md` so drafts never repeat a question |
 
 ### 6.2 Store schema
 
@@ -274,21 +323,25 @@ Append-only time series; "latest value" and "value on or before <ts>" are the tw
 
 ### 6.3 Scheduling & ops units (partially active)
 
-`systemd/` holds 9 unit files, all installed in `~/.config/systemd/user/`, all hardened
+`systemd/` holds 13 unit files, all installed in `~/.config/systemd/user/`, all hardened
 (`NoNewPrivileges`, `PrivateTmp`, `ProtectSystem=full`) and all timers carrying
 `RandomizedDelaySec=300`:
 
 - `cmo-collect.{service,timer}` (daily 06:00 UTC) and `cmo-digest.{service,timer}` (Mondays
-  08:00 UTC) — installed but **not enabled**, deliberately: without `.env` they'd just schedule
-  failures. §9 step 5 enables them.
+  08:00 UTC) — **enabled 2026-06-10** at go-live (§9 step 5). (Also enabled on their own timers:
+  blog-index, listen, nudge, and strategy — the full schedule is in §1.)
+- **Observability & governance timers** (all **enabled** 2026-06-27, §5): `cmo-logship.timer`
+  (every 15 min — forwards the gateway journal), `cmo-alertcheck.timer` (daily 07:33 — anomaly + spend
+  + dead-man alerts), `cmo-insights.timer` (Fridays 16:03 — weekly founder cockpit).
 - `cmo-backup.{service,timer}` (daily 06:30 UTC) — **enabled**. Runs `scripts/backup.sh`:
   SQLite `.backup` snapshot into `backups/` (once the DB exists) + commit + push to the private
   remote.
 - `cmo-health.{service,timer}` (daily 07:00 UTC) — **enabled**. Runs `scripts/health.sh`:
   disk ≥80%, available RAM ≤300 MiB, or failed user units → Telegram alert.
-- `cmo-research.{service,timer}` (Mondays 07:00 UTC, before the digest) — **installed but NOT
-  enabled**. Runs the weekly BrowserUse research batch (§6.5); left off because each run spends
-  BrowserUse credits. Enable when ready: `systemctl --user enable --now cmo-research.timer`.
+- `cmo-research.{service,timer}` (Mondays 07:00 UTC, before the digest) and
+  `cmo-trendsweep.{service,timer}` (Thursdays 08:00 UTC, §6.6) — **installed but NOT enabled**. Both
+  spend BrowserUse credits per run, so they are founder-opt-in:
+  `systemctl --user enable --now cmo-research.timer` (or `cmo-trendsweep.timer`).
 - `cmo-alert@.service` — `OnFailure=` target for collect/digest/backup; runs
   `scripts/notify-failure.sh <unit>` which sends the unit name + last journal lines to the
   operator's Telegram. All alerting reads `.env` and is a logged no-op until go-live populates it.
@@ -344,6 +397,27 @@ never posts. It makes the agent a sharper analyst/writer; distribution stays man
 
 Verified live 2026-06-23: `cmo.browse` extracted example.com's H1 (~$0.012); `cmo.serp` returned a
 typed SERP recon for a Dublin question (~$0.03), both shipping `cost` to Bronto.
+
+### 6.6 Social listening at depth (last30days) + the trend sweep — 2026-06-27
+
+Two additions sharpen the Sense surface beyond the RSS feeds in §7.3:
+
+- **`last30days`** — a security-reviewed OpenClaw skill (stdlib-only, no telemetry) installed into Alex's
+  workspace for **engagement-ranked** multi-platform listening (reddit / HN / YouTube + TikTok / IG /
+  Threads via one free `SCRAPECREATORS_API_KEY`, server-side, **no accounts or cookies**). Alex drives
+  it — resolving the right subreddits/hashtags first — rather than a cron. Its own web lane is dead from
+  the datacenter IP, so the playbook pairs every sweep with a `cmo.browse` web pass (§6.5).
+- **`cmo/trendsweep.py`** (`python -m cmo.run_trendsweep`) — a **decoupled gather-then-synthesise**
+  weekly brief: `last30days` social + `cmo.browse` web (gather, fault-isolated per lane) → one
+  `openclaw agent --thinking off` turn (synthesise) → Telegram. Decoupled because a single agent turn
+  doing resolve + listen + browse + synthesise timed out at the LLM-request level. `cmo-trendsweep.timer`
+  (Thu 08:00) is **installed but not enabled** (opt-in BrowserUse spend, §6.3).
+
+> **BrowserUse free plan = 10 agent tasks / billing period (a quota, not a $ cap), exhausted
+> 2026-06-27.** `cmo.browse` / `research` / `serp` / `factcheck` and the trend sweep's web pass return
+> `402 Free plan limit reached` until credits are added; the §5 spend governor now warns at 8/10
+> *before* this happens. last30days' ScrapeCreators lane (10k free calls) is unaffected, so the sweep
+> degrades to social-only.
 
 ## 7. Chem-irl integration points
 
@@ -580,13 +654,16 @@ end-to-end during the build) or `systemctl --user disable --now cmo-collect.time
 | Timer state | `systemctl --user list-timers \| grep cmo` |
 | CMO job logs | `journalctl --user -u cmo-collect -n 50` · `journalctl --user -u cmo-digest -n 50` |
 | Query event history (Bronto) | Ask Alex over Telegram, or via the Bronto MCP: `bronto__search_logs` / `bronto__timeseries`, service `chem-irl-cmo` |
+| Preview the weekly cockpit | `cd /root/marketing && .venv/bin/python -m cmo.run_insights --no-send` |
+| Run the anomaly check now | `… -m cmo.run_alertcheck` (stale pipeline · female-share · BrowserUse spend · dead-man) |
+| Agent behaviour (recent) | `journalctl --user -u cmo-logship -n 20` · or read `data/agent-events.jsonl` |
 | Inspect the DB | `cd /root/marketing && .venv/bin/python -c "import sqlite3;[print(r) for r in sqlite3.connect('data/cmo.db').execute('select surface,metric,value,captured_at from metric_snapshots order by id desc limit 10')]"` |
 | Box health | `df -h /` · `free -h` · `systemctl --user list-units --failed` |
 
-Each job also emits one structured JSON event to journald **and** Bronto (§5), so run history and
-failures (`status:"error"`) stay queryable after the fact. There is still no *active* alert push on
-failure beyond the armed `OnFailure=` Telegram hook — a broken connector won't page you; you query
-Bronto or read the journal (§12 R3).
+Each job emits one structured JSON event to journald **and** Bronto (§5), so run history and failures
+(`status:"error"`) stay queryable after the fact. **Active alerting is live** (2026-06-27): any error
+event pages Telegram (rate-limited), and the daily `cmo-alertcheck` adds stale-pipeline, female-share,
+BrowserUse-spend, and dead-man checks — a broken connector or a silently-dead job now pages you (§5).
 
 ## 11. Security posture & accepted risks
 
@@ -618,13 +695,17 @@ re-run this section's analysis before that happens, per spec §7 and §13.
 > **implemented**; P1 is LIVE end-to-end as of 2026-06-10 (PR #128); P3 verified healthy. Remaining open:
 > the items below without a ✅ — chiefly S1 non-root migration, R9 Hetzner snapshots, and the
 > Phase-2 preparation items (C6–C8, P2, P4, P5). **C2 was decided 2026-06-10: Plausible dropped.**
+>
+> **Observability update 2026-06-27:** C5 (structured logging) has grown into a full stack — active
+> error **alerting**, a daily anomaly check, **agent-behaviour** forwarding, **rich-error forensics**,
+> **spend** + **dead-man** governance, and a weekly founder **cockpit** (all §5). This **fully closes R3**.
 
 Top five by leverage:
 
 | # | Item | Why first | Status |
 |---|---|---|---|
 | 1 | **R1** — git remote/backup for `/root/marketing` | Only copy of the repo was one VPS disk | ✅ Done — private repo + deploy key + nightly push |
-| 2 | **R3** — failure alerting via Telegram | Silent-failure mode is the worst kind for a "trust me" system | ✅ Done — `cmo-alert@` armed (`.env`-gated) |
+| 2 | **R3** — failure alerting via Telegram | Silent-failure mode is the worst kind for a "trust me" system | ✅ Done — error events + daily `alertcheck` (spend + dead-man) page Telegram (§5), 2026-06-27 |
 | 3 | **P1** — UTM instrumentation in chem-irl | The CMO is attribution-blind until this lands (`WAITLIST_AUDIT.md` P0) | ✅ LIVE 2026-06-10 — merged, migration applied, fn deployed |
 | 4 | **C2** — settle Plausible Cloud-vs-CE | Blocks half the Sense loop (§9 decision box) | ✅ Decided 2026-06-10 — **dropped** (Vercel Analytics for eyeballing; revisit at Phase 2) |
 | 5 | **S1** — dedicated non-root user for CMO timers | Cheapest meaningful privilege reduction before Phase 2 | ⏳ Open |
@@ -635,7 +716,7 @@ Top five by leverage:
 |---|---|---|---|---|
 | R1 | Push `/root/marketing` to a private GitHub repo (or nightly `git bundle` scp'd off-box) | Disk loss/corruption currently destroys code+history+data with no recovery path | S | ✅ Done 2026-06-09 |
 | R2 | Back up `data/cmo.db` (nightly copy off-box, or to the same private repo via `sqlite3 .backup`/Python) | Metrics history becomes irreplaceable the day collection starts | S | ✅ Done 2026-06-09 |
-| R3 | `OnFailure=` drop-in on both services firing a `curl` to the Telegram API ("collect failed — check journal"), or a weekly dead-man's-switch | Failures currently land only in journald; nobody is notified | S | ✅ Done 2026-06-09 |
+| R3 | `OnFailure=` drop-in firing a Telegram `curl`, **plus** active error-event alerting + a daily anomaly check + a dead-man's-switch | Failures otherwise land only in journald; nobody is notified | S | ✅ Done — `OnFailure=` 2026-06-09; error-event alerting + `alertcheck` (spend + dead-man) 2026-06-27 (§5) |
 | R4 | Confirm journald persistence (`Storage=persistent`) | User-unit logs shouldn't vanish on reboot mid-investigation | S | ✅ Verified 2026-06-09 (was already persistent) |
 | R5 | `RandomizedDelaySec=` on the timers | Avoid thundering-herd-at-06:00 patterns as more jobs accrue | S | ✅ Done 2026-06-09 |
 | R6 | Pin versions in `requirements.txt` | `requests`/`pytest` float today; a bad upgrade breaks silently at next venv rebuild | S | ✅ Done 2026-06-09 |
@@ -663,7 +744,7 @@ Top five by leverage:
 | C2 | Plausible decision + possible v1→v2 migration of `connectors/plausible.py` | §9 decision box; v2 (`/api/v2/query`) is where Plausible is headed | S–L | ✅ Decided 2026-06-10 — dropped; connector unwired/dormant; revisit at Phase 2 |
 | C3 | Retention policy for `raw_snapshots` (e.g. keep 90 days) | Unbounded JSON blobs on a small disk | S | ✅ Done 2026-06-09 (90-day prune in run_collect) |
 | C4 | Use or drop the `dims` column | Dead schema invites confusion; spec §12 intended per-dimension metrics | S | P3 |
-| C5 | Structured logging (one JSON line per connector run with status/duration/row-counts) | Makes R3 alerting and later dashboards trivial | S | ✅ Done 2026-06-20 — `cmo/obs.py` → journald + Bronto ingest (§5); Alex queries via the Bronto MCP |
+| C5 | Structured logging (one JSON line per connector run with status/duration/row-counts) | Makes R3 alerting and later dashboards trivial | S | ✅ Done 2026-06-20, extended 2026-06-27 — `cmo/obs.py` → journald + Bronto; now the spine for alerting, agent-tracking, forensics, governance + the cockpit (§5) |
 | C6 | LLM-written digest narrative (template stays as fallback) | `TENSORIX_API_KEY` is already on the box; spec kept Phase 0/1 template-only deliberately | M | P2 (Phase 1.5) |
 | C7 | Context-pack refresh mechanism (scp from repo on change, or a checksum warning in the digest) | `context/*.md` are 2026-06-09 copies; brand voice drift = off-brand CMO outputs later | S | P1 (before Phase 2) |
 | C8 | MCP-wrap the connectors | Spec §5.2's end-state: every connector call visible/loggable as an agent tool | M | P2 (Phase 1.5–2) |
@@ -701,6 +782,10 @@ One consolidated list — if something on this box surprises you, check here fir
 - **Reddit `.json` endpoints 403 this datacenter IP; the `top.rss` Atom feeds work** (no scores in RSS). Never log in to reddit from this box (§7.2 rationale).
 - **The gateway agent's `web_search`/`web_fetch` are dead from this box** — no SearXNG, and the datacenter IP is Cloudflare-403'd. Use `cmo.browse` / `cmo.research` (BrowserUse cloud) for any live web lookup (§6.5).
 - **BrowserUse costs real money per call** (~1¢ trivial, a few ¢ per structured research task) on the `BROWSER_USE_API_KEY`; every call's cost is logged to Bronto. The SDK wraps `cost` in a pydantic RootModel and `status` in an enum — unwrap `.cost.root` / `.status.value` (the cmo wrappers already do).
+- **BrowserUse free plan = 10 agent tasks per billing period** (a quota, not a $ cap) — **exhausted 2026-06-27**; `cmo.browse` / `research` / `serp` / `factcheck` return `402` until credits are added. The §5 spend governor warns at 8/10 first; the trend sweep degrades to social-only (§6.6).
+- **The cockpit reads `data/agent-events.jsonl`, not the gateway journal** — the OpenClaw gateway journal rotates too fast to read weekly, so `logship` *accumulates* each agent event into that file (cap 5,000) and `insights` reads the accumulation (§5).
+- **`last30days`' own web lane is dead from this box** (datacenter IP blocked); its reddit/TikTok/IG/HN lanes work. Always pair a sweep with a `cmo.browse` web pass (§6.6).
+- **Don't grep `"browseuse"` for the spend alert** — `"BrowserUse".lower()` is `"browseruse"` (Browser + Use). A test that searched the dropped-`r` spelling failed against correct code (2026-06-27).
 
 ## 14. Related documents
 
@@ -728,8 +813,8 @@ df -h / | tail -1'
 ```
 
 Then update the §1 and §8 tables plus any drifted §4 facts. The facts most likely to drift:
-OpenClaw version · timer/`.env`/`cmo.db` state (flips at go-live — §9) · disk % · commit count ·
-autonomy level (flips at Phase 2) · the Plausible decision.
+OpenClaw version · timer/`.env`/`cmo.db` state · disk % · commit count · test count · enabled-timer
+count (11 + 2 opt-in as of 2026-06-27) · autonomy level (flips at Phase 2) · BrowserUse quota state.
 
 **Rules:**
 
