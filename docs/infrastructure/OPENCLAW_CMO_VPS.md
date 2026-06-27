@@ -1,6 +1,6 @@
 # OpenClaw CMO VPS — Architecture & Operations
 
-**Type:** Living ops doc · **Last verified:** 2026-06-27 (full observability stack: emit · alert · agent-tracking · forensics · governance · cockpit) · **Owner:** Nathan Doyle
+**Type:** Living ops doc · **Last verified:** 2026-06-27 (full observability stack: emit · alert · agent-tracking · forensics · governance · cockpit · cost ledger) · **Owner:** Nathan Doyle
 **Host:** Hetzner VPS `OpenClaw` · `188.245.123.146` · access: `ssh openclaw`
 
 > State sections (§1, §4–§8) describe the box **as observed on the Last verified date** — when you
@@ -27,7 +27,7 @@ rationale; the [Phase 0/1 build plan](../superpowers/plans/2026-06-09-autonomous
 | Access | ✅ Working | `ssh openclaw` → root, key `~/.ssh/openclaw_hetzner` |
 | OpenClaw gateway | ✅ LIVE | `openclaw-gateway.service` (user unit), v2026.6.1, port 18789 |
 | Telegram bot | ✅ LIVE | `@Natosopenclawbot`, DM-only, paired operator chat 5355963011 |
-| CMO code (`/root/marketing`) | ✅ LIVE | 74 unit tests green (all HTTP mocked); 65 commits; running autonomously since 2026-06-10 |
+| CMO code (`/root/marketing`) | ✅ LIVE | 81 unit tests green (all HTTP mocked); 67 commits; running autonomously since 2026-06-10 |
 | CMO timers | ✅ ELEVEN ENABLED | collect 06:01 + blog-index 06:15 + backup 06:31 + health 07:04 + **alertcheck 07:33** + nudge 10:00 + **logship every 15 min** daily · listen Mon 07:30 · digest Mon 08:02 · **strategy Mon 08:30** · **insights Fri 16:03** (UTC, randomized delay). Plus **research Mon 07:00** + **trendsweep Thu 08:00** — installed, NOT enabled (weekly BrowserUse spend is opt-in, §6.5 / §6.6) |
 | CMO `.env` | ✅ Present (600) | bot token + Supabase anon + Tensorix key (25-char `sk-v…`) + nudge secret + Bronto + **BrowserUse** keys |
 | CMO database (`data/cmo.db`) | ✅ COLLECTING | Daily waitlist + weekly listening snapshots |
@@ -42,9 +42,10 @@ rationale; the [Phase 0/1 build plan](../superpowers/plans/2026-06-09-autonomous
 | Kill-switch (`PAUSED` flag) | ✅ Mechanism in place | Flag not currently set (nothing to pause yet) |
 | Backups for `/root/marketing` | ✅ Off-box | Private repo `NatoDoyle/chem-irl-marketing` (write deploy key) + nightly snapshot push |
 | Failure alerting | ✅ ACTIVE | Two layers: any `status:"error"` event → rate-limited Telegram (in-job **and** Alex's tool errors); daily `cmo-alertcheck` (07:33) for stale pipeline / female-share floor / **BrowserUse spend** / **dead-man's-switch** (§5) |
-| Observability | ✅ Full stack | Emit (every job + rich errors) → journald **and** Bronto ingest (service `chem-irl-cmo`) · query via the Bronto MCP · proactive **alerting** · weekly **founder cockpit**. Eight ways, one event stream (§5) |
+| Observability | ✅ Full stack | Emit (every job + rich errors) → journald **and** Bronto ingest (service `chem-irl-cmo`) · query via the Bronto MCP · proactive **alerting** · **cost ledger** · weekly **founder cockpit**. Nine ways, one event stream (§5) |
 | Agent-behaviour tracking | ✅ LIVE | `logship` (every 15 min) forwards the gateway journal — Alex's DMs, tool calls/failures, security events — to Bronto as `agent` events + a rolling local log (§5) |
 | Weekly founder cockpit | ✅ LIVE | `insights` (Fri 16:03) replays the event stream → waitlist funnel + Alex analytics + actions + incidents → Telegram (§5) |
+| Cost tracking | ✅ LIVE | Every paid op → a `cost` event + `cost-ledger.jsonl`: BrowserUse $ (exact) + Tensorix tokens (priced at glm-5.1 $1.40/$4.40 per 1M) → weekly Spend line in the cockpit (§5) |
 | Spend + dead-man governance | ✅ LIVE | BrowserUse usage counter warns at 8/10 of the free quota before the 402; `alertcheck` pages if `nudge`/`logship` go silent (§5) |
 | Host security | ✅ Hardened | UFW deny-in (22 only) · fail2ban (sshd) · key-only SSH (password auth off) |
 
@@ -226,7 +227,7 @@ below runs off **one event stream** (service `chem-irl-cmo`) and **one API key**
 `/root/marketing/.env`: `BRONTO_INGEST_URL` / `BRONTO_API_KEY` / `BRONTO_SERVICE`; the same key also
 authenticates the MCP query side). The implementation is `cmo/obs.py` (build / ship / emit / exception
 / guard), `cmo/logship.py` (agent forwarding), `cmo/run_alertcheck.py` (alerts), and `cmo/insights.py`
-(cockpit). Eight distinct jobs off that one pipe:
+(cockpit). Nine distinct jobs off that one pipe:
 
 1. **Emit (write path).** `obs.build_event(cfg, name, status, **fields)` makes a typed JSON event
    (`timestamp`, `service`, `event`, `status`, + that run's metrics) and `obs.ship` writes it to
@@ -258,25 +259,31 @@ authenticates the MCP query side). The implementation is `cmo/obs.py` (build / s
 8. **Rich error forensics.** `obs.exception(cfg, name, exc)` captures **what** (`error_type` + message),
    **where** (`file:line:func`), and a `trace`; an `obs.guard(name)` decorator wraps every entrypoint so
    an uncaught crash still becomes a structured event. You debug the headless box from the event itself.
+9. **Cost ledger.** Every paid op writes to `data/cost-ledger.jsonl` **and** ships a `cost` event:
+   `cmo/cost.py` records **BrowserUse USD** (exact, from the API, at the `browse.research()` choke point)
+   and **Tensorix token usage** (exact, from `resp["usage"]` on direct calls like `narrate`). USD comes
+   from a configurable rate (`TENSORIX_USD_PER_1M_INPUT/OUTPUT`; glm-5.1 is $1.40/$4.40 per 1M), applied
+   **retroactively** by `cost.summary`. Gap: gateway-routed turns (strategy / trendsweep / Alex's DMs)
+   report 0 usage from OpenClaw, so the **Tensorix billing dashboard** is the authoritative LLM total.
 
 **The weekly cockpit closes the loop.** `cmo/insights.py` + `cmo-insights.timer` (Fri 16:03) *replay*
 the stream into one Telegram: waitlist funnel (cmo.db) + Alex's DMs / tool-calls / fail-rate
-(`agent-events.jsonl`) + actions taken + incidents (journald `[cmo.obs]` lines). Built incrementally —
+(`agent-events.jsonl`) + **weekly spend** + actions taken + incidents (journald `[cmo.obs]` lines). Built incrementally —
 emit + MCP 2026-06-20 (C5, §12.3); alerting + coverage, agent-tracking + forensics, governance + cockpit
 all 2026-06-27 — which **fully closes §12 R3**. **Why it matters:** a silent cron, a quietly-drained API
 budget, and a hallucinated metric are the three failure modes that kill trust in an unattended agent;
-this stack makes each one loud. (A polished public walkthrough of all eight lives at the
+this stack makes each one loud. (A polished public walkthrough of all nine lives at the
 [Stacktree dashboard](https://stacktr.ee/p/uuqEfQg7yPZV0tr7YCdDw5/).)
 
 ## 6. The CMO system (`/root/marketing`)
 
-A standalone git repo (65 commits; remote: **private GitHub `NatoDoyle/chem-irl-marketing`** via a
+A standalone git repo (67 commits; remote: **private GitHub `NatoDoyle/chem-irl-marketing`** via a
 write-scoped deploy key — the nightly backup timer pushes code + a DB snapshot off-box) containing
 a dependency-light Python package. Venv at `.venv/` on **Python 3.14.4** (the plan specified 3.12;
 3.14 is what `apt` provided — recorded deviation, no functional impact). Pinned deps in
 `requirements.txt`: `requests`, `pytest`, and `browser-use-sdk==3.8.4` (the cloud research client —
 pulls only `httpx`+`pydantic`; the browser runs off-box, §6.5), plus `pyyaml` (parses the published-post
-index, §7.5). Test suite: **74/74 green**, all HTTP mocked — the suite proves wiring and parsing, not
+index, §7.5). Test suite: **81/81 green**, all HTTP mocked — the suite proves wiring and parsing, not
 live credentials.
 
 ### 6.1 Module inventory
@@ -308,6 +315,7 @@ live credentials.
 | `cmo/insights.py` · `cmo/run_insights.py` | Weekly founder cockpit (§5) | Funnel (cmo.db) + agent analytics (`agent-events.jsonl`) + actions + incidents → Telegram; `--no-send` to preview |
 | `cmo/trendsweep.py` · `cmo/run_trendsweep.py` | Mid-week trend sweep (§6.6) | last30days social + BrowserUse web (gather, fault-isolated) → one `--thinking off` synthesis turn → Telegram |
 | `cmo/refresh_blog_index.py` | Published-post grounding (§7.5) | Reads the public chem-irl repo → `context/PUBLISHED_POSTS.md` so drafts never repeat a question |
+| `cmo/cost.py` | Unified cost ledger (§5) | Every paid op → `data/cost-ledger.jsonl` + a `cost` Bronto event; BrowserUse $ (exact) + Tensorix tokens (priced at the configured rate); `cost.summary` re-prices retroactively |
 
 ### 6.2 Store schema
 
@@ -783,6 +791,8 @@ One consolidated list — if something on this box surprises you, check here fir
 - **The gateway agent's `web_search`/`web_fetch` are dead from this box** — no SearXNG, and the datacenter IP is Cloudflare-403'd. Use `cmo.browse` / `cmo.research` (BrowserUse cloud) for any live web lookup (§6.5).
 - **BrowserUse costs real money per call** (~1¢ trivial, a few ¢ per structured research task) on the `BROWSER_USE_API_KEY`; every call's cost is logged to Bronto. The SDK wraps `cost` in a pydantic RootModel and `status` in an enum — unwrap `.cost.root` / `.status.value` (the cmo wrappers already do).
 - **BrowserUse free plan = 10 agent tasks per billing period** (a quota, not a $ cap) — **exhausted 2026-06-27**; `cmo.browse` / `research` / `serp` / `factcheck` return `402` until credits are added. The §5 spend governor warns at 8/10 first; the trend sweep degrades to social-only (§6.6).
+- **Cost tracking captures BrowserUse $ + direct Tensorix tokens, NOT gateway-routed LLM turns.** strategy / trendsweep / Alex's DMs run through `openclaw agent`, and OpenClaw's Tensorix adapter reports **0 usage** (`--json` `meta.agentMeta.lastCallUsage` is all-zero even on real generations; the gateway journal logs no tokens). They bill the same Tensorix key, so the **Tensorix billing dashboard is the authoritative total LLM cost** (§5).
+- **Tensorix pricing lives at `tensorx.ai/pricing`; the API is `api.tensorix.ai`** (the marketing domain drops the `i`). glm-5.1 = $1.40 in / $4.40 out per 1M; `GET /v1/models` exposes no pricing. Set `TENSORIX_USD_PER_1M_INPUT/OUTPUT` in `.env` (gitignored); `cost.summary` re-prices history when the rate changes.
 - **The cockpit reads `data/agent-events.jsonl`, not the gateway journal** — the OpenClaw gateway journal rotates too fast to read weekly, so `logship` *accumulates* each agent event into that file (cap 5,000) and `insights` reads the accumulation (§5).
 - **`last30days`' own web lane is dead from this box** (datacenter IP blocked); its reddit/TikTok/IG/HN lanes work. Always pair a sweep with a `cmo.browse` web pass (§6.6).
 - **Don't grep `"browseuse"` for the spend alert** — `"BrowserUse".lower()` is `"browseruse"` (Browser + Use). A test that searched the dropped-`r` spelling failed against correct code (2026-06-27).
