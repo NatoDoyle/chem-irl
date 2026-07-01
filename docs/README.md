@@ -27,6 +27,7 @@ Organized documentation for the Chem IRL dating app.
 
 - **[Cloudflare Setup](./infrastructure/CLOUDFLARE_SETUP.md)**
 - **[OpenClaw CMO VPS](./infrastructure/OPENCLAW_CMO_VPS.md)** — Hetzner box running the OpenClaw agent platform + Autonomous CMO (architecture, current state, go-live runbook, improvements)
+- **[OpenClaw CSO](./infrastructure/OPENCLAW_CSO.md)** — Alex's autonomous LinkedIn sales pipeline on the same box (sourcing → qualify → draft → dry-run send)
 - **[Security Audit](./infrastructure/SECURITY_AUDIT.md)**
 
 ## Operations (launch + trust & safety)

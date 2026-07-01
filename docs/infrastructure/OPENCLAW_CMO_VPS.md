@@ -1,6 +1,6 @@
 # OpenClaw CMO VPS — Architecture & Operations
 
-**Type:** Living ops doc · **Last verified:** 2026-06-27 (full observability stack: emit · alert · agent-tracking · forensics · governance · cockpit · cost ledger) · **Owner:** Nathan Doyle
+**Type:** Living ops doc · **Last verified:** 2026-07-01 (2026-06-27 observability stack; **the box now also runs the CSO sales pipeline** → [OPENCLAW_CSO.md](OPENCLAW_CSO.md)) · **Owner:** Nathan Doyle
 **Host:** Hetzner VPS `OpenClaw` · `188.245.123.146` · access: `ssh openclaw`
 
 > State sections (§1, §4–§8) describe the box **as observed on the Last verified date** — when you
@@ -8,9 +8,11 @@
 > lives in the [Autonomous CMO design spec](../superpowers/specs/2026-06-09-autonomous-cmo-design.md)
 > and is linked, not duplicated, here.
 
-This VPS hosts two things: the **OpenClaw agent platform** (a self-hosted AI agent gateway the
-founder talks to over Telegram) and the **Autonomous CMO** Phase 0/1 system (a read-only marketing
-analytics pipeline in `/root/marketing`). Neither is visible from the chem-irl codebase — this
+This VPS hosts three things: the **OpenClaw agent platform** (a self-hosted AI agent gateway the
+founder talks to over Telegram), the **Autonomous CMO** system (a marketing pipeline in
+`/root/marketing`), and — since 2026-07-01 — the **CSO sales pipeline** (Alex's second seat, an
+automated LinkedIn outreach system documented separately in [OPENCLAW_CSO.md](OPENCLAW_CSO.md)). None
+is visible from the chem-irl codebase — this
 document is the canonical window into the box for the founder and for future Claude Code sessions.
 Division of labour across the doc set: **this doc** = as-built state + operations + improvements;
 the [design spec](../superpowers/specs/2026-06-09-autonomous-cmo-design.md) = vision and design
@@ -21,13 +23,14 @@ rationale; the [Phase 0/1 build plan](../superpowers/plans/2026-06-09-autonomous
 
 ## 1. At a glance
 
-| Component | State (2026-06-27) | Detail |
+| Component | State (2026-07-01) | Detail |
 |---|---|---|
 | Host | ✅ UP | Hetzner, Ubuntu 26.04 LTS, 2 vCPU / 3.7 GiB / 75 GiB (5% used) |
 | Access | ✅ Working | `ssh openclaw` → root, key `~/.ssh/openclaw_hetzner` |
 | OpenClaw gateway | ✅ LIVE | `openclaw-gateway.service` (user unit), v2026.6.1, port 18789 |
 | Telegram bot | ✅ LIVE | `@Natosopenclawbot`, DM-only, paired operator chat 5355963011 |
-| CMO code (`/root/marketing`) | ✅ LIVE | 81 unit tests green (all HTTP mocked); 67 commits; running autonomously since 2026-06-10 |
+| CMO code (`/root/marketing`) | ✅ LIVE | 93 unit tests green (all HTTP mocked, cmo + cso); 75 commits; running autonomously since 2026-06-10 |
+| CSO sales pipeline | ✅ LIVE | Alex's **second seat** — automated LinkedIn outreach (`cso/` package, 3 enabled timers, **dry-run send**). Full doc: [OPENCLAW_CSO.md](OPENCLAW_CSO.md) |
 | CMO timers | ✅ ELEVEN ENABLED | collect 06:01 + blog-index 06:15 + backup 06:31 + health 07:04 + **alertcheck 07:33** + nudge 10:00 + **logship every 15 min** daily · listen Mon 07:30 · digest Mon 08:02 · **strategy Mon 08:30** · **insights Fri 16:03** (UTC, randomized delay). Plus **research Mon 07:00** + **trendsweep Thu 08:00** — installed, NOT enabled (weekly BrowserUse spend is opt-in, §6.5 / §6.6) |
 | CMO `.env` | ✅ Present (600) | bot token + Supabase anon + Tensorix key (25-char `sk-v…`) + nudge secret + Bronto + **BrowserUse** keys |
 | CMO database (`data/cmo.db`) | ✅ COLLECTING | Daily waitlist + weekly listening snapshots |
@@ -802,6 +805,7 @@ One consolidated list — if something on this box surprises you, check here fir
 | Document | Owns | Read it when |
 |---|---|---|
 | [Autonomous CMO design spec](../superpowers/specs/2026-06-09-autonomous-cmo-design.md) | Vision, goals, full architecture, platform matrix, autonomy ramp, phases, risks, costs, adopted decisions (§18) | Deciding what to build next, or why anything here is shaped the way it is |
+| [OpenClaw CSO](OPENCLAW_CSO.md) | The **CSO sales pipeline** — Alex's automated LinkedIn outreach (as-built, ops, safety, the dry-run/arming boundary) | Working on sales/outreach, or arming the live send |
 | [Phase 0/1 build plan](../superpowers/plans/2026-06-09-autonomous-cmo-phase-0-1.md) | Task-by-task build record with the exact code (note the three corrections in §8 here) | Rebuilding from scratch, or auditing what was executed |
 | `WAITLIST_AUDIT.md` (repo root, untracked) | Waitlist funnel P0 gaps: Resend key, Vercel env, **UTM capture** | Working attribution or the signup funnel |
 | [Dublin launch plan](../DUBLIN_LAUNCH_PLAN.md) | GTM strategy the CMO serves — phases, channels, the ≥40% female gate | Judging whether CMO outputs serve the actual plan |
