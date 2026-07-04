@@ -124,6 +124,12 @@ export function Footer() {
                 Support
               </Link>
               <Link
+                href="/solutions"
+                className="hover:text-aqua-400 transition-colors"
+              >
+                Solutions
+              </Link>
+              <Link
                 href="/privacy"
                 className="hover:text-aqua-400 transition-colors"
               >
