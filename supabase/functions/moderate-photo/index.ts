@@ -30,6 +30,15 @@
 //   SUPABASE_URL           — pre-set
 //   SUPABASE_ANON_KEY      — pre-set
 //   SUPABASE_SERVICE_ROLE_KEY — pre-set
+//
+// Optional secrets (Chem IRL as a Photo Safety tenant of the Solutions
+// platform — see chem-irl-solutions docs/DOMAINS.md and the platform's
+// docs/CHEM_IRL_TENANT.md):
+//   PHOTO_PLATFORM_URL — e.g. https://solutions.chemirl.app/api/v1/moderate
+//   PHOTO_PLATFORM_KEY — workspace API key (cis_…)
+// When BOTH are set, moderation is served by the platform (metered per
+// call like any tenant); any platform failure falls back to the direct
+// Anthropic path, so the cutover can never reduce availability.
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
@@ -163,6 +172,69 @@ serve(async (req) => {
     if (compare.bytes.byteLength > MAX_BYTES) {
       return jsonResponse({ error: 'image_too_large' }, 400);
     }
+  }
+
+  // --- Platform path: Chem IRL as a Photo Safety tenant ---
+  const platform = await tryPlatformModeration(kind, primary, compare);
+  if (platform) {
+    const platformModel =
+      typeof platform.model === 'string' ? `platform:${platform.model}` : 'platform';
+
+    if (kind === 'safety') {
+      const decision = String(platform.decision ?? 'review');
+      const score = Math.max(0, Math.min(100, Number(platform.overall_risk_score ?? 50)));
+      const checkId = await insertAuditRow(admin, {
+        userId: user.id,
+        kind: 'safety',
+        photoPath,
+        comparePath: null,
+        decision,
+        score,
+        result: platform,
+        tokensIn: null,
+        tokensOut: null,
+        model: platformModel,
+      });
+      return jsonResponse(
+        {
+          kind: 'safety',
+          decision,
+          overallRiskScore: score,
+          summary: String(platform.summary ?? ''),
+          containsPerson: platform.contains_person === true,
+          isProfilePhotoSuitable: platform.is_profile_photo_suitable === true,
+          recommendedAction: String(platform.recommended_action ?? ''),
+          categories: Array.isArray(platform.categories) ? platform.categories : [],
+          checkId,
+        },
+        200,
+      );
+    }
+
+    const decision = String(platform.decision ?? 'no_match');
+    const confidence = Math.max(0, Math.min(1, Number(platform.confidence ?? 0)));
+    const checkId = await insertAuditRow(admin, {
+      userId: user.id,
+      kind: 'match',
+      photoPath,
+      comparePath,
+      decision,
+      score: Math.round(confidence * 100),
+      result: platform,
+      tokensIn: null,
+      tokensOut: null,
+      model: platformModel,
+    });
+    return jsonResponse(
+      {
+        kind: 'match',
+        decision,
+        confidence,
+        reasoning: String(platform.reasoning ?? ''),
+        checkId,
+      },
+      200,
+    );
   }
 
   // --- Call Claude ---
@@ -415,6 +487,9 @@ interface AuditRow {
   result: Json;
   tokensIn: number | null;
   tokensOut: number | null;
+  // Audit provenance: absent = direct Anthropic path; 'platform:<model>' =
+  // served by the Solutions platform.
+  model?: string;
 }
 
 // deno-lint-ignore no-explicit-any
@@ -429,7 +504,7 @@ async function insertAuditRow(admin: any, row: AuditRow): Promise<string> {
       decision: row.decision,
       score: row.score,
       result: row.result,
-      model: MODEL,
+      model: row.model ?? MODEL,
       tokens_in: row.tokensIn,
       tokens_out: row.tokensOut,
     })
@@ -443,6 +518,55 @@ async function insertAuditRow(admin: any, row: AuditRow): Promise<string> {
     return '';
   }
   return data.id as string;
+}
+
+// Attempts moderation via the Solutions platform (/api/v1/moderate).
+// Returns the platform's JSON verdict, or null when the platform path is
+// disabled (env unset) or fails for any reason — the caller then falls
+// back to the direct Anthropic path. Never throws.
+async function tryPlatformModeration(
+  kind: 'safety' | 'match',
+  primary: ImageContent,
+  compare: ImageContent | null,
+): Promise<Json | null> {
+  const url = Deno.env.get('PHOTO_PLATFORM_URL');
+  const key = Deno.env.get('PHOTO_PLATFORM_KEY');
+  if (!url || !key) return null;
+
+  const toImage = (img: ImageContent) => ({
+    base64: encodeBase64(img.bytes),
+    media_type: img.mediaType,
+  });
+  const body =
+    kind === 'safety'
+      ? { op: 'safety', image: toImage(primary) }
+      : {
+          op: 'match',
+          selfie: toImage(primary),
+          candidate: toImage(compare as ImageContent),
+        };
+
+  try {
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${key}`,
+      },
+      body: JSON.stringify(body),
+      signal: AbortSignal.timeout(30000),
+    });
+    if (!res.ok) {
+      console.error(
+        `moderate-photo: platform returned ${res.status} (falling back to direct)`,
+      );
+      return null;
+    }
+    return (await res.json()) as Json;
+  } catch (err) {
+    console.error('moderate-photo: platform errored (falling back to direct)', err);
+    return null;
+  }
 }
 
 // Rolling 1-hour cap on calls per user. Counts rows in
