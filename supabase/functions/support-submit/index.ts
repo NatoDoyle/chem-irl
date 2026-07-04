@@ -14,6 +14,12 @@
 // service-role Supabase client to call the SECURITY DEFINER RPC
 // `submit_support_request`, which is the only way data lands in
 // support_submissions (RLS denies anon writes).
+//
+// After a successful store, submissions with an email are optionally forwarded
+// to the Chem IRL Support agent (Brigade) intake API so the AI can draft a
+// reply into its human-review queue. Disabled unless BOTH
+// SUPPORT_AGENT_INTAKE_URL and SUPPORT_AGENT_INTAKE_KEY are set; strictly
+// fail-open (a forward failure never changes the user-facing response).
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
@@ -212,15 +218,78 @@ serve(async (req) => {
       );
     }
 
-    return json(
-      { success: true, submission_id: data.submission_id ?? null },
-      200,
-    );
+    const submissionId =
+      typeof data.submission_id === 'string' ? data.submission_id : null;
+
+    // Only submissions with a reply-to address are useful to the agent.
+    if (email) {
+      await forwardToSupportAgent({
+        submissionId,
+        kind,
+        email,
+        displayName,
+        subject,
+        body: bodyText,
+        metadata,
+      });
+    }
+
+    return json({ success: true, submission_id: submissionId }, 200);
   } catch (err) {
     console.error('support-submit unhandled error:', err);
     return json({ success: false, error: 'internal_error' }, 500);
   }
 });
+
+// --- Support-agent forwarding ------------------------------------------------
+
+// Contract with the Brigade intake API (POST SUPPORT_AGENT_INTAKE_URL):
+//   { source, external_id, from_email, from_name, subject, body, metadata }
+// authenticated via `Authorization: Bearer SUPPORT_AGENT_INTAKE_KEY`.
+// Brigade dedupes on (workspace, source, external_id), so a retried request
+// cannot double-create threads. 4s timeout; every failure path only logs.
+interface ForwardArgs {
+  submissionId: string | null;
+  kind: Kind;
+  email: string;
+  displayName: string | null;
+  subject: string;
+  body: string;
+  metadata: Record<string, unknown>;
+}
+
+async function forwardToSupportAgent(args: ForwardArgs): Promise<void> {
+  const url = Deno.env.get('SUPPORT_AGENT_INTAKE_URL');
+  const key = Deno.env.get('SUPPORT_AGENT_INTAKE_KEY');
+  if (!url || !key) return; // forwarding disabled
+
+  try {
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${key}`,
+      },
+      body: JSON.stringify({
+        source: 'chem_irl_web_form',
+        external_id: args.submissionId,
+        from_email: args.email,
+        from_name: args.displayName,
+        subject: `[${args.kind}] ${args.subject}`,
+        body: args.body,
+        metadata: { kind: args.kind, ...args.metadata },
+      }),
+      signal: AbortSignal.timeout(4000),
+    });
+    if (!res.ok) {
+      console.error(
+        `support-agent forward failed with status ${res.status} (submission ${args.submissionId ?? 'unknown'})`,
+      );
+    }
+  } catch (err) {
+    console.error('support-agent forward errored (failing open):', err);
+  }
+}
 
 // --- Helpers ---------------------------------------------------------------
 
