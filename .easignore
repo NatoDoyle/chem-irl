@@ -1,0 +1,45 @@
+# EAS Build upload exclusions.
+#
+# EAS CLI archives the whole git repo (this file's directory) as the build
+# tarball. None of the paths below are needed to build the mobile app:
+# brand tokens are generated into mobile/src/config/brand.ts and committed,
+# and edge functions deploy separately via the Supabase CLI.
+#
+# Repo-content patterns are root-anchored (leading /) on purpose — an
+# unanchored `scripts/` would also strip mobile/scripts out of the upload.
+#
+# CAUTION: when a .easignore exists, EAS CLI uses it INSTEAD of .gitignore
+# to decide what to archive (docs.expo.dev/build-reference/easignore), so the
+# security-relevant .gitignore entries are mirrored below. If you add a
+# sensitive path to .gitignore, mirror it here.
+
+# --- repo content not needed to build the mobile app ---
+/web
+/docs
+/agent_docs
+/db
+/brand
+/supabase
+/scripts
+/.github
+/.claude
+/.cursor
+/.superpowers
+/App Plans
+/generated_imgs
+/WAITLIST_AUDIT.md
+/Blog post ideas.md
+/WRITING_GUIDE.md
+
+# --- mirrored from .gitignore: secrets + local state (must never upload) ---
+.env*
+*.pem
+/.worktrees
+node_modules/
+.DS_Store
+.vercel
+coverage/
+*.tsbuildinfo
+*.log
+mobile/mobile@*
+chem-irl@*
