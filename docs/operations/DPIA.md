@@ -3,7 +3,8 @@
 **Status: DRAFT for DPO / legal review — not legal advice.** A dating app
 processes special-category data (sexual orientation) and does large-scale
 profiling with location, so a DPIA is **mandatory** under GDPR Art. 35.
-This draft is grounded in the system as built (2026-06-17) so a reviewer
+This draft is grounded in the system as built (2026-06-17; §2.6, GAP-8
+and ROPA addendum 2026-07-06) so a reviewer
 starts from facts, not a blank page. Sign-off by a qualified data
 protection adviser is required before public launch.
 
@@ -61,7 +62,10 @@ At least three triggers apply:
 
 Supabase (hosting, eu-west-1), Resend (email, EU SES), Sentry (crash —
 PII scrubbed at source), Apple/Google (payment + receipt verification),
-Anthropic (Iris — ~30-day API retention unless ZDR), Expo (push relay).
+Anthropic (Iris, and the photo-moderation fallback path — ~30-day API
+retention unless ZDR), Expo (push relay), and the first-party **Chem IRL
+Solutions platform** (solutions.chemirl.app — photo moderation + support
+intake forwarding, see §2.6).
 No data sold; no third-party advertising/tracking SDK as of this draft.
 
 ### 2.4 Retention
@@ -79,6 +83,36 @@ Primary processing is EU (Supabase eu-west-1). US processors (Sentry,
 Apple, Google, Anthropic, possibly Expo/Resend infra) require a transfer
 mechanism (SCCs / adequacy). Confirm each processor's DPA + transfer
 basis before launch — see GAP-4.
+
+### 2.6 First-party forwards to the Chem IRL Solutions platform (2026-07-06)
+
+Two Supabase edge functions can forward data to the Chem IRL Solutions
+platform (`solutions.chemirl.app`) — the company's own B2B platform, with
+the dating app as its first tenant. Both paths are env-gated (active only
+while the corresponding function secrets are set; enabled in production
+since 2026-07-04) and **fail open**: if the platform call errors or times
+out, the function falls back to its original behaviour and the user flow
+is unaffected.
+
+1. **Photo moderation** — `moderate-photo` POSTs photo bytes (base64) to
+   the platform's `/api/v1/moderate` (gate: `PHOTO_PLATFORM_URL/KEY`).
+   The platform returns the safety/match verdict; its AI subprocessor for
+   photo verdicts is currently Tensorix (the platform repo's docs are the
+   authoritative subprocessor list). Fallback path = the function's
+   direct Anthropic call. Verdicts are audited in
+   `photo_verification_checks` either way; the app never learns which
+   backend ran.
+2. **Support intake** — `support-submit` forwards stored submissions
+   (email, display name, subject, message body, kind + whitelisted
+   metadata) to the platform's `/api/v1/intake`
+   (gate: `SUPPORT_AGENT_INTAKE_URL/KEY`), where replies are AI-drafted
+   into a human review queue. The submission row in Supabase remains the
+   system of record; a forwarding failure never loses the submission.
+
+Both recipients are operated by the same controller today. If the
+Solutions platform is ever spun into a separate legal entity, these
+forwards become controller→processor (or joint-controller) arrangements
+needing a DPA and privacy-policy disclosure — see GAP-8.
 
 ## 3. Necessity & proportionality
 
@@ -131,6 +165,13 @@ without retaining PII; fail-closed payment verification.
   ranking logic for the privacy policy (transparency, Art. 13–14).
 - **GAP-7 (R7):** confirm Anthropic ZDR status for the Iris API key;
   document Iris retention in the privacy policy.
+- **GAP-8 (R6):** Solutions-platform forwards (§2.6): confirm
+  platform-side retention of forwarded photo bytes and support
+  submissions, hosting regions (Vercel + the platform's Supabase
+  project), and the Art. 9 written-agreement status of the platform's AI
+  subprocessor for photo verdicts; reflect both flows in the privacy
+  policy, and fold the platform into the GAP-4 processor/transfer
+  register if it becomes a separate legal entity.
 
 ## 6. Biometrics note
 
@@ -163,6 +204,8 @@ Controller-side record. Keep current as processing changes.
 | AI concierge (Iris) | Optional bio help | Opted-in users | transcripts, derived profile | Anthropic | US (confirm ZDR) | ~30d API unless ZDR; app rows until iris-forget | opt-in, JWT |
 | Waitlist | Pre-launch growth | Prospects | email, UTM, IP hash, consents | Supabase, Resend | EU | until erasure | RLS, hashed IP, rate-limit |
 | Transactional email | Confirmations | Users/prospects | email, name | Resend | EU (SES) | per Resend | DKIM/SPF |
+| Photo moderation & verification (§2.6) | Safety: pre-publish photo checks, selfie match | App users | photo bytes (transient), verification verdicts | Supabase, Chem IRL Solutions platform (→ its AI subprocessor) or Anthropic (fallback) | EU + confirm platform/AI regions (GAP-8) | verdict audit rows; forwarded bytes transient (confirm platform retention — GAP-8) | JWT + path-ownership check, 30/hr rate limit, fail-open backend switch |
+| Support intake forwarding (§2.6) | Support/inquiry handling | Users + site visitors | email, name, subject, message, whitelisted metadata | Supabase, Chem IRL Solutions platform | confirm (GAP-8) | Supabase row is system of record, until handled/erasure | CORS allowlist, honeypot, IP-hash rate limit, env-gated forward |
 
 ## 9. Related documents
 
