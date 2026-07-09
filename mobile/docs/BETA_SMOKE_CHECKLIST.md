@@ -9,19 +9,19 @@ This checklist covers the core user loop for beta smoke testing. Focus on critic
 ### Prerequisites
 
 - [ ] `.env.staging` file exists (or create from `.env.staging.example`)
-- [ ] Run `npm run use:staging` to switch to staging environment
-- [ ] Restart Expo dev server (`npm start`) for env changes to take effect
-- [ ] Run `npm run verify:staging` to confirm staging setup is correct
+- [ ] Run `bun run use:staging` to switch to staging environment
+- [ ] Restart Expo dev server (`bun start`) for env changes to take effect
+- [ ] Run `bun run verify:staging` to confirm staging setup is correct
 
 ### Install on phones
 
-**Option A - Expo Go:** Install Expo Go app, scan QR code from `npm start` output (quickest for testing)
+**Option A - Expo Go:** Install Expo Go app, scan QR code from `bun start` output (quickest for testing)
 
 **Option B - Dev build:** Build with `eas build --profile development`, install on device (full features including deep links)
 
 ### Command sequence
 
-1. **Generate test log:** `npm run test:beta:smoke:new`
+1. **Generate test log:** `bun run test:beta:smoke:new`
 2. **Open generated file:** Use the absolute path printed by the command
 3. **Complete Pre-flight:** Check off all Pre-flight items in the generated file
 4. **Run checklist:** Follow the [Core Loop Checklist](#core-loop-checklist) below on two devices
@@ -30,9 +30,9 @@ This checklist covers the core user loop for beta smoke testing. Focus on critic
 
 **⚠️ Complete before starting tests to avoid common setup mistakes:**
 
-- [ ] `npm run use:staging` executed
+- [ ] `bun run use:staging` executed
 - [ ] Expo restarted after env switch
-- [ ] `npm run verify:staging` passed
+- [ ] `bun run verify:staging` passed
 - [ ] Phones installed using Expo Go
 - [ ] Phones installed using Dev build
 - [ ] Phones installed using Production build

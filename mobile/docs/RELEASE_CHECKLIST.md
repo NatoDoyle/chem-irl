@@ -5,17 +5,17 @@
 ## Pre-Build Checks
 
 - [ ] Verify Node.js version matches project requirements (check `package.json` engines if specified)
-- [ ] Verify Expo CLI is up-to-date: `npx expo --version`
-- [ ] Clean install: `rm -rf node_modules && npm install`
+- [ ] Verify Expo CLI is up-to-date: `bunx expo --version`
+- [ ] Clean install: `rm -rf node_modules && bun install`
 - [ ] Verify environment variables in `.env`:
   - [ ] `EXPO_PUBLIC_SUPABASE_URL` is set
   - [ ] `EXPO_PUBLIC_SUPABASE_KEY` is set
   - [ ] `EXPO_PUBLIC_SENTRY_DSN` is set (if using error logging)
   - [ ] `EXPO_PUBLIC_ENVIRONMENT` is set to `production` for production builds
-- [ ] Run `npm run check:env` (should pass)
-- [ ] Run `npm run lint` (should pass with 0 errors)
-- [ ] Run `npm run type-check` (should pass)
-- [ ] Run `npm test` (all tests should pass)
+- [ ] Run `bun run check:env` (should pass)
+- [ ] Run `bun run lint` (should pass with 0 errors)
+- [ ] Run `bun run type-check` (should pass)
+- [ ] Run `bun run test:unit` (all tests should pass)
 
 ## Manual Smoke Test Flow
 
@@ -136,7 +136,7 @@
 
 1. Set `EXPO_PUBLIC_ENVIRONMENT=development` in `.env`
 2. Set `EXPO_PUBLIC_SENTRY_DSN` to valid DSN
-3. Start app: `npm start`
+3. Start app: `bun start`
 4. Trigger an error (e.g., network error in Discover screen)
 5. Verify:
    - [ ] Error is NOT sent to Sentry (disabled in dev)
@@ -145,7 +145,7 @@
 ### Production Environment
 
 1. Set `EXPO_PUBLIC_ENVIRONMENT=production` in `.env`
-2. Build app: `npm run build` or EAS build
+2. Build app: EAS build (`eas build`)
 3. Install on device
 4. Trigger an error
 5. Verify in Sentry Dashboard:

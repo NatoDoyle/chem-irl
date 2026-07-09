@@ -287,7 +287,7 @@ Copy production schema to staging:
 2. Run verification:
 
    ```bash
-   npm run verify:staging
+   bun run verify:staging
    ```
 
    This will check:
@@ -387,20 +387,20 @@ In Supabase Dashboard:
 
 ## Switching Between Staging and Production
 
-### Using npm Scripts (Recommended)
+### Using bun scripts (Recommended)
 
-The easiest way to switch environments is using the provided npm scripts:
+The easiest way to switch environments is using the provided bun scripts:
 
 **Switch to Staging:**
 
 ```bash
-npm run use:staging
+bun run use:staging
 ```
 
 **Switch to Production:**
 
 ```bash
-npm run use:production
+bun run use:production
 ```
 
 These scripts will:
@@ -412,7 +412,7 @@ These scripts will:
 
 ```bash
 # Stop server (Ctrl+C if running)
-npm start
+bun start
 ```
 
 ### Setting Up Environment Files
@@ -459,7 +459,7 @@ EXPO_PUBLIC_SUPABASE_KEY=production_anon_key
 
 ```bash
 # Stop server (Ctrl+C)
-npm start
+bun start
 ```
 
 ## Troubleshooting

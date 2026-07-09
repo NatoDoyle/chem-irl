@@ -214,7 +214,7 @@ If you didn't request this code, you can safely ignore this email.
 
 ```bash
 cd mobile
-npm run verify:staging
+bun run verify:staging
 ```
 
 **Expected Output:**

@@ -9,7 +9,7 @@
 
 **Build Type:**
 
-- [ ] Dev client (`npm start`)
+- [ ] Dev client (`bun start`)
 - [ ] Development build (`eas build --profile development`)
 - [ ] Production build (`eas build --profile production`)
 
