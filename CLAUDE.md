@@ -103,8 +103,8 @@ The web build emits a static export (`output: 'export'`) and runs `pagefind` aga
 
 ### Mobile app structure (`mobile/src/`)
 - **`navigation/`** — Three navigators: `AuthNavigator` (login/signup), `OnboardingNavigator` (profile setup), `MainNavigator` (main app with bottom tabs)
-- **`screens/`** — Organized by feature: `auth/`, `onboarding/`, `discover/`, `matches/`, `profile/`, `debug/`
-- **`lib/`** — Shared utilities and service modules (auth, analytics, notifications, image compression, offline queue, Supabase client, Sentry, IAP via `iap.ts` + `tokens.ts`, availability/timezone helpers, error normalization). The app has a paid token economy — see `iap.ts`, `tokens.ts`, `components/TokenPurchaseModal.tsx`, and the `validate-receipt` edge function.
+- **`screens/`** — Organized by feature: `auth/`, `onboarding/`, `discover/`, `matches/`, `profile/`, `iris/` (Iris AI concierge — post-signup Chem+ pitch, bio-interview, chat modal), `debug/`
+- **`lib/`** — Shared utilities and service modules (auth, analytics, notifications, image compression, offline queue, Supabase client, Sentry, IAP via `iap.ts` + `tokens.ts`, availability/timezone helpers, error normalization). The app has a paid token economy — see `iap.ts`, `tokens.ts`, `components/TokenPurchaseModal.tsx`, and the `validate-receipt` edge function. The Iris AI-concierge client lives in `lib/iris/` (edge-function client, persona, pitch-seen flag; screens/modal in `screens/iris/`), and the 18+ age-gate helpers in `lib/age.ts`.
 - **`lib/supabase/client.ts`** — Single Supabase client instance, imported throughout the app. Uses a custom `LargeSecureStore` that encrypts session tokens with AES-256 (key in SecureStore, ciphertext in AsyncStorage) to work around Expo SecureStore's 2048-byte value limit.
 - **`config/brand.ts`** — Brand colors (aquamarine palette), design tokens, and user-facing copy
 - **`contexts/`** — React contexts (e.g., `ProfileRefreshContext`)
@@ -121,6 +121,7 @@ Auth uses **OTP code entry**, not magic links.
 - The live `profiles` table uses **`id`** as its primary key (mapped to `auth.users.id`). Queries use `.eq('id', session.user.id)`. The reference `db/schema.sql` may still reference `user_id`; always check the actual migration or running schema.
 - `signup_completed` (boolean) and `completion_pct` (integer) are separate checks — a user can have a session and an incomplete signup (e.g., email verified but name not entered).
 - The `ensureProfileExists()` helper in `lib/profile.ts` auto-creates a profile row if one doesn't exist for the authenticated user.
+- **Age gate (18+):** `users.dob` is nullable (NULL = "not provided yet"); the `users_dob_18_plus` CHECK rejects under-18 DOBs at write time, and NULL-dob rows are excluded from age-filtered discovery (NULL-safe age comparisons). Client-side validation lives in `lib/age.ts`. See migration `20260611163555_age_gate_enforcement.sql`.
 
 ### Main tab navigator (`MainNavigator`)
 - **Discover** — swipe-based discovery feed
@@ -137,15 +138,26 @@ No separate backend server. The mobile app connects directly to Supabase (Postgr
 - Scheduled jobs via `pg_cron` (e.g. periodic scoring rollups)
 
 ### Web app structure (`web/src/`)
-- **`app/`** — Next.js 16 App Router routes: landing, `download/`, `how-it-works/`, `waitlist/`, `blog/` (MDX), plus `about/`, `privacy/`, `safety/`, `terms/`. Static export only — no API routes.
+- **`app/`** — Next.js 16 App Router routes: landing, `download/`, `how-it-works/`, `waitlist/`, `blog/` (MDX), plus `about/`, `privacy/`, `safety/`, `support/`, `solutions/`, `terms/`. Static export only — no API routes.
 - **`content/`** — MDX blog posts; rendered via `next-mdx-remote` + `gray-matter` + `rehype-pretty-code`.
 - **`components/`** — Marketing components (`Nav`, `Footer`, `WaitlistForm`, `PhoneMockup`, `SentryInit`, `blog/*`).
-- Waitlist flow: form posts to the `waitlist-signup` edge function → confirmation email → `waitlist-confirm` GET link → optional `waitlist-forget` for GDPR erasure. Blog sidebar uses `waitlist-blog-subscribe`.
+- Waitlist flow: form posts to the `waitlist-signup` edge function → confirmation email → `waitlist-confirm` GET link → optional `waitlist-forget` for GDPR erasure. Blog sidebar uses `waitlist-blog-subscribe`. Support and Solutions-inquiry forms post to the `support-submit` edge function.
 
 ### Edge functions (`supabase/functions/`)
-- `push` — sends push notifications. Webhook endpoint; `verify_jwt = false`, authenticates via `x-webhook-secret`.
-- `validate-receipt` — validates iOS/Android IAP receipts.
-- `waitlist-signup`, `waitlist-confirm`, `waitlist-forget`, `waitlist-blog-subscribe` — anonymous-callable from the marketing site; all have `verify_jwt = false` in `supabase/config.toml` and use a service-role client to call SECURITY DEFINER RPCs. Don't re-enable JWT verification without rerouting the callers.
+
+**Anonymous-callable** (`verify_jwt = false` in `supabase/config.toml`; each uses a service-role client to call SECURITY DEFINER RPCs — don't re-enable JWT verification without rerouting the callers):
+- `push` — sends push notifications. Webhook endpoint; authenticates via `x-webhook-secret`.
+- `waitlist-signup`, `waitlist-confirm`, `waitlist-forget`, `waitlist-blog-subscribe` — marketing-site waitlist funnel (signup form, email confirm link, GDPR erasure, blog sidebar subscribe).
+- `waitlist-unsubscribe` — one-click List-Unsubscribe from lifecycle emails; the HMAC-signed link is the proof of identity.
+- `waitlist-nudge` — D7 referral nudge; webhook from the CMO VPS scheduler (`x-webhook-secret`, supports `{"dry_run": true}`).
+- `support-submit` — `/support` and Solutions-inquiry intake; stores the row, then best-effort forwards to the Solutions platform when `SUPPORT_AGENT_INTAKE_URL`/`_KEY` are set.
+
+**Authenticated** (JWT verified — the `config.toml` default; function bodies still re-check `auth.uid()`):
+- `iris-chat` — the Iris AI-concierge conversation (client in `mobile/src/lib/iris/`, UI in `mobile/src/screens/iris/`).
+- `iris-forget` — GDPR erasure of the Iris transcript and derived data.
+- `moderate-photo` — server-side photo moderation; env-gated cutover to the Solutions platform API (`PHOTO_PLATFORM_URL`/`_KEY`), falls back to direct Anthropic on any platform failure.
+- `validate-receipt` / `validate-subscription` — iOS/Android IAP validation (token packs / the `chem_plus_monthly` subscription), called from `mobile/src/lib/iap.ts`.
+- `delete-account` — account erasure. Not listed in `config.toml`; JWT verification applies by default.
 
 ### Testing
 Two Jest configurations:
@@ -297,7 +309,7 @@ Run or propose only the validations relevant to the files changed. Prefer root-c
 - If you did not run a command, say so explicitly. If you only inspected files, say "no code changes made".
 - When you do run quality gates, paste the actual transcript (or a faithful summary with the exit status), not a description of what they would have shown.
 - For commits and pushes, include the SHA from `git log -1 --oneline` and the output of `git status --porcelain`.
-- This mirrors the stricter contract in `.cursorrules`; if the two ever conflict, prefer the stricter rule.
+- Never fabricate terminal output; if you did not open a file, do not claim its contents.
 
 ## Self-Improvement Protocol
 
