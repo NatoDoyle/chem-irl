@@ -4,6 +4,8 @@ Organized documentation for the Chem IRL dating app.
 
 > **Start here:** the root [`../README.md`](../README.md) (project overview + quick start) and [`../CLAUDE.md`](../CLAUDE.md) — the authoritative reference for architecture, workflow, and conventions. The product definition lives in [`../brand/PRODUCT.md`](../brand/PRODUCT.md).
 
+> **Company policy:** [`SOLUTIONS_PLATFORM.md`](./SOLUTIONS_PLATFORM.md) — Chem IRL Solutions (separate repo) is the main business; this app is tenant #1. Major new capabilities are built multi-tenant on the platform by default and consumed here as a tenant.
+
 ## Setup
 
 - **[Database Setup](./setup/DATABASE_SETUP.md)** — schema bootstrap and migration workflow
@@ -41,7 +43,7 @@ Organized documentation for the Chem IRL dating app.
 - **[Mobile App README](../mobile/README.md)** — plus detailed guides in [`../mobile/docs/`](../mobile/docs/README.md)
 - **[Website README](../web/README.md)**
 - **[Database Automation](../db/AUTOMATION.md)** — pg_cron jobs (reference; the deployed jobs live in `supabase/migrations/`)
-- **[Chem IRL Solutions boundary](./SOLUTIONS_PLATFORM.md)** — what the Solutions platform is, the repo/runtime boundary, and this repo's tenant-side integration points
+- **[Chem IRL Solutions boundary](./SOLUTIONS_PLATFORM.md)** — the platform-first build rule, the repo/runtime boundary, and this repo's tenant-side integration points
 
 ## Plans & feature docs (point-in-time — read with caution)
 
