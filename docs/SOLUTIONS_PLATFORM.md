@@ -1,7 +1,8 @@
-# Chem IRL Solutions — platform boundary and integration points
+# Chem IRL Solutions — platform-first rule, boundary, and integration points
 
-_Last updated: 2026-07-09._ What the Chem IRL Solutions platform is, where the
-repo/runtime boundary sits, and every place this repo touches it.
+_Last updated: 2026-07-09._ What the Chem IRL Solutions platform is, the
+platform-first build rule, where the repo/runtime boundary sits, and every
+place this repo touches it.
 
 ## What Solutions is
 
@@ -20,6 +21,34 @@ repo is **tenant #1 and the reference case study**, not the other way around.
   working on the boundary: that repo's `docs/CHEM_IRL_TENANT.md` (this app as
   a tenant) and `docs/DOMAINS.md` (domain/routing layout) — both cited in
   `moderate-photo`'s header comments.
+
+## The platform-first build rule
+
+Adopted company-wide 2026-07-06 (the pivot); the master policy is the
+platform repo's `docs/suite/TENANCY_POLICY.md` (2026-07-04). **Major new
+capabilities — features, workflows, tools, services, agents — are built
+multi-tenant on the platform by default and consumed here as a tenant.**
+Chem IRL is a software company; this app is the testing ground and the
+public case study.
+
+- **Heuristic:** could a second customer plausibly use it? Moderation,
+  support intake, AI agents, analytics, notifications, CRM/marketing,
+  billing, trust & safety, and admin tooling are platform-shaped.
+  Dating-product mechanics/UI, app-specific copy/brand/config, and thin
+  tenant-side adapters are app-local by nature.
+- **Two valid tenancy shapes** (per the master policy): a **platform
+  module** — workspace-scoped rows behind RLS, metered via `usage_events`,
+  exposed via the dashboard and/or `api/v1/*` behind workspace API keys
+  (`cis_…`) — or a **per-tenant instance** — a dedicated runtime (e.g. an
+  agent seat on its own VPS) registered to a workspace in the control plane
+  for identity, metering, and kill switches.
+- **What the rule forbids:** a new capability wired only to Chem IRL's own
+  schema/secrets with no workspace concept — the shape the original
+  single-tenant `moderate-photo` had before its cutover.
+- **Deviation protocol (default with judgment):** building something
+  platform-shaped app-local is allowed when pragmatic, but the PR
+  description must say so explicitly ("built app-local because …"). This is
+  a default, not a stop-and-ask gate.
 
 ## The boundary rule
 
@@ -53,15 +82,40 @@ Notes:
   item on platform-side regions/retention (GAP-8) is tracked in the DPIA, not
   here.
 
-## What does NOT touch the platform
+## What does NOT touch the platform (as of 2026-07-09)
 
-The waitlist funnel (`waitlist-*` functions), Iris (`iris-chat`/`iris-forget`),
-IAP validation (`validate-receipt`/`validate-subscription`), `push`, and
-`delete-account` are all direct Supabase/Anthropic — no platform involvement.
+- **Deliberately exempt:** Iris (`iris-chat`/`iris-forget`) stays app-local —
+  it *is* the dating product's surface, and by prior decision it remains a
+  purely additive, opt-in in-app feature. At most the platform later harvests
+  its skeleton (streaming, memory, entitlements), never the feature itself.
+- **Platform-shaped candidates, app-local today:** analytics
+  (`analytics_events`, Supabase-native per decision D1), push notifications
+  (`push`), IAP/billing (`validate-receipt`/`validate-subscription` + the
+  token economy), and account deletion/GDPR flows (`delete-account`). These
+  are direct Supabase/Anthropic today; each is a migration candidate under
+  the build rule above.
+- **Out of scope per the master policy:** the waitlist funnel (`waitlist-*`
+  functions) is consumer-app plumbing, not a product — a candidate only if
+  the platform ever grows a generic lifecycle-email module.
+- **Per-tenant instances elsewhere:** the CMO/CSO agent ("Alex") runs on its
+  own VPS ([OPENCLAW_CMO_VPS.md](./infrastructure/OPENCLAW_CMO_VPS.md),
+  [OPENCLAW_CSO.md](./infrastructure/OPENCLAW_CSO.md)) — Chem IRL's instance
+  is seat #1 of the platform's marketing/outbound seat offering;
+  control-plane registration waits on the platform's seat registry.
+
+## Migrating existing app-local capabilities
+
+Opportunistic, not big-bang. Migrate a candidate when (a) it is next up for
+major work anyway, (b) the platform grows the matching module, or (c) a
+paying tenant needs it. Cutovers follow the `moderate-photo` template:
+env-gated (secrets unset = zero behavior change), fail-open to the existing
+app-local path, platform provenance recorded in audit rows. No rewrites for
+their own sake.
 
 ## Maintenance
 
 When adding a new tenant-side touchpoint (a new call out to
-`solutions.chemirl.app`), update **this doc** and **DPIA §2.6** in the same
-change, and keep the env-gated + fail-open pattern unless there is a strong
-reason not to.
+`solutions.chemirl.app`), update **this doc** and **DPIA §2.6** (plus its
+Article 30 register rows) in the same change, and keep the env-gated +
+fail-open pattern unless there is a strong reason not to. When a capability
+moves between the lists above, update the inventory section and its date.

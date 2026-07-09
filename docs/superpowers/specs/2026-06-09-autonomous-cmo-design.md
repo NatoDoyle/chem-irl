@@ -7,6 +7,8 @@
 
 > This spec defines a system that **runs outside this repo** (on the VPS) but **acts on this repo** (blog/newsletter via PR) and on Chem IRL's external marketing surfaces. It is intentionally phased: a north-star vision delivered as independently-useful increments. Nothing here is built until this design is approved.
 
+> ⚠️ **§3 non-goal "Multi-tenant / productising this" superseded (2026-07-06):** the CMO is now the Chem IRL Solutions platform's per-tenant "marketing seat" (Chem IRL's VPS = seat #1; control-plane registration pending the platform's seat registry) — see [docs/SOLUTIONS_PLATFORM.md](../../SOLUTIONS_PLATFORM.md) and the platform repo's `docs/suite/TENANCY_POLICY.md`. The rest of this spec stands as a dated record.
+
 ---
 
 ## 1. Vision

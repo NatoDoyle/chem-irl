@@ -6,6 +6,17 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Chem IRL is a dating app optimized for real-world follow-through and reduced time-to-date, not endless in-app engagement. Core mechanic: users propose 2-3 specific meeting times within 7 days; proposals expire after 72 hours.
 
+## Platform-first rule (Chem IRL Solutions)
+
+Chem IRL Solutions — the multi-tenant B2B platform (`NatoDoyle/chem-irl-solutions-platform`, runtime `solutions.chemirl.app`, local checkout `../chem-irl-solutions-platform`) — is the **main business**; this dating app is tenant #1, the testing ground, and the public case study. The master tenancy policy is the platform repo's `docs/suite/TENANCY_POLICY.md`; the tenant-side view for this repo is `docs/SOLUTIONS_PLATFORM.md`.
+
+- **Default: build major new capabilities multi-tenant on the platform** — features, workflows, tools, services, agents — and consume them here as a tenant. Heuristic: if a second customer could plausibly use it (moderation, support intake, AI agents, analytics, notifications, CRM/marketing, billing, trust & safety, admin tooling), it is platform-shaped.
+- **App-local is fine for:** dating-product mechanics and UI, app-specific copy/brand/config, and thin tenant-side adapters that call platform APIs.
+- **Deviating is allowed with judgment.** Building something platform-shaped app-local is OK when pragmatic, but say so explicitly in the PR description ("built app-local because …"). This is a default, not a stop-and-ask gate.
+- **Repo boundary follows the runtime boundary:** platform code goes in the platform repo; this repo gets only the tenant-side integration — edge-function proxy, env-gated secrets (unset = zero behavior change), fail-open fallback. Canonical examples: `moderate-photo`, `support-submit` (see the Solutions subsection under Architecture).
+- **Data protection:** any new forward of user data to the platform updates `docs/operations/DPIA.md` §2.6 and the Article 30 register in the same change (tracked as GAP-8).
+- **Deliberate exemption:** Iris (the in-app concierge) stays app-local by prior decision — it *is* the dating product's surface. Current inventory and candidates: `docs/SOLUTIONS_PLATFORM.md`.
+
 ## Repo map
 
 - `mobile/` — React Native (Expo SDK 54) client (primary product)
