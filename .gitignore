@@ -76,3 +76,6 @@ Blog post ideas.md
 WRITING_GUIDE.md
 web/src/app/blog/chem-irl-blog-ideas.md
 docs/COHORT_A_AUDIT_REPORT.md
+
+# deno artifacts (ad-hoc edge-function tests; lockfile is per-machine)
+deno.lock

@@ -34,6 +34,7 @@
 
 import { scrubSentryPayload } from './sentry-scrubber.ts';
 import { runbookUrl } from './runbook-url.ts';
+import { buildEvent, shipEvents } from './bronto.ts';
 
 // Severity matches mobile/src/lib/errors.ts ERROR_SEVERITIES so Sentry
 // alert rules (defined once in PR-E) can fire across both layers.
@@ -72,6 +73,9 @@ export class ObservabilityContext {
   user_id: string | null = null;
   // Free-form tags handlers can attach mid-request (e.g. step:auth → step:upstream).
   readonly tags: Record<string, string> = {};
+  // Bronto events buffered by logEvent; flushed once per request (see
+  // flushToBronto) so telemetry costs at most one background POST.
+  readonly pending: Record<string, unknown>[] = [];
 
   constructor(fn: string) {
     this.request_id = crypto.randomUUID();
@@ -104,6 +108,7 @@ export function withObservability(
         status: response.status,
         duration_ms: Math.round(performance.now() - start),
       });
+      flushToBronto(ctx, req);
       return response;
     } catch (err) {
       const duration_ms = Math.round(performance.now() - start);
@@ -120,6 +125,8 @@ export function withObservability(
           sentry_error: sentryErr instanceof Error ? sentryErr.message : String(sentryErr),
         });
       });
+
+      flushToBronto(ctx, req);
 
       const status = err instanceof EdgeError ? err.status : 500;
       const responseBody: Record<string, unknown> = {
@@ -139,6 +146,33 @@ function safePath(url: string): string {
     return new URL(url).pathname;
   } catch {
     return '/';
+  }
+}
+
+// One background NDJSON POST per request carrying everything logEvent
+// buffered (request_start/complete/failed + handler events). user_id is
+// stamped at flush so events logged pre-auth still correlate. Fail-open
+// and never awaited on the request path; EdgeRuntime.waitUntil (when the
+// runtime provides it) keeps the isolate alive until the POST settles.
+// OPTIONS preflights are dropped as noise.
+function flushToBronto(ctx: ObservabilityContext, req: Request): void {
+  if (req.method === 'OPTIONS') {
+    ctx.pending.length = 0;
+    return;
+  }
+  if (ctx.pending.length === 0) return;
+  for (const e of ctx.pending) {
+    if (ctx.user_id && e.user_id === undefined) e.user_id = ctx.user_id;
+  }
+  const flush = shipEvents(ctx.pending.splice(0)).catch(() => {});
+  const runtime = (
+    globalThis as { EdgeRuntime?: { waitUntil?: (p: Promise<unknown>) => void } }
+  ).EdgeRuntime;
+  try {
+    runtime?.waitUntil?.(flush);
+  } catch {
+    // waitUntil can throw outside a request scope; the flush promise is
+    // already running regardless.
   }
 }
 
@@ -166,6 +200,19 @@ export function logEvent(
   if (level === 'error') console.error(line);
   else if (level === 'warn') console.warn(line);
   else console.log(line);
+
+  // Mirror the line into the per-request Bronto buffer (scrubbed there;
+  // shipped once per request by flushToBronto).
+  ctx.pending.push(
+    buildEvent({
+      event: msg,
+      level,
+      fn: ctx.fn,
+      request_id: ctx.request_id,
+      user_id: ctx.user_id,
+      extra,
+    })
+  );
 }
 
 // --- Lazy Sentry init -----------------------------------------------------
