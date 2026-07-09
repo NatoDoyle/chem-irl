@@ -41,6 +41,7 @@ Organized documentation for the Chem IRL dating app.
 - **[Mobile App README](../mobile/README.md)** — plus detailed guides in [`../mobile/docs/`](../mobile/docs/README.md)
 - **[Website README](../web/README.md)**
 - **[Database Automation](../db/AUTOMATION.md)** — pg_cron jobs (reference; the deployed jobs live in `supabase/migrations/`)
+- **[Chem IRL Solutions boundary](./SOLUTIONS_PLATFORM.md)** — what the Solutions platform is, the repo/runtime boundary, and this repo's tenant-side integration points
 
 ## Plans & feature docs (point-in-time — read with caution)
 
