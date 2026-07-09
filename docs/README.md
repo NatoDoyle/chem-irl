@@ -7,7 +7,7 @@ Organized documentation for the Chem IRL dating app.
 ## Setup
 
 - **[Database Setup](./setup/DATABASE_SETUP.md)** — schema bootstrap and migration workflow
-- **[Supabase Setup](./setup/SUPABASE_SETUP.md)** — Supabase connection for the web/Vercel app
+- **[Supabase Setup](./setup/SUPABASE_SETUP.md)** — how the static marketing site connects to Supabase (anonymous edge functions + publishable key)
 - **[Cloudflare Email Routing](./setup/POSTMARK_CLOUDFLARE_SETUP.md)** — email routing (note: transactional email now uses Resend, not Postmark — see the file's banner)
 
 ## Development
