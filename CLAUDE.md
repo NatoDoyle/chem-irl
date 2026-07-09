@@ -309,7 +309,7 @@ Run or propose only the validations relevant to the files changed. Prefer root-c
 - If you did not run a command, say so explicitly. If you only inspected files, say "no code changes made".
 - When you do run quality gates, paste the actual transcript (or a faithful summary with the exit status), not a description of what they would have shown.
 - For commits and pushes, include the SHA from `git log -1 --oneline` and the output of `git status --porcelain`.
-- This mirrors the stricter contract in `.cursorrules`; if the two ever conflict, prefer the stricter rule.
+- Never fabricate terminal output; if you did not open a file, do not claim its contents.
 
 ## Self-Improvement Protocol
 
