@@ -21,7 +21,7 @@ Use this checklist when deploying to production.
 
 #### Mobile (Expo / React Native)
 - [ ] App builds/runs locally
-- [ ] TypeScript check passes (repo script if present, otherwise `npx tsc --noEmit`)
+- [ ] TypeScript check passes (`bun run type-check`, or `bunx tsc --noEmit` if no repo script)
 - [ ] No redbox/runtime errors on critical flows (auth → onboarding → discover → like/match → proposal → chat)
 
 ### 2) Database (BLOCKING: staging → production)

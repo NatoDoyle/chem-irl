@@ -165,10 +165,10 @@ try {
 
 **⚠️  Complete before starting tests to avoid common setup mistakes:**
 
-- [ ] \`npm run use:staging\` executed
+- [ ] \`bun run use:staging\` executed
 - [ ] Expo restarted after env switch
-- [ ] \`npm run verify:staging\` passed
-- [ ] Confirm detected environment: **${detectedEnv}**${detectedEnv === 'unknown' ? '\n  Hint: create .env.staging/.env.production or run `npm run use:staging` / `npm run use:production`' : ''}
+- [ ] \`bun run verify:staging\` passed
+- [ ] Confirm detected environment: **${detectedEnv}**${detectedEnv === 'unknown' ? '\n  Hint: create .env.staging/.env.production or run `bun run use:staging` / `bun run use:production`' : ''}
 - [ ] Confirm Supabase URL host: **${supabaseHost}**
 - [ ] Phones installed using Expo Go
 - [ ] Phones installed using Dev build

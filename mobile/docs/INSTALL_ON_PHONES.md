@@ -10,14 +10,14 @@ Before installing on phones, ensure staging environment is set up and verified:
 
 ```bash
 # 1. Switch to staging environment
-npm run use:staging
+bun run use:staging
 
 # 2. Restart Expo dev server (if running)
 # Press Ctrl+C to stop, then:
-npm start
+bun start
 
 # 3. Verify staging setup
-npm run verify:staging
+bun run verify:staging
 ```
 
 **Important:** The verification script requires a `.env.seed` file with service role key:
@@ -44,14 +44,14 @@ See [`SUPABASE_STAGING_SETUP.md`](./SUPABASE_STAGING_SETUP.md) for detailed setu
 2. **Start Expo dev server:**
 
    ```bash
-   npm start
+   bun start
    ```
 
 3. **Connect your phone:**
    - **Same WiFi (LAN):** Scan QR code from terminal
    - **Different network:** Use tunnel mode:
      ```bash
-     npm start -- --tunnel
+     bun start -- --tunnel
      ```
 
 4. **Open in Expo Go:**
@@ -62,14 +62,14 @@ See [`SUPABASE_STAGING_SETUP.md`](./SUPABASE_STAGING_SETUP.md) for detailed setu
 
 **"Unable to connect" or "Network request failed":**
 
-- **Try tunnel mode:** `npm start -- --tunnel`
+- **Try tunnel mode:** `bun start -- --tunnel`
 - **Check firewall:** Ensure port 8081 is not blocked
 - **Same network:** Ensure phone and computer are on same WiFi (for LAN mode)
-- **Restart Expo:** Press `r` in terminal or restart `npm start`
+- **Restart Expo:** Press `r` in terminal or restart `bun start`
 
 **"Metro bundler error":**
 
-- Clear cache: `npm start -- --clear`
+- Clear cache: `bun start -- --clear`
 - Check `.env.local` exists and has correct values
 - Restart Expo dev server
 
@@ -77,7 +77,7 @@ See [`SUPABASE_STAGING_SETUP.md`](./SUPABASE_STAGING_SETUP.md) for detailed setu
 
 - Verify `.env.local` has correct `EXPO_PUBLIC_SUPABASE_URL` and `EXPO_PUBLIC_SUPABASE_KEY`
 - Check Supabase project is active
-- Run `npm run verify:staging` to verify setup
+- Run `bun run verify:staging` to verify setup
 
 **Deep linking not working:**
 
@@ -93,7 +93,7 @@ See [`SUPABASE_STAGING_SETUP.md`](./SUPABASE_STAGING_SETUP.md) for detailed setu
 
 ### Prerequisites
 
-- EAS CLI installed: `npm install -g eas-cli`
+- EAS CLI installed: `bun install -g eas-cli`
 - EAS account: `eas login`
 - Apple Developer account (for iOS) or Google Play account (for Android)
 
@@ -134,7 +134,7 @@ This repo uses the following EAS build profiles (from `eas.json`):
 3. **Start Expo dev server:**
 
    ```bash
-   npm start
+   bun start
    ```
 
 4. **Connect dev client:**
@@ -195,7 +195,7 @@ This repo uses the following EAS build profiles (from `eas.json`):
 **Important:** After changing `.env.local` or switching environments:
 
 1. **Stop Expo dev server:** Press `Ctrl+C`
-2. **Restart:** `npm start`
+2. **Restart:** `bun start`
 3. **Reload app:** Shake device → "Reload" (or press `r` in terminal)
 
 **Why:** Expo inlines `EXPO_PUBLIC_*` variables at build/start time. Changes require restart.
@@ -207,7 +207,7 @@ This repo uses the following EAS build profiles (from `eas.json`):
 - **NEVER** put `SUPABASE_SERVICE_ROLE_KEY` in `.env.local` or any `EXPO_PUBLIC_*` variable
 - Service role keys bypass Row Level Security (RLS)
 - They must only be used in server-side code or local verification scripts
-- Use service role key only in `.env.seed` (gitignored) for `npm run verify:staging`
+- Use service role key only in `.env.seed` (gitignored) for `bun run verify:staging`
 
 **Correct:**
 
@@ -240,33 +240,33 @@ For two-device testing (see [`TWO_DEVICE_TEST_PLAN.md`](./TWO_DEVICE_TEST_PLAN.m
 ### Switch to Staging
 
 ```bash
-npm run use:staging
-npm start  # Restart required
+bun run use:staging
+bun start  # Restart required
 ```
 
 ### Switch to Production
 
 ```bash
-npm run use:production
-npm start  # Restart required
+bun run use:production
+bun start  # Restart required
 ```
 
 ### Verify Staging Setup
 
 ```bash
-npm run verify:staging
+bun run verify:staging
 ```
 
 ### Start Expo (LAN mode)
 
 ```bash
-npm start
+bun start
 ```
 
 ### Start Expo (Tunnel mode)
 
 ```bash
-npm start -- --tunnel
+bun start -- --tunnel
 ```
 
 ### Build Dev Client (iOS)
@@ -289,4 +289,4 @@ After installing on phones:
 
 1. **Run two-device test plan:** See [`TWO_DEVICE_TEST_PLAN.md`](./TWO_DEVICE_TEST_PLAN.md)
 2. **Record test results:** Use [`TEST_RUN_LOG_TEMPLATE.md`](./TEST_RUN_LOG_TEMPLATE.md)
-3. **Verify staging parity:** Run `npm run verify:staging` before each test session
+3. **Verify staging parity:** Run `bun run verify:staging` before each test session

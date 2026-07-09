@@ -45,7 +45,7 @@ The edge function handles webhook events and sends push notifications via Expo P
 ### 2.1 Install Supabase CLI
 
 ```bash
-npm install -g supabase
+bun install -g supabase
 ```
 
 ### 2.2 Login to Supabase
@@ -180,7 +180,7 @@ EXPO_PUBLIC_PROJECT_ID=your-expo-project-id  # Optional, for Expo Push
 
 ### 4.2 Test Token Registration
 
-1. Run the app: `cd mobile && npm start`
+1. Run the app: `cd mobile && bun start`
 2. Sign in with a test account
 3. Check Supabase Dashboard → Database → `push_tokens` table
 4. Verify a token was inserted for your user
