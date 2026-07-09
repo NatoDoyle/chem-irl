@@ -25,6 +25,12 @@
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import {
+  type EdgeHandler,
+  logEvent,
+  type ObservabilityContext,
+  withObservability,
+} from '../_shared/observability.ts';
 
 const MARKETING_SUCCESS_URL = 'https://chemirl.app/waitlist/success';
 
@@ -32,13 +38,16 @@ const MARKETING_SUCCESS_URL = 'https://chemirl.app/waitlist/success';
 // a `?state=` query param.
 type ConfirmState = 'invalid' | 'expired' | 'already_confirmed' | 'error';
 
-function redirectToStatus(state: ConfirmState): Response {
+// Every non-success outcome funnels through here, so one logEvent covers
+// them all (`confirm_result` with the state the user was redirected to).
+function redirectToStatus(ctx: ObservabilityContext, state: ConfirmState): Response {
+  logEvent(state === 'error' ? 'error' : 'info', 'confirm_result', ctx, { state });
   const u = new URL(MARKETING_SUCCESS_URL);
   u.searchParams.set('state', state);
   return Response.redirect(u.toString(), 302);
 }
 
-serve(async (req) => {
+const handler: EdgeHandler = async (req, ctx) => {
   // Only GET is meaningful (link click from email). HEAD also fine.
   if (req.method !== 'GET' && req.method !== 'HEAD') {
     return new Response('Method not allowed', { status: 405 });
@@ -48,14 +57,14 @@ serve(async (req) => {
   const token = (url.searchParams.get('token') ?? '').trim();
 
   if (!token || token.length < 16 || token.length > 256) {
-    return redirectToStatus('invalid');
+    return redirectToStatus(ctx, 'invalid');
   }
 
   const supabaseUrl = Deno.env.get('SUPABASE_URL');
   const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
   if (!supabaseUrl || !serviceRoleKey) {
     console.error('waitlist-confirm: missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY');
-    return redirectToStatus('error');
+    return redirectToStatus(ctx, 'error');
   }
 
   const admin = createClient(supabaseUrl, serviceRoleKey);
@@ -66,7 +75,7 @@ serve(async (req) => {
 
   if (error) {
     console.error('confirm_waitlist_email_v3 rpc failed:', error);
-    return redirectToStatus('error');
+    return redirectToStatus(ctx, 'error');
   }
 
   if (!data || data.success !== true) {
@@ -76,9 +85,9 @@ serve(async (req) => {
     // HTTP-status signal is dropped for the human; keep it in the log.
     console.error('waitlist-confirm: confirm failed', { reason });
     if (reason === 'expired_token') {
-      return redirectToStatus('expired');
+      return redirectToStatus(ctx, 'expired');
     }
-    return redirectToStatus('invalid');
+    return redirectToStatus(ctx, 'invalid');
   }
 
   // Idempotent re-hit: an email-scanner prefetch already confirmed this
@@ -86,7 +95,7 @@ serve(async (req) => {
   // Resend on that first (confirming) hit, so show the calm "already
   // confirmed" page — no celebration, no duplicate audience push.
   if (data.already_confirmed === true) {
-    return redirectToStatus('already_confirmed');
+    return redirectToStatus(ctx, 'already_confirmed');
   }
 
   const email = typeof data.email === 'string' ? data.email : null;
@@ -99,7 +108,7 @@ serve(async (req) => {
     console.error(
       'waitlist-confirm: rpc returned success without email or source',
     );
-    return redirectToStatus('error');
+    return redirectToStatus(ctx, 'error');
   }
 
   // Push the now-confirmed contact to the appropriate Resend audience.
@@ -121,13 +130,16 @@ serve(async (req) => {
       console.error(
         'waitlist-confirm: waitlist confirm returned without referral_code',
       );
-      return redirectToStatus('error');
+      return redirectToStatus(ctx, 'error');
     }
     successUrl.searchParams.set('code', referralCode);
   }
 
+  logEvent('info', 'confirm_result', ctx, { state: 'confirmed', source });
   return Response.redirect(successUrl.toString(), 302);
-});
+};
+
+serve(withObservability(handler, { name: 'waitlist-confirm' }));
 
 // --- Resend audience push -------------------------------------------------
 //

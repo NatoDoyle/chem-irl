@@ -22,6 +22,7 @@
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { type EdgeHandler, logEvent, withObservability } from '../_shared/observability.ts';
 
 const DEFAULT_ALLOWED_ORIGINS = new Set<string>([
   'https://chemirl.app',
@@ -57,7 +58,7 @@ function isAllowedOrigin(origin: string): boolean {
   return false;
 }
 
-serve(async (req) => {
+const handler: EdgeHandler = async (req, ctx) => {
   const corsHeaders = buildCorsHeaders(req);
   const json = (body: unknown, status: number): Response =>
     new Response(JSON.stringify(body), {
@@ -97,6 +98,7 @@ serve(async (req) => {
 
     if (error) {
       console.error('forget_waitlist_signup rpc failed:', error);
+      logEvent('error', 'erasure_rpc_failed', ctx, { rpc: 'forget_waitlist_signup' });
       return json({ error: 'rpc_failed' }, 500);
     }
 
@@ -104,15 +106,25 @@ serve(async (req) => {
       const reason = typeof data?.error === 'string' ? data.error : 'forget_failed';
       // not_found / invalid_token from the RPC → 404; everything else → 400.
       const status = reason === 'not_found' ? 404 : 400;
+      logEvent('info', 'erasure_result', ctx, { outcome: reason });
       return json({ error: reason }, status);
     }
 
+    // GDPR Art. 17 erasure completed — no identifiers in telemetry.
+    logEvent('info', 'erasure_result', ctx, { outcome: 'deleted' });
     return json({ success: true }, 200);
   } catch (err) {
+    // Keep the CORS'd 500 (the wrapper's generic 500 has no CORS headers);
+    // mirror the failure into telemetry.
     console.error('waitlist-forget unhandled error:', err);
+    logEvent('error', 'erasure_unhandled', ctx, {
+      error_message: err instanceof Error ? err.message : String(err),
+    });
     return json({ error: 'internal_error' }, 500);
   }
-});
+};
+
+serve(withObservability(handler, { name: 'waitlist-forget' }));
 
 async function safeJson(req: Request): Promise<Record<string, unknown> | null> {
   try {
