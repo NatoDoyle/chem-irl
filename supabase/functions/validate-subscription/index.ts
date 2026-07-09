@@ -51,12 +51,18 @@ import {
   isGoogleConfigured,
   type VerifiedSubscription,
 } from '../_shared/store-verify.ts';
+import {
+  type EdgeHandler,
+  logEvent,
+  type ObservabilityContext,
+  withObservability,
+} from '../_shared/observability.ts';
 
 const EXPECTED_PRODUCT_ID = 'chem_plus_monthly';
 
 type SubStatus = 'trialing' | 'active' | 'grace_period' | 'expired' | 'cancelled';
 
-serve(async (req) => {
+const handler: EdgeHandler = async (req, ctx) => {
   if (req.method !== 'POST') {
     return jsonResponse({ error: 'method_not_allowed' }, 405);
   }
@@ -85,6 +91,7 @@ serve(async (req) => {
   if (authError || !user) {
     return jsonResponse({ error: 'unauthorized' }, 401);
   }
+  ctx.user_id = user.id;
 
   // Parse + validate body
   let body: Record<string, unknown>;
@@ -122,12 +129,16 @@ serve(async (req) => {
 
     if (!result.ok) {
       console.error('validate-subscription: store verification failed', result);
+      logEvent('error', 'subscription_verify_failed', ctx, {
+        platform,
+        reason: result.reason,
+      });
       return result.reason === 'invalid_receipt'
         ? jsonResponse({ error: 'receipt_invalid', detail: result.detail }, 400)
         : jsonResponse({ error: 'store_verification_failed' }, 502);
     }
 
-    return upsertAndRespond(admin, user.id, platform, result.sub);
+    return upsertAndRespond(admin, ctx, user.id, platform, result.sub);
   }
 
   // --- Path 2: staging-only trusting fallback (no store creds present) -----
@@ -139,6 +150,7 @@ serve(async (req) => {
         'configured (APPLE_IAP_* / GOOGLE_PLAY_SERVICE_ACCOUNT) and ' +
         'STAGING_TRUST_RECEIPTS is not enabled.',
     );
+    logEvent('error', 'subscription_unavailable', ctx, { platform });
     return jsonResponse(
       {
         error: 'receipt_validation_unavailable',
@@ -154,9 +166,10 @@ serve(async (req) => {
     'validate-subscription: STAGING_TRUST_RECEIPTS=true; trusting receipt ' +
       'without store-side verification (staging only)',
   );
+  logEvent('warn', 'subscription_staging_trusted', ctx, { platform });
 
   const placeholder = placeholderSubscription();
-  return upsertAndRespond(admin, user.id, platform, {
+  return upsertAndRespond(admin, ctx, user.id, platform, {
     status: placeholder.status,
     currentPeriodEndsAt: placeholder.currentPeriodEndsAt,
     trialEndsAt: placeholder.trialEndsAt,
@@ -164,7 +177,9 @@ serve(async (req) => {
     productId: EXPECTED_PRODUCT_ID,
     environment: 'staging-trusted',
   });
-});
+};
+
+serve(withObservability(handler, { name: 'validate-subscription' }));
 
 // ============================================================================
 // Shared upsert + response
@@ -172,6 +187,7 @@ serve(async (req) => {
 
 async function upsertAndRespond(
   admin: ReturnType<typeof createClient>,
+  ctx: ObservabilityContext,
   userId: string,
   platform: 'ios' | 'android',
   sub: VerifiedSubscription,
@@ -196,8 +212,15 @@ async function upsertAndRespond(
 
   if (upsertErr) {
     console.error('validate-subscription: upsert failed', upsertErr);
+    logEvent('error', 'subscription_upsert_failed', ctx, { platform });
     return jsonResponse({ error: 'upsert_failed' }, 500);
   }
+
+  logEvent('info', 'subscription_result', ctx, {
+    platform,
+    status: sub.status,
+    environment: sub.environment,
+  });
 
   return jsonResponse(
     {

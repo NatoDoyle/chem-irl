@@ -26,8 +26,9 @@
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient, SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { type EdgeHandler, logEvent, withObservability } from '../_shared/observability.ts';
 
-serve(async (req) => {
+const handler: EdgeHandler = async (req, ctx) => {
   if (req.method !== 'POST') {
     return jsonResponse({ error: 'method_not_allowed' }, 405);
   }
@@ -56,6 +57,11 @@ serve(async (req) => {
     return jsonResponse({ error: 'unauthorized' }, 401);
   }
 
+  // Recorded before the row disappears: the UUID is pseudonymous and this
+  // is the durable "account deleted" event in telemetry (the DB cascade
+  // erases everything else).
+  ctx.user_id = user.id;
+
   // Service-role client bypasses RLS. Every query below is scoped to
   // `user.id` (the verified caller); there is no path to another user's data.
   const admin = createClient(supabaseUrl, serviceKey);
@@ -67,6 +73,7 @@ serve(async (req) => {
     .eq('user_id', user.id);
   if (txErr) {
     console.error('delete-account: token_transactions delete failed', txErr);
+    logEvent('error', 'account_delete_failed', ctx, { step: 'token_transactions' });
     return jsonResponse({ error: 'token_transactions_delete_failed' }, 500);
   }
 
@@ -74,6 +81,7 @@ serve(async (req) => {
   const { error: balErr } = await admin.from('tokens').delete().eq('user_id', user.id);
   if (balErr) {
     console.error('delete-account: tokens delete failed', balErr);
+    logEvent('error', 'account_delete_failed', ctx, { step: 'tokens' });
     return jsonResponse({ error: 'tokens_delete_failed' }, 500);
   }
 
@@ -87,14 +95,20 @@ serve(async (req) => {
   const { error: authDeleteErr } = await admin.auth.admin.deleteUser(user.id);
   if (authDeleteErr) {
     console.error('delete-account: auth user delete failed', authDeleteErr);
+    logEvent('error', 'account_delete_failed', ctx, { step: 'auth_delete' });
     return jsonResponse(
       { error: 'auth_delete_failed', details: authDeleteErr.message },
       500
     );
   }
 
+  logEvent('info', 'account_delete_result', ctx, {
+    storage_objects_removed: storageRemoved,
+  });
   return jsonResponse({ ok: true, storage_objects_removed: storageRemoved }, 200);
-});
+};
+
+serve(withObservability(handler, { name: 'delete-account' }));
 
 /**
  * Remove every object under `profiles/{userId}/` and `profiles/{userId}/verification/`.

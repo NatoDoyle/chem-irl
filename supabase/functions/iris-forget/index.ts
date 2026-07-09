@@ -38,8 +38,9 @@
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { type EdgeHandler, logEvent, withObservability } from '../_shared/observability.ts';
 
-serve(async (req) => {
+const handler: EdgeHandler = async (req, ctx) => {
   if (req.method !== 'POST') {
     return jsonResponse({ error: 'method_not_allowed' }, 405);
   }
@@ -67,6 +68,7 @@ serve(async (req) => {
   if (authError || !user) {
     return jsonResponse({ error: 'unauthorized' }, 401);
   }
+  ctx.user_id = user.id;
 
   // Service-role client: bypasses RLS for the actual deletes. The user_id
   // filter is enforced by the explicit .eq('user_id', user.id) on every
@@ -170,6 +172,14 @@ serve(async (req) => {
     // Non-fatal: storage + audit rows are already gone.
   }
 
+  // GDPR Art. 17 feature-scoped erasure completed — counts only.
+  logEvent('info', 'erasure_complete', ctx, {
+    conversations: conversationsDeleted ?? 0,
+    memory_rows: memoryDeleted ?? 0,
+    verification_checks: verifyChecksErr ? null : verificationChecksDeleted ?? 0,
+    selfies: selfiesRemoved,
+  });
+
   return jsonResponse(
     {
       ok: true,
@@ -189,7 +199,9 @@ serve(async (req) => {
     },
     200
   );
-});
+};
+
+serve(withObservability(handler, { name: 'iris-forget' }));
 
 function jsonResponse(body: unknown, status: number): Response {
   return new Response(JSON.stringify(body), {
