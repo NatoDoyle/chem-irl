@@ -154,9 +154,11 @@ function safePath(url: string): string {
 // stamped at flush so events logged pre-auth still correlate. Fail-open
 // and never awaited on the request path; EdgeRuntime.waitUntil (when the
 // runtime provides it) keeps the isolate alive until the POST settles.
-// OPTIONS preflights are dropped as noise.
+// OPTIONS preflights are dropped as noise, as is any request whose handler
+// set ctx.tags.bronto_suppress = '1' (heartbeat endpoints like
+// telemetry-ship's idle minutes — console logs stay, nothing ships).
 function flushToBronto(ctx: ObservabilityContext, req: Request): void {
-  if (req.method === 'OPTIONS') {
+  if (req.method === 'OPTIONS' || ctx.tags.bronto_suppress === '1') {
     ctx.pending.length = 0;
     return;
   }
