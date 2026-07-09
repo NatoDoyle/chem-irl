@@ -52,6 +52,15 @@ verify_jwt = false
 # consent_marketing off and redirects to /waitlist/unsubscribed.
 verify_jwt = false
 
+[functions.telemetry-ship]
+# Disable JWT verification — webhook endpoint (like `push`/`waitlist-nudge`):
+# a minutely pg_cron + pg_net job POSTs here, authenticating with the
+# x-webhook-secret header (TELEMETRY_SHIP_SECRET; mirrored in Vault as
+# telemetry_ship_secret for the cron command). Drains analytics_events /
+# scoring_events / ops_events to Bronto (service chem-irl-app), advancing
+# per-source cursors only after a successful ship. Strictly fail-open.
+verify_jwt = false
+
 # Authenticated mobile-client functions below. JWT verification is on by
 # default (no `verify_jwt = false`); the function bodies still re-check
 # auth.uid() against the operation they perform.

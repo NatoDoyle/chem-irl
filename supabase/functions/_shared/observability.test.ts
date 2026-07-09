@@ -207,6 +207,27 @@ Deno.test('withObservability: no BRONTO_API_KEY → no fetch, request unaffected
   }
 });
 
+Deno.test('withObservability: bronto_suppress tag drops the whole request from Bronto', async () => {
+  const stub = stubFetch();
+  try {
+    await withEnv(TEST_ENV, async () => {
+      const handler: EdgeHandler = (_req, ctx) => {
+        logEvent('info', 'idle_heartbeat', ctx);
+        ctx.tags.bronto_suppress = '1';
+        return Promise.resolve(new Response('ok'));
+      };
+      const wrapped = withObservability(handler, { name: 'test-fn' });
+      const res = await wrapped(new Request('https://x.test/test-fn', { method: 'POST' }));
+      assertEquals(res.status, 200);
+
+      await new Promise((r) => setTimeout(r, 100));
+      assertEquals(stub.calls.length, 0);
+    });
+  } finally {
+    stub.restore();
+  }
+});
+
 Deno.test('withObservability: second request gets its own batch (buffer does not leak)', async () => {
   const stub = stubFetch();
   try {
