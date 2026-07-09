@@ -24,6 +24,7 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { EMAIL_RE, isDisposableEmail } from '../_shared/email-validation.ts';
+import { type EdgeHandler, logEvent, withObservability } from '../_shared/observability.ts';
 
 const RATE_LIMIT_MAX = 5;
 const RATE_LIMIT_WINDOW_SECONDS = 3600;
@@ -63,7 +64,7 @@ function isAllowedOrigin(origin: string): boolean {
   return false;
 }
 
-serve(async (req) => {
+const handler: EdgeHandler = async (req, ctx) => {
   const corsHeaders = buildCorsHeaders(req);
   const json = (
     body: unknown,
@@ -93,6 +94,8 @@ serve(async (req) => {
     // Honeypot — bots auto-fill hidden fields; real users never see
     // them. Pretend success so the bot can't probe the difference.
     if (typeof body.website === 'string' && body.website.trim().length > 0) {
+      // Distinguish the fake-200 from real subscribes in telemetry.
+      logEvent('info', 'subscribe_honeypot', ctx);
       return json({ ok: true }, 200);
     }
 
@@ -121,6 +124,7 @@ serve(async (req) => {
     if (ipHash) {
       const allowed = await checkRateLimit(admin, ipHash);
       if (!allowed) {
+        logEvent('warn', 'subscribe_rate_limited', ctx);
         return json({ error: 'rate_limited' }, 429, {
           'Retry-After': String(RATE_LIMIT_WINDOW_SECONDS),
         });
@@ -137,6 +141,7 @@ serve(async (req) => {
 
     if (error) {
       console.error('claim_blog_subscribe rpc failed:', error);
+      logEvent('error', 'subscribe_rpc_failed', ctx, { rpc: 'claim_blog_subscribe' });
       return json({ error: 'subscribe_failed' }, 500);
     }
     if (!data || data.success !== true) {
@@ -156,12 +161,24 @@ serve(async (req) => {
       });
     }
 
+    // No email/PII in telemetry — flags only.
+    logEvent('info', 'subscribe_result', ctx, {
+      sent_confirmation: typeof data.email_confirmation_token === 'string',
+    });
+
     return json({ ok: true }, 200);
   } catch (err) {
+    // Keep the CORS'd 500 (the wrapper's generic 500 has no CORS headers);
+    // mirror the failure into telemetry.
     console.error('waitlist-blog-subscribe unhandled error:', err);
+    logEvent('error', 'subscribe_unhandled', ctx, {
+      error_message: err instanceof Error ? err.message : String(err),
+    });
     return json({ error: 'internal_error' }, 500);
   }
-});
+};
+
+serve(withObservability(handler, { name: 'waitlist-blog-subscribe' }));
 
 // --- Helpers --------------------------------------------------------------
 

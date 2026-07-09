@@ -16,6 +16,7 @@
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { type EdgeHandler, logEvent, withObservability } from '../_shared/observability.ts';
 
 const UNSUB_PAGE = 'https://chemirl.app/waitlist/unsubscribed';
 
@@ -49,7 +50,7 @@ function timingSafeEqual(a: string, b: string): boolean {
   return diff === 0;
 }
 
-serve(async (req) => {
+const handler: EdgeHandler = async (req, ctx) => {
   if (req.method !== 'GET' && req.method !== 'POST') {
     return new Response('Method not allowed', { status: 405 });
   }
@@ -73,6 +74,8 @@ serve(async (req) => {
 
   const expected = await hmacHex(unsubSecret, email);
   if (!timingSafeEqual(sig, expected)) {
+    // A burst of bad signatures = someone probing the address oracle.
+    logEvent('warn', 'unsubscribe_invalid_sig', ctx);
     return new Response('Invalid unsubscribe link', { status: 400 });
   }
 
@@ -80,12 +83,22 @@ serve(async (req) => {
   const { error } = await admin.rpc('waitlist_marketing_unsubscribe_v1', { p_email: email });
   if (error) {
     console.error('waitlist_marketing_unsubscribe_v1 failed:', error);
+    logEvent('error', 'unsubscribe_rpc_failed', ctx, {
+      rpc: 'waitlist_marketing_unsubscribe_v1',
+    });
     return new Response('Something went wrong — try the link again.', { status: 500 });
   }
+
+  // Consent withdrawal recorded — method only, never the address.
+  logEvent('info', 'unsubscribe_result', ctx, {
+    method: req.method === 'POST' ? 'one_click' : 'link',
+  });
 
   if (req.method === 'POST') {
     // RFC 8058 one-click: mail client expects a quiet 200.
     return new Response(null, { status: 200 });
   }
   return Response.redirect(UNSUB_PAGE, 302);
-});
+};
+
+serve(withObservability(handler, { name: 'waitlist-unsubscribe' }));

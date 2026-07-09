@@ -21,6 +21,7 @@
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { type EdgeHandler, logEvent, withObservability } from '../_shared/observability.ts';
 
 const DEFAULT_LIMIT = 50;
 const MAX_LIMIT = 200;
@@ -52,13 +53,15 @@ async function hmacHex(secret: string, message: string): Promise<string> {
     .join('');
 }
 
-serve(async (req) => {
+const handler: EdgeHandler = async (req, ctx) => {
   if (req.method !== 'POST') {
     return new Response(JSON.stringify({ error: 'method_not_allowed' }), { status: 405 });
   }
 
   const secret = Deno.env.get('WAITLIST_NUDGE_SECRET');
   if (!secret || req.headers.get('x-webhook-secret') !== secret) {
+    // Security-relevant on a webhook endpoint — worth its own event.
+    logEvent('warn', 'nudge_unauthorized', ctx);
     return new Response(JSON.stringify({ error: 'unauthorized' }), { status: 401 });
   }
 
@@ -84,6 +87,7 @@ serve(async (req) => {
   const { data, error } = await admin.rpc('get_waitlist_nudge_batch_v1', { p_limit: limit });
   if (error) {
     console.error('get_waitlist_nudge_batch_v1 failed:', error);
+    logEvent('error', 'nudge_batch_fetch_failed', ctx, { rpc: 'get_waitlist_nudge_batch_v1' });
     return new Response(JSON.stringify({ error: 'batch_fetch_failed' }), { status: 500 });
   }
   const rows = (data ?? []) as NudgeRow[];
@@ -195,6 +199,9 @@ Stop these updates: ${unsubUrl}
       // Sends happened but marking failed — surface loudly: a retry would
       // double-send these. Operator must mark manually before re-running.
       console.error('mark_waitlist_nudged_v1 failed for ids:', sentIds, markError);
+      // The operationally scary path — sends unmarked means a re-run
+      // double-sends. Counts only; no ids/emails in telemetry.
+      logEvent('error', 'nudge_mark_failed', ctx, { sent: sentIds.length });
       return new Response(
         JSON.stringify({ error: 'mark_failed_after_send', sent: sentIds.length, ids: sentIds }),
         { status: 500 },
@@ -202,6 +209,14 @@ Stop these updates: ${unsubUrl}
     }
     marked = Number(markData) || 0;
   }
+
+  logEvent('info', 'nudge_batch', ctx, {
+    dry_run: dryRun,
+    eligible: rows.length,
+    sent: sentIds.length,
+    failed,
+    marked,
+  });
 
   return new Response(
     JSON.stringify(
@@ -211,4 +226,6 @@ Stop these updates: ${unsubUrl}
     ),
     { status: 200, headers: { 'Content-Type': 'application/json' } },
   );
-});
+};
+
+serve(withObservability(handler, { name: 'waitlist-nudge' }));

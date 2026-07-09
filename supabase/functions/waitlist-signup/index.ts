@@ -19,6 +19,7 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { EMAIL_RE, isDisposableEmail } from '../_shared/email-validation.ts';
+import { type EdgeHandler, logEvent, withObservability } from '../_shared/observability.ts';
 
 const ALLOWED_AGE_BANDS = ['18-21', '22-26', '27-31', '32-36', '37-44', '45+'];
 const ALLOWED_GENDERS = ['female', 'male', 'nonbinary', 'prefer_not_to_say'];
@@ -72,7 +73,7 @@ function isAllowedOrigin(origin: string): boolean {
   return false;
 }
 
-serve(async (req) => {
+const handler: EdgeHandler = async (req, ctx) => {
   const corsHeaders = buildCorsHeaders(req);
   const json = (
     body: unknown,
@@ -105,6 +106,8 @@ serve(async (req) => {
     // Honeypot: bots auto-fill hidden fields; real users never see them.
     // Pretend success so the bot can't probe the difference.
     if (typeof body.website === 'string' && body.website.trim().length > 0) {
+      // Distinguish the fake-200 from real signups in telemetry.
+      logEvent('info', 'signup_honeypot', ctx);
       return json(
         { success: true, was_new: true, position: 0, referral_code: '', email_confirmed: false },
         200,
@@ -169,6 +172,9 @@ serve(async (req) => {
       // probe response shape to distinguish signal from noise. Real users
       // re-submitting their own email aren't matched (different-email gate).
       if (await isRapidIpDuplicate(admin, ipHash, email)) {
+        // Another fake-200 shape — mark it so telemetry doesn't count it
+        // as a real signup.
+        logEvent('info', 'signup_silent_dedup', ctx);
         return json(
           { success: true, was_new: true, position: 0, referral_code: '', email_confirmed: false },
           200,
@@ -177,6 +183,7 @@ serve(async (req) => {
 
       const allowed = await checkRateLimit(admin, ipHash);
       if (!allowed) {
+        logEvent('warn', 'signup_rate_limited', ctx);
         return json({ error: 'rate_limited' }, 429, {
           'Retry-After': String(RATE_LIMIT_WINDOW_SECONDS),
         });
@@ -206,6 +213,7 @@ serve(async (req) => {
 
     if (error) {
       console.error('claim_waitlist_signup_v2 rpc failed:', error);
+      logEvent('error', 'signup_rpc_failed', ctx, { rpc: 'claim_waitlist_signup_v2' });
       return json({ error: 'signup_failed' }, 500);
     }
 
@@ -228,6 +236,12 @@ serve(async (req) => {
       });
     }
 
+    // No email/PII in telemetry — counts and flags only.
+    logEvent('info', 'signup_result', ctx, {
+      was_new: data.was_new === true,
+      has_referral: typeof referred_by_code === 'string' && referred_by_code.length > 0,
+    });
+
     return json(
       {
         success: true,
@@ -239,10 +253,17 @@ serve(async (req) => {
       200,
     );
   } catch (err) {
+    // Keep the CORS'd 500 (the wrapper's generic 500 has no CORS headers,
+    // so browsers couldn't read it); mirror the failure into telemetry.
     console.error('waitlist-signup unhandled error:', err);
+    logEvent('error', 'signup_unhandled', ctx, {
+      error_message: err instanceof Error ? err.message : String(err),
+    });
     return json({ error: 'internal_error' }, 500);
   }
-});
+};
+
+serve(withObservability(handler, { name: 'waitlist-signup' }));
 
 // --- Helpers ---
 
