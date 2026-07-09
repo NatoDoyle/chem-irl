@@ -1,5 +1,7 @@
 # Chem IRL — Dublin Launch Plan (Strategy + Build)
 
+> **Status (2026-07): Phase A (build) is complete and the waitlist is live in production** — signup → confirmation → referral attribution → UTM capture all shipped (PR #128 and successors; see `docs/infrastructure/OPENCLAW_CMO_VPS.md` for current funnel state). The Context section below describes the pre-build state ("the waitlist form is dead") as of the plan date and is kept as history. The strategy and phasing sections (§1 onward) remain the active GTM reference.
+
 ## Context
 
 You asked how big the Dublin waitlist needs to be before opening beta and the public app. The conversational answer (~1.5k waitlist for beta, 6–8k for soft launch, 15k for public) is sound, but two things need to be reconciled before that strategy can run:

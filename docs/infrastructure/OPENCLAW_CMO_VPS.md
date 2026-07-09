@@ -764,7 +764,7 @@ Top five by leverage:
 
 | ID | What | Why | Effort | Priority |
 |---|---|---|---|---|
-| P1 | **UTM instrumentation** through form → `waitlist-signup` edge fn → RPC → `waitlist_signups` | The standing P0 from `WAITLIST_AUDIT.md` (repo root): channel attribution is impossible today; spec §11.3 absorbs it as foundational | M | ✅ LIVE 2026-06-10 (PR #128 merged → migration applied → fn deployed; end-to-end on prod) |
+| P1 | **UTM instrumentation** through form → `waitlist-signup` edge fn → RPC → `waitlist_signups` | The standing P0 from `WAITLIST_AUDIT.md` (now in `docs/archive/`): channel attribution is impossible today; spec §11.3 absorbs it as foundational | M | ✅ LIVE 2026-06-10 (PR #128 merged → migration applied → fn deployed; end-to-end on prod) |
 | P2 | Social read-connectors (Reddit, Threads, X read-tier; IG/TikTok after account/app approval) | Completes the Sense surface; blocked on developer apps + tokens (spec §8) | M each | P1 |
 | P3 | Audit `RESEND_API_KEY` + Resend audiences | The other `WAITLIST_AUDIT.md` P0: unset key = silently broken confirmations; also prerequisite for the Phase 3 newsletter | S | ✅ Verified healthy 2026-06-09 (RESEND_API_KEY + audiences + FROM all set) |
 | P4 | Phases 2–4: content engine → publishing → learn loop, with the L0→L3 autonomy ramp per surface | The designed path (spec §14–§15) | L | 🟡 PARTIAL — Create (blog, §7.5) + Learn (strategy loop, §7.4) LIVE at L1 2026-06-12/17; social Distribute (P2) + autonomy ramp beyond L1 remain |
@@ -807,7 +807,7 @@ One consolidated list — if something on this box surprises you, check here fir
 | [Autonomous CMO design spec](../superpowers/specs/2026-06-09-autonomous-cmo-design.md) | Vision, goals, full architecture, platform matrix, autonomy ramp, phases, risks, costs, adopted decisions (§18) | Deciding what to build next, or why anything here is shaped the way it is |
 | [OpenClaw CSO](OPENCLAW_CSO.md) | The **CSO sales pipeline** — Alex's automated LinkedIn outreach (as-built, ops, safety, the dry-run/arming boundary) | Working on sales/outreach, or arming the live send |
 | [Phase 0/1 build plan](../superpowers/plans/2026-06-09-autonomous-cmo-phase-0-1.md) | Task-by-task build record with the exact code (note the three corrections in §8 here) | Rebuilding from scratch, or auditing what was executed |
-| `WAITLIST_AUDIT.md` (repo root, untracked) | Waitlist funnel P0 gaps: Resend key, Vercel env, **UTM capture** | Working attribution or the signup funnel |
+| `docs/archive/WAITLIST_AUDIT.md` | Waitlist funnel P0 gaps (2026-06-01 audit; since closed): Resend key, Vercel env, **UTM capture** | Working attribution or the signup funnel |
 | [Dublin launch plan](../DUBLIN_LAUNCH_PLAN.md) | GTM strategy the CMO serves — phases, channels, the ≥40% female gate | Judging whether CMO outputs serve the actual plan |
 | [`20260609141728_marketing_waitlist_snapshot.sql`](../../supabase/migrations/20260609141728_marketing_waitlist_snapshot.sql) | The RPC's source of truth | Changing what the waitlist connector can see |
 | [PR #116](https://github.com/NatoDoyle/chem-irl/pull/116) | RPC merge provenance | Audit trail |
