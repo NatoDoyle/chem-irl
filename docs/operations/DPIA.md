@@ -4,7 +4,7 @@
 processes special-category data (sexual orientation) and does large-scale
 profiling with location, so a DPIA is **mandatory** under GDPR Art. 35.
 This draft is grounded in the system as built (2026-06-17; §2.6, GAP-8
-and ROPA addendum 2026-07-06) so a reviewer
+and ROPA addendum 2026-07-06; §2.7 telemetry addendum 2026-07-09) so a reviewer
 starts from facts, not a blank page. Sign-off by a qualified data
 protection adviser is required before public launch.
 
@@ -63,9 +63,11 @@ At least three triggers apply:
 Supabase (hosting, eu-west-1), Resend (email, EU SES), Sentry (crash —
 PII scrubbed at source), Apple/Google (payment + receipt verification),
 Anthropic (Iris, and the photo-moderation fallback path — ~30-day API
-retention unless ZDR), Expo (push relay), and the first-party **Chem IRL
-Solutions platform** (solutions.chemirl.app — photo moderation + support
-intake forwarding, see §2.6).
+retention unless ZDR), Expo (push relay), Bronto (bronto.io — operational
+telemetry/log ingest for app observability: pseudonymous UUIDs +
+PII-scrubbed event payloads only, EU ingest endpoint, see §2.7), and the
+first-party **Chem IRL Solutions platform** (solutions.chemirl.app —
+photo moderation + support intake forwarding, see §2.6).
 No data sold; no third-party advertising/tracking SDK as of this draft.
 
 ### 2.4 Retention
@@ -81,8 +83,10 @@ accounts — see GAP-3.
 
 Primary processing is EU (Supabase eu-west-1). US processors (Sentry,
 Apple, Google, Anthropic, possibly Expo/Resend infra) require a transfer
-mechanism (SCCs / adequacy). Confirm each processor's DPA + transfer
-basis before launch — see GAP-4.
+mechanism (SCCs / adequacy). Bronto telemetry ingests at an EU endpoint
+(ingestion.eu.bronto.io); confirm Bronto's storage region, retention
+default, and DPA alongside the rest — see GAP-4. Confirm each
+processor's DPA + transfer basis before launch — see GAP-4.
 
 ### 2.6 First-party forwards to the Chem IRL Solutions platform (2026-07-06)
 
@@ -113,6 +117,38 @@ Both recipients are operated by the same controller today. If the
 Solutions platform is ever spun into a separate legal entity, these
 forwards become controller→processor (or joint-controller) arrangements
 needing a DPA and privacy-policy disclosure — see GAP-8.
+
+### 2.7 App telemetry to Bronto (2026-07-09)
+
+Operational telemetry for the whole product ships to Bronto (bronto.io,
+log-ingest SaaS; dataset `chem-irl-app`) so failures and business events
+are observable — see
+[BRONTO_APP_OBSERVABILITY.md](../infrastructure/BRONTO_APP_OBSERVABILITY.md).
+
+**What is shipped:** edge-function request metadata (function name,
+request id, status, duration, outcome events with counts/flags),
+mirrored rows from `analytics_events` (client funnel events),
+`scoring_events` (domain events) and `ops_events` (cron-job outcomes),
+and CI run outcomes. Events carry the pseudonymous `user_id` UUID where
+relevant.
+
+**What is never shipped:** message bodies, emails, phone numbers,
+photos/photo bytes, storage paths, confirmation/unsubscribe tokens, or
+free-text subjects/bodies. Every payload passes the shared PII scrubber
+at source (drops message/body/email/phone-class keys, hashes
+email/phone patterns, masks photo-URL keys); request paths are logged
+without query strings.
+
+**Design properties:** strictly fail-open (a Bronto outage cannot affect
+any user flow); ingest endpoint is EU (`ingestion.eu.bronto.io`).
+
+**Deletion note:** `analytics_events` rows cascade-delete with the
+account, but Bronto-side copies of already-shipped events (pseudonymous
+UUID + event metadata) persist until Bronto's retention expires — the
+erasure cascade does not reach Bronto. This mirrors the Sentry
+position (scrubbed crash context retained per vendor policy). Record
+Bronto's retention period + DPA under GAP-4 and reflect telemetry in
+the privacy policy alongside GAP-6.
 
 ## 3. Necessity & proportionality
 
@@ -206,6 +242,7 @@ Controller-side record. Keep current as processing changes.
 | Transactional email | Confirmations | Users/prospects | email, name | Resend | EU (SES) | per Resend | DKIM/SPF |
 | Photo moderation & verification (§2.6) | Safety: pre-publish photo checks, selfie match | App users | photo bytes (transient), verification verdicts | Supabase, Chem IRL Solutions platform (→ its AI subprocessor) or Anthropic (fallback) | EU + confirm platform/AI regions (GAP-8) | verdict audit rows; forwarded bytes transient (confirm platform retention — GAP-8) | JWT + path-ownership check, 30/hr rate limit, fail-open backend switch |
 | Support intake forwarding (§2.6) | Support/inquiry handling | Users + site visitors | email, name, subject, message, whitelisted metadata | Supabase, Chem IRL Solutions platform | confirm (GAP-8) | Supabase row is system of record, until handled/erasure | CORS allowlist, honeypot, IP-hash rate limit, env-gated forward |
+| App observability/telemetry (§2.7) | Reliability, ops visibility, abuse detection | App users, site visitors (request metadata), operators | pseudonymous user_id UUIDs, event names, counts/flags, scrubbed payloads | Bronto (bronto.io) | EU ingest; confirm storage region + DPA (GAP-4) | Bronto retention (confirm — GAP-4); survives account deletion (§2.7) | PII scrubbed at source, fail-open, service-role-only pipeline |
 
 ## 9. Related documents
 
