@@ -14,7 +14,6 @@ Organized documentation for the Chem IRL dating app.
 
 - **[Development Guide](./development/DEVELOPING.md)** — local environment setup, copy-paste commands
 - **[Git Push Troubleshooting](./development/GIT_PUSH_TROUBLESHOOTING.md)**
-- **[Repo State Explanation](./development/REPO_STATE_SYSTEM_EXPLANATION.md)** — system overview (partially superseded; see its banner)
 
 ## Deployment
 
@@ -46,7 +45,6 @@ Organized documentation for the Chem IRL dating app.
 ## Plans & feature docs (point-in-time — read with caution)
 
 - **[Dublin Launch Plan](./DUBLIN_LAUNCH_PLAN.md)** — GTM strategy; active reference for marketing work
-- **[Iris — Phase 1 Verification](./iris/PHASE_1_VERIFICATION.md)** — AI-concierge feature checkpoint
 - **[Autonomous CMO](./superpowers/)** — design spec + implementation plan (in-flight); as-built VPS doc under [Infrastructure](./infrastructure/OPENCLAW_CMO_VPS.md)
 
 ## Archive

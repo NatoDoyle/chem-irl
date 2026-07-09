@@ -2,7 +2,7 @@
 
 **App-first dating platform that optimizes time-to-date**
 
-[![Status](https://img.shields.io/badge/status-MVP-green)]()
+[![Status](https://img.shields.io/badge/status-beta%20build--out-blue)]()
 [![Platform](https://img.shields.io/badge/platform-iOS%20%7C%20Android-blue)]()
 [![Stack](https://img.shields.io/badge/stack-React%20Native%20%7C%20Supabase-orange)]()
 
@@ -79,7 +79,7 @@ chem-irl/
 
 **Backend**
 - Supabase (PostgreSQL + Auth + RLS + Realtime + Storage)
-- Edge Functions (push notifications)
+- Edge Functions (push, IAP validation, Iris AI concierge, photo moderation, waitlist + support)
 - pg_cron (scheduled scoring)
 
 ## Quality Gates
@@ -114,5 +114,5 @@ Private - All rights reserved
 
 ---
 
-**Status**: MVP Complete
-**Last Updated**: 2026-03-22
+**Status**: Beta build-out — Dublin launch prep
+**Last Updated**: 2026-07-09
