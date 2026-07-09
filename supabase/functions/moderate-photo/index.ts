@@ -50,6 +50,12 @@ import {
   SAFETY_TOOL_SCHEMA,
   MATCH_TOOL_SCHEMA,
 } from './prompts.ts';
+import {
+  type EdgeHandler,
+  logEvent,
+  type ObservabilityContext,
+  withObservability,
+} from '../_shared/observability.ts';
 
 const ANTHROPIC_API_URL = 'https://api.anthropic.com/v1/messages';
 const ANTHROPIC_VERSION = '2023-06-01';
@@ -68,7 +74,7 @@ const MAX_BYTES = 5 * 1024 * 1024;
 
 type Json = Record<string, unknown>;
 
-serve(async (req) => {
+const handler: EdgeHandler = async (req, ctx) => {
   if (req.method !== 'POST') {
     return jsonResponse({ error: 'method_not_allowed' }, 405);
   }
@@ -104,6 +110,7 @@ serve(async (req) => {
   if (authError || !user) {
     return jsonResponse({ error: 'unauthorized' }, 401);
   }
+  ctx.user_id = user.id;
 
   // --- Body parse + validation ---
   let body: Json;
@@ -144,6 +151,7 @@ serve(async (req) => {
   // --- Rate limit ---
   const rateOk = await checkRateLimit(admin, user.id);
   if (!rateOk) {
+    logEvent('warn', 'moderation_rate_limited', ctx, { kind });
     return jsonResponse({ error: 'rate_limited' }, 429, {
       'Retry-After': String(RATE_LIMIT_WINDOW_SECONDS),
     });
@@ -175,7 +183,7 @@ serve(async (req) => {
   }
 
   // --- Platform path: Chem IRL as a Photo Safety tenant ---
-  const platform = await tryPlatformModeration(kind, primary, compare);
+  const platform = await tryPlatformModeration(ctx, kind, primary, compare);
   if (platform) {
     const platformModel =
       typeof platform.model === 'string' ? `platform:${platform.model}` : 'platform';
@@ -183,7 +191,7 @@ serve(async (req) => {
     if (kind === 'safety') {
       const decision = String(platform.decision ?? 'review');
       const score = Math.max(0, Math.min(100, Number(platform.overall_risk_score ?? 50)));
-      const checkId = await insertAuditRow(admin, {
+      const checkId = await insertAuditRow(admin, ctx, {
         userId: user.id,
         kind: 'safety',
         photoPath,
@@ -194,6 +202,11 @@ serve(async (req) => {
         tokensIn: null,
         tokensOut: null,
         model: platformModel,
+      });
+      logEvent('info', 'moderation_decision', ctx, {
+        kind: 'safety',
+        decision,
+        backend: 'platform',
       });
       return jsonResponse(
         {
@@ -213,7 +226,7 @@ serve(async (req) => {
 
     const decision = String(platform.decision ?? 'no_match');
     const confidence = Math.max(0, Math.min(1, Number(platform.confidence ?? 0)));
-    const checkId = await insertAuditRow(admin, {
+    const checkId = await insertAuditRow(admin, ctx, {
       userId: user.id,
       kind: 'match',
       photoPath,
@@ -224,6 +237,11 @@ serve(async (req) => {
       tokensIn: null,
       tokensOut: null,
       model: platformModel,
+    });
+    logEvent('info', 'moderation_decision', ctx, {
+      kind: 'match',
+      decision,
+      backend: 'platform',
     });
     return jsonResponse(
       {
@@ -256,6 +274,10 @@ serve(async (req) => {
   if (!upstream.ok) {
     const detail = await upstream.text().catch(() => '');
     console.error('moderate-photo: anthropic upstream failed', upstream.status, detail);
+    logEvent('error', 'moderation_upstream_failed', ctx, {
+      kind,
+      http_status: upstream.status,
+    });
     return jsonResponse({ error: 'upstream_failed', status: upstream.status }, 502);
   }
 
@@ -273,6 +295,7 @@ serve(async (req) => {
   // --- Tool-call missing: fall back to a 'review' verdict, log, audit ---
   if (!toolCall || !toolCall.input) {
     console.error('moderate-photo: tool_call missing', { kind, response: json });
+    logEvent('warn', 'moderation_tool_missing', ctx, { kind });
     const fallbackInput =
       kind === 'safety'
         ? {
@@ -293,7 +316,7 @@ serve(async (req) => {
           };
 
     const fallbackScore = kind === 'safety' ? 50 : 0;
-    const checkId = await insertAuditRow(admin, {
+    const checkId = await insertAuditRow(admin, ctx, {
       userId: user.id,
       kind,
       photoPath,
@@ -303,6 +326,12 @@ serve(async (req) => {
       result: fallbackInput as Json,
       tokensIn,
       tokensOut,
+    });
+    logEvent('info', 'moderation_decision', ctx, {
+      kind,
+      decision: fallbackInput.decision,
+      backend: 'anthropic',
+      fallback_verdict: true,
     });
 
     const payload =
@@ -317,7 +346,7 @@ serve(async (req) => {
   if (kind === 'safety') {
     const decision = String(input.decision ?? 'review');
     const score = Math.max(0, Math.min(100, Number(input.overallRiskScore ?? 0)));
-    const checkId = await insertAuditRow(admin, {
+    const checkId = await insertAuditRow(admin, ctx, {
       userId: user.id,
       kind: 'safety',
       photoPath,
@@ -328,6 +357,11 @@ serve(async (req) => {
       tokensIn,
       tokensOut,
     });
+    logEvent('info', 'moderation_decision', ctx, {
+      kind: 'safety',
+      decision,
+      backend: 'anthropic',
+    });
     return jsonResponse({ kind: 'safety', ...input, checkId }, 200);
   }
 
@@ -335,7 +369,7 @@ serve(async (req) => {
   const decision = String(input.decision ?? 'no_match');
   const confidence = Math.max(0, Math.min(1, Number(input.confidence ?? 0)));
   const score = Math.round(confidence * 100);
-  const checkId = await insertAuditRow(admin, {
+  const checkId = await insertAuditRow(admin, ctx, {
     userId: user.id,
     kind: 'match',
     photoPath,
@@ -346,8 +380,15 @@ serve(async (req) => {
     tokensIn,
     tokensOut,
   });
+  logEvent('info', 'moderation_decision', ctx, {
+    kind: 'match',
+    decision,
+    backend: 'anthropic',
+  });
   return jsonResponse({ kind: 'match', ...input, checkId }, 200);
-});
+};
+
+serve(withObservability(handler, { name: 'moderate-photo' }));
 
 // ============================================================================
 // Anthropic request builders
@@ -493,7 +534,7 @@ interface AuditRow {
 }
 
 // deno-lint-ignore no-explicit-any
-async function insertAuditRow(admin: any, row: AuditRow): Promise<string> {
+async function insertAuditRow(admin: any, ctx: ObservabilityContext, row: AuditRow): Promise<string> {
   const { data, error } = await admin
     .from('photo_verification_checks')
     .insert({
@@ -515,6 +556,7 @@ async function insertAuditRow(admin: any, row: AuditRow): Promise<string> {
     // the client. The cost is a missing audit row; the alternative (failing
     // the whole call) would be worse for the user. Log loudly so we notice.
     console.error('moderate-photo: audit insert failed', error);
+    logEvent('error', 'moderation_audit_insert_failed', ctx, { kind: row.kind });
     return '';
   }
   return data.id as string;
@@ -525,6 +567,7 @@ async function insertAuditRow(admin: any, row: AuditRow): Promise<string> {
 // disabled (env unset) or fails for any reason — the caller then falls
 // back to the direct Anthropic path. Never throws.
 async function tryPlatformModeration(
+  ctx: ObservabilityContext,
   kind: 'safety' | 'match',
   primary: ImageContent,
   compare: ImageContent | null,
@@ -560,11 +603,32 @@ async function tryPlatformModeration(
       console.error(
         `moderate-photo: platform returned ${res.status} (falling back to direct)`,
       );
+      // The fallback is deliberately invisible to the user — this event is
+      // how operators learn the platform cutover is degraded.
+      logEvent('warn', 'platform_forward', ctx, {
+        target: 'photo_platform',
+        kind,
+        status: 'error',
+        http_status: res.status,
+        fallback: 'anthropic',
+      });
       return null;
     }
+    logEvent('info', 'platform_forward', ctx, {
+      target: 'photo_platform',
+      kind,
+      status: 'ok',
+    });
     return (await res.json()) as Json;
   } catch (err) {
     console.error('moderate-photo: platform errored (falling back to direct)', err);
+    logEvent('warn', 'platform_forward', ctx, {
+      target: 'photo_platform',
+      kind,
+      status: 'error',
+      error_message: err instanceof Error ? err.message : String(err),
+      fallback: 'anthropic',
+    });
     return null;
   }
 }

@@ -24,6 +24,12 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { EMAIL_RE, isDisposableEmail } from '../_shared/email-validation.ts';
+import {
+  type EdgeHandler,
+  logEvent,
+  type ObservabilityContext,
+  withObservability,
+} from '../_shared/observability.ts';
 
 const RATE_LIMIT_MAX = 8;
 const RATE_LIMIT_WINDOW_SECONDS = 3600;
@@ -92,7 +98,7 @@ function isAllowedOrigin(origin: string): boolean {
   return false;
 }
 
-serve(async (req) => {
+const handler: EdgeHandler = async (req, ctx) => {
   const corsHeaders = buildCorsHeaders(req);
   const json = (
     body: unknown,
@@ -122,6 +128,8 @@ serve(async (req) => {
     // Honeypot — bots auto-fill hidden fields; real users never see them.
     // Pretend success so the bot can't probe the difference.
     if (typeof body.website === 'string' && body.website.trim().length > 0) {
+      // Distinguish the fake-200 from real submissions in telemetry.
+      logEvent('info', 'submit_honeypot', ctx);
       return json({ success: true, submission_id: null }, 200);
     }
 
@@ -190,6 +198,7 @@ serve(async (req) => {
     if (ipHash) {
       const allowed = await checkRateLimit(admin, ipHash);
       if (!allowed) {
+        logEvent('warn', 'submit_rate_limited', ctx);
         return json({ success: false, error: 'rate_limited' }, 429, {
           'Retry-After': String(RATE_LIMIT_WINDOW_SECONDS),
         });
@@ -209,6 +218,7 @@ serve(async (req) => {
 
     if (error) {
       console.error('submit_support_request rpc failed:', error);
+      logEvent('error', 'submit_rpc_failed', ctx, { rpc: 'submit_support_request' });
       return json({ success: false, error: 'submit_failed' }, 500);
     }
     if (!data || data.success !== true) {
@@ -223,7 +233,7 @@ serve(async (req) => {
 
     // Only submissions with a reply-to address are useful to the agent.
     if (email) {
-      await forwardToSupportAgent({
+      await forwardToSupportAgent(ctx, {
         submissionId,
         kind,
         email,
@@ -234,12 +244,23 @@ serve(async (req) => {
       });
     }
 
+    // Kind + flags only — never subject/body/email (scrubber drops them
+    // anyway, but they shouldn't reach the buffer at all).
+    logEvent('info', 'submit_result', ctx, { kind, has_email: email !== null });
+
     return json({ success: true, submission_id: submissionId }, 200);
   } catch (err) {
+    // Keep the CORS'd 500 (the wrapper's generic 500 has no CORS headers);
+    // mirror the failure into telemetry.
     console.error('support-submit unhandled error:', err);
+    logEvent('error', 'submit_unhandled', ctx, {
+      error_message: err instanceof Error ? err.message : String(err),
+    });
     return json({ success: false, error: 'internal_error' }, 500);
   }
-});
+};
+
+serve(withObservability(handler, { name: 'support-submit' }));
 
 // --- Support-agent forwarding ------------------------------------------------
 
@@ -258,7 +279,10 @@ interface ForwardArgs {
   metadata: Record<string, unknown>;
 }
 
-async function forwardToSupportAgent(args: ForwardArgs): Promise<void> {
+async function forwardToSupportAgent(
+  ctx: ObservabilityContext,
+  args: ForwardArgs,
+): Promise<void> {
   const url = Deno.env.get('SUPPORT_AGENT_INTAKE_URL');
   const key = Deno.env.get('SUPPORT_AGENT_INTAKE_KEY');
   if (!url || !key) return; // forwarding disabled
@@ -285,9 +309,29 @@ async function forwardToSupportAgent(args: ForwardArgs): Promise<void> {
       console.error(
         `support-agent forward failed with status ${res.status} (submission ${args.submissionId ?? 'unknown'})`,
       );
+      // The forward is fail-open by design, which made failures invisible —
+      // this event is how operators find out the agent intake is down.
+      logEvent('warn', 'platform_forward', ctx, {
+        target: 'support_agent',
+        status: 'error',
+        http_status: res.status,
+        submission_id: args.submissionId,
+      });
+      return;
     }
+    logEvent('info', 'platform_forward', ctx, {
+      target: 'support_agent',
+      status: 'ok',
+      submission_id: args.submissionId,
+    });
   } catch (err) {
     console.error('support-agent forward errored (failing open):', err);
+    logEvent('warn', 'platform_forward', ctx, {
+      target: 'support_agent',
+      status: 'error',
+      error_message: err instanceof Error ? err.message : String(err),
+      submission_id: args.submissionId,
+    });
   }
 }
 
