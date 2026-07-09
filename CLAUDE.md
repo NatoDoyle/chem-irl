@@ -137,6 +137,9 @@ No separate backend server. The mobile app connects directly to Supabase (Postgr
 - Database triggers (auto-create profile on signup, etc.)
 - Scheduled jobs via `pg_cron` (e.g. periodic scoring rollups)
 
+### Chem IRL Solutions (separate repo)
+Since 2026-07-06 the main business is **Chem IRL Solutions** (`NatoDoyle/chem-irl-solutions-platform`, runtime `solutions.chemirl.app`) — the B2B platform selling the AI stack that runs this app; this dating app is tenant #1 and the reference case study. No platform code lives in this repo. Tenant-side touchpoints: `moderate-photo` (env-gated cutover, Anthropic fallback), `support-submit` (intake forwarding), the `web/src/app/solutions/` marketing page, and DPIA §2.6. See `docs/SOLUTIONS_PLATFORM.md`.
+
 ### Web app structure (`web/src/`)
 - **`app/`** — Next.js 16 App Router routes: landing, `download/`, `how-it-works/`, `waitlist/`, `blog/` (MDX), plus `about/`, `privacy/`, `safety/`, `support/`, `solutions/`, `terms/`. Static export only — no API routes.
 - **`content/`** — MDX blog posts; rendered via `next-mdx-remote` + `gray-matter` + `rehype-pretty-code`.
