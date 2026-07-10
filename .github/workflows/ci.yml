@@ -133,10 +133,20 @@ jobs:
             echo "BRONTO_API_KEY not set; skipping emit"
             exit 0
           fi
+          # Only genuine failures are errors. Superseded runs (concurrency
+          # cancel-in-progress) report their jobs as "cancelled" — that says
+          # nothing about the code, so a fully-cancelled run emits nothing
+          # at all instead of polluting Bronto with false status=error.
           STATUS=ok
+          ALL_CANCELLED=yes
           for r in "$R_MOBILE" "$R_WEB" "$R_DOCS" "$R_BRAND"; do
-            [ "$r" = "success" ] || STATUS=error
+            [ "$r" = "failure" ] && STATUS=error
+            [ "$r" = "cancelled" ] || ALL_CANCELLED=no
           done
+          if [ "$ALL_CANCELLED" = "yes" ]; then
+            echo "run superseded (all jobs cancelled); skipping emit"
+            exit 0
+          fi
           ENV=staging
           [ "$IS_MAIN_PUSH" = "true" ] && ENV=production
           curl -sf -X POST https://ingestion.eu.bronto.io \
