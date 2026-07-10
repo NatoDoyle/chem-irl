@@ -30,7 +30,7 @@ PII scrubber before leaving the process.
 
 | Field | Values | Notes |
 |---|---|---|
-| `timestamp` | ISO 8601 UTC | Edge/CI: emit time. Forwarded DB rows: the row's `created_at` (when it *happened*, not when it shipped). |
+| `timestamp` | ISO 8601 UTC (`Z`) | Edge/CI: emit time. Forwarded DB rows: the row's `created_at` (when it *happened*, not when it shipped). NOTE: Bronto's `@time` index axis is always **arrival** time — verified 2026-07-10 by probing `timestamp`/`@timestamp`/`time`/`event_time`, none are honored. Near-real-time events sit within ~2 min of truth; for backfilled history, filter on the `timestamp` *field*, not the time-range picker. |
 | `service` | `chem-irl-app` | `BRONTO_SERVICE` override exists but should stay default. |
 | `env` | `production` \| `staging` | From `SENTRY_ENV` (per Supabase project); CI: `production` on main pushes, `staging` on PRs. Unset defaults to `production` — keep `SENTRY_ENV=staging` set on the staging project. |
 | `layer` | `edge` \| `db` \| `mobile` \| `ci` | The primary discriminator. |
@@ -219,8 +219,16 @@ same read path the CMO/CSO agents use. Useful starting filters:
 - **Web client funnel events** (`waitlist_form_started` etc.) remain a
   silent no-op seam (`web/src/lib/analytics.ts`) by decision — edge
   functions cover conversions; Vercel Analytics covers pageviews.
-- **Bronto-side alerting** on the events marked "worth alerting on" in
-  §3 (the CMO stack's Telegram alert pattern is the precedent).
+- ~~**Bronto-side alerting**~~ **DONE 2026-07-10**: `cmo/appwatch.py` on
+  the OpenClaw VPS queries this dataset daily inside `cmo-alertcheck`
+  (07:33 UTC → Telegram): any `status:error` events (grouped),
+  `platform_forward forward_status:error`, `subscription_staging_trusted`
+  in production, and warns above a noise floor. Fail-open, but a query
+  failure emits a "watch FAILED" line instead of silence. See
+  [OPENCLAW_CMO_VPS.md](./OPENCLAW_CMO_VPS.md) §5.
+- **Edge Sentry (`SENTRY_DSN_EDGE`)** is still unset — no Sentry project
+  exists for any layer. Until one is created, this appwatch check is the
+  app's only error alerting.
 
 ## 10. Privacy
 

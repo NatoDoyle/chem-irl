@@ -36,9 +36,10 @@ function statusForLevel(level: BrontoLevel): BrontoStatus {
 }
 
 // Normalize a timestamp-ish value (e.g. PostgREST's
-// '2026-06-12T14:21:59.237561+00:00') to ISO-8601 UTC with a Z suffix.
-// Bronto only indexes the `timestamp` field as the event's time when it is
-// in this shape — offset/microsecond formats fall back to arrival time.
+// '2026-06-12T14:21:59.237561+00:00') to ISO-8601 UTC with a Z suffix, so
+// the `timestamp` field is consistent and lexicographically sortable.
+// (Bronto's @time index axis is always ARRIVAL time regardless — verified
+// 2026-07-10; origin time is queryable via this field, not the time picker.)
 // Unparseable input degrades to String(value) rather than inventing a time.
 export function toIsoUtc(value: unknown): string {
   const date = typeof value === 'number' ? new Date(value) : new Date(String(value));
