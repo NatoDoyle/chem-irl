@@ -313,7 +313,7 @@ async function forwardToSupportAgent(
       // this event is how operators find out the agent intake is down.
       logEvent('warn', 'platform_forward', ctx, {
         target: 'support_agent',
-        status: 'error',
+        forward_status: 'error',
         http_status: res.status,
         submission_id: args.submissionId,
       });
@@ -321,14 +321,14 @@ async function forwardToSupportAgent(
     }
     logEvent('info', 'platform_forward', ctx, {
       target: 'support_agent',
-      status: 'ok',
+      forward_status: 'ok',
       submission_id: args.submissionId,
     });
   } catch (err) {
     console.error('support-agent forward errored (failing open):', err);
     logEvent('warn', 'platform_forward', ctx, {
       target: 'support_agent',
-      status: 'error',
+      forward_status: 'error',
       error_message: err instanceof Error ? err.message : String(err),
       submission_id: args.submissionId,
     });

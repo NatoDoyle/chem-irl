@@ -72,8 +72,8 @@ outcome events:
 | waitlist-forget | `erasure_result {outcome}` (GDPR Art. 17) |
 | waitlist-nudge | `nudge_batch {dry_run, eligible, sent, failed, marked}`; **`nudge_mark_failed {sent}`** = sends unmarked, a re-run would double-send — page on this |
 | waitlist-unsubscribe | `unsubscribe_result {method}`; `unsubscribe_invalid_sig` (bursts = address-oracle probing) |
-| support-submit | `submit_result {kind, has_email}`; **`platform_forward {target: support_agent, status}`** — the fail-open Brigade intake forward, errors here mean the support agent sees nothing |
-| moderate-photo | `moderation_decision {kind, decision, backend}`; **`platform_forward {target: photo_platform, status, fallback}`** — Solutions-platform cutover degradation; `moderation_upstream_failed`, `moderation_tool_missing`, `moderation_audit_insert_failed` |
+| support-submit | `submit_result {kind, has_email}`; **`platform_forward {target: support_agent, forward_status}`** — the fail-open Brigade intake forward, errors here mean the support agent sees nothing |
+| moderate-photo | `moderation_decision {kind, decision, backend}`; **`platform_forward {target: photo_platform, forward_status, fallback}`** — Solutions-platform cutover degradation; `moderation_upstream_failed`, `moderation_tool_missing`, `moderation_audit_insert_failed` |
 | validate-receipt / validate-subscription | request lifecycle + `subscription_result {platform, status}`, `subscription_verify_failed {reason}`, `subscription_unavailable` (fail-closed 503), `subscription_staging_trusted` (must never appear in production) |
 | delete-account | `account_delete_result {storage_objects_removed}` (the durable deletion record), `account_delete_failed {step}` |
 | iris-forget | `erasure_complete {conversations, memory_rows, checks, selfies}` |
@@ -199,7 +199,7 @@ Use the **Bronto MCP** on the OpenClaw gateway (`ssh openclaw`; config
 same read path the CMO/CSO agents use. Useful starting filters:
 
 - `service:chem-irl-app layer:edge level:error` — anything failing at the edge
-- `event:platform_forward status:error` — Solutions-platform / support-agent forward degradation
+- `event:platform_forward forward_status:error` — Solutions-platform / support-agent forward degradation (note: the top-level `status` on these events is the level-derived `warn`; the reserved `status` field can't be set from extras by design)
 - `event:nudge_mark_failed` — double-send hazard, act before re-running the nudge
 - `event:ci_run status:error` — red CI on main
 - `layer:db event:expire_matches` — cron sweep history with counts
