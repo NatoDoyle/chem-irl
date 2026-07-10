@@ -28,7 +28,7 @@
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-import { type BrontoLayer, buildEvent, shipEvents } from '../_shared/bronto.ts';
+import { type BrontoLayer, buildEvent, shipEvents, toIsoUtc } from '../_shared/bronto.ts';
 import { type EdgeHandler, logEvent, withObservability } from '../_shared/observability.ts';
 
 const BATCH_LIMIT = 500; // rows per source per run
@@ -250,8 +250,10 @@ function rowToEvent(
     event: String(row[spec.eventColumn] ?? 'unknown'),
     level: spec.levelFromStatus && row.status === 'error' ? 'error' : 'info',
     layer: spec.layer,
-    // The event's time is when it HAPPENED (row insert), not when it shipped.
-    timestamp: String(row.created_at),
+    // The event's time is when it HAPPENED (row insert), not when it
+    // shipped — normalized to the Z format Bronto indexes as event time
+    // (PostgREST's offset format falls back to arrival-time indexing).
+    timestamp: toIsoUtc(row.created_at),
     user_id: spec.hasUserId && typeof row.user_id === 'string' ? row.user_id : null,
     extra: {
       ...payload,

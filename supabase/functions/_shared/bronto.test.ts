@@ -5,7 +5,7 @@
 //   deno test --allow-env supabase/functions/_shared/bronto.test.ts
 
 import { assert, assertEquals, assertFalse, assertMatch } from 'jsr:@std/assert@1';
-import { buildEvent, shipEvents } from './bronto.ts';
+import { buildEvent, shipEvents, toIsoUtc } from './bronto.ts';
 
 // --- helpers ---------------------------------------------------------------
 
@@ -166,6 +166,26 @@ Deno.test('buildEvent: explicit timestamp is used verbatim', async () => {
     const e = buildEvent({ event: 'x', timestamp: '2026-07-01T00:00:00.000Z' });
     assertEquals(e.timestamp, '2026-07-01T00:00:00.000Z');
   });
+});
+
+// --- toIsoUtc ----------------------------------------------------------------
+
+Deno.test('toIsoUtc: normalizes PostgREST timestamp formats to ISO-8601 Z', () => {
+  // PostgREST offset format (microseconds + +00:00) — the shape Bronto
+  // failed to index as event time.
+  assertEquals(toIsoUtc('2026-06-12T14:21:59.237561+00:00'), '2026-06-12T14:21:59.237Z');
+  // Plain Postgres text format.
+  assertEquals(toIsoUtc('2026-06-12 14:21:59+00'), '2026-06-12T14:21:59.000Z');
+  // Non-UTC offset converts to UTC.
+  assertEquals(toIsoUtc('2026-06-12T15:21:59+01:00'), '2026-06-12T14:21:59.000Z');
+  // Already-normalized input is a fixpoint.
+  assertEquals(toIsoUtc('2026-07-09T20:12:00.974Z'), '2026-07-09T20:12:00.974Z');
+});
+
+Deno.test('toIsoUtc: unparseable input falls back to the raw string', () => {
+  assertEquals(toIsoUtc('not-a-date'), 'not-a-date');
+  assertEquals(toIsoUtc(null), 'null');
+  assertEquals(toIsoUtc(12345), new Date(12345).toISOString());
 });
 
 // --- shipEvents ------------------------------------------------------------
