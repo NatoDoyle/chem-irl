@@ -608,7 +608,7 @@ async function tryPlatformModeration(
       logEvent('warn', 'platform_forward', ctx, {
         target: 'photo_platform',
         kind,
-        status: 'error',
+        forward_status: 'error',
         http_status: res.status,
         fallback: 'anthropic',
       });
@@ -617,7 +617,7 @@ async function tryPlatformModeration(
     logEvent('info', 'platform_forward', ctx, {
       target: 'photo_platform',
       kind,
-      status: 'ok',
+      forward_status: 'ok',
     });
     return (await res.json()) as Json;
   } catch (err) {
@@ -625,7 +625,7 @@ async function tryPlatformModeration(
     logEvent('warn', 'platform_forward', ctx, {
       target: 'photo_platform',
       kind,
-      status: 'error',
+      forward_status: 'error',
       error_message: err instanceof Error ? err.message : String(err),
       fallback: 'anthropic',
     });
