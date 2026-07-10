@@ -251,8 +251,8 @@ function rowToEvent(
     level: spec.levelFromStatus && row.status === 'error' ? 'error' : 'info',
     layer: spec.layer,
     // The event's time is when it HAPPENED (row insert), not when it
-    // shipped — normalized to the Z format Bronto indexes as event time
-    // (PostgREST's offset format falls back to arrival-time indexing).
+    // shipped. Bronto's @time index is arrival regardless (verified
+    // 2026-07-10) — origin time is queryable via this field.
     timestamp: toIsoUtc(row.created_at),
     user_id: spec.hasUserId && typeof row.user_id === 'string' ? row.user_id : null,
     extra: {

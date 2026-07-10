@@ -246,7 +246,11 @@ authenticates the MCP query side). The implementation is `cmo/obs.py` (build / s
    statefile `data/.alert-<event>.ts`) Telegram alert — catching both in-job failures and Alex-run
    tool errors that systemd `OnFailure=` cannot see. This is the active alerting R3 (§12) called for.
 4. **Daily anomaly check.** `cmo-alertcheck.timer` (07:33 UTC, §6.3) runs `run_alertcheck`: a stale
-   pipeline (collect > 36 h), the women-first metric under a 30% floor, plus #5 and #6 below.
+   pipeline (collect > 36 h), the women-first metric under a 30% floor, plus #5 and #6 below — and,
+   since 2026-07-10, `cmo/appwatch.py`, which queries the **dating app's** Bronto dataset
+   (`chem-irl-app`) for error events, degraded Solutions-platform forwards, and staging-trust
+   leaks; the app has no Sentry, so this is its only alerting path (see the app repo's
+   `docs/infrastructure/BRONTO_APP_OBSERVABILITY.md` §9).
 5. **Spend governance.** `browse._record_usage` logs each *successful* BrowserUse task to
    `data/.usage-browseuse`; `alertcheck.check_spend` warns at **8 of the free plan's 10 tasks** — before
    the next `402` (the quota Alex hit blind on 2026-06-27, §13). An autonomous agent with credits needs
