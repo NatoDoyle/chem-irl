@@ -28,7 +28,13 @@
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-import { type BrontoLayer, buildEvent, shipEvents, toIsoUtc } from '../_shared/bronto.ts';
+import {
+  type BrontoLayer,
+  buildEvent,
+  rowLevel,
+  shipEvents,
+  toIsoUtc,
+} from '../_shared/bronto.ts';
 import { type EdgeHandler, logEvent, withObservability } from '../_shared/observability.ts';
 
 const BATCH_LIMIT = 500; // rows per source per run
@@ -43,6 +49,10 @@ interface SourceSpec {
   hasUserId: boolean;
   // ops_events rows carry their own ok/error status.
   levelFromStatus?: boolean;
+  // analytics_events rows may carry an explicit `level` in their payload
+  // (mobile client errors ship as warn/error so appwatch alerting sees
+  // them). Invalid/missing values fall back to info — see rowLevel.
+  levelFromPayload?: boolean;
   // High-volume noise rows excluded in-query (e.g. ~20 feed_impression
   // rows per discovery-feed call).
   excludeEvents?: readonly string[];
@@ -59,6 +69,7 @@ const SOURCES: Record<string, SourceSpec> = {
     eventColumn: 'event',
     payloadColumn: 'properties',
     hasUserId: true,
+    levelFromPayload: true,
   },
   scoring_events: {
     idColumn: 'event_id',
@@ -248,7 +259,7 @@ function rowToEvent(
 
   return buildEvent({
     event: String(row[spec.eventColumn] ?? 'unknown'),
-    level: spec.levelFromStatus && row.status === 'error' ? 'error' : 'info',
+    level: rowLevel(spec, row, payload),
     layer: spec.layer,
     // The event's time is when it HAPPENED (row insert), not when it
     // shipped. Bronto's @time index is arrival regardless (verified

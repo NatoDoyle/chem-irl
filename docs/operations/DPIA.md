@@ -130,7 +130,11 @@ request id, status, duration, outcome events with counts/flags),
 mirrored rows from `analytics_events` (client funnel events),
 `scoring_events` (domain events) and `ops_events` (cron-job outcomes),
 and CI run outcomes. Events carry the pseudonymous `user_id` UUID where
-relevant.
+relevant. Since 2026-07-11 `analytics_events` also includes
+`client_error` rows recorded by the mobile app on handled errors and
+render crashes: error class name, error message (PII-scrubbed at the
+device, truncated), severity/level, and screen/action context — no
+stack traces, no device identifiers.
 
 **What is never shipped:** message bodies, emails, phone numbers,
 photos/photo bytes, storage paths, confirmation/unsubscribe tokens, or
@@ -145,10 +149,10 @@ any user flow); ingest endpoint is EU (`ingestion.eu.bronto.io`).
 **Deletion note:** `analytics_events` rows cascade-delete with the
 account, but Bronto-side copies of already-shipped events (pseudonymous
 UUID + event metadata) persist until Bronto's retention expires — the
-erasure cascade does not reach Bronto. This mirrors the Sentry
-position (scrubbed crash context retained per vendor policy). Record
-Bronto's retention period + DPA under GAP-4 and reflect telemetry in
-the privacy policy alongside GAP-6.
+erasure cascade does not reach Bronto. Record Bronto's retention
+period + DPA under GAP-4 and reflect telemetry in the privacy policy
+alongside GAP-6. (Bronto is the sole telemetry processor — decision
+2026-07-10: no Sentry.)
 
 ## 3. Necessity & proportionality
 

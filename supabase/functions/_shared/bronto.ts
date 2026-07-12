@@ -1,5 +1,6 @@
 // Bronto ingest helper — the app-wide "what happened, when, how, where"
-// event stream (service/dataset: chem-irl-app), additive to Sentry.
+// event stream (service/dataset: chem-irl-app), the app's sole telemetry
+// platform (decision 2026-07-10: no Sentry).
 //
 // Ingest mechanics follow the org convention established by the CMO/CSO
 // agents and .github/workflows/blog-sync.yml:
@@ -33,6 +34,34 @@ function statusForLevel(level: BrontoLevel): BrontoStatus {
   if (level === 'error') return 'error';
   if (level === 'warn') return 'warn';
   return 'ok';
+}
+
+const BRONTO_LEVELS: readonly BrontoLevel[] = ['debug', 'info', 'warn', 'error'];
+
+// Validate an untrusted level-ish value (e.g. a forwarded row's
+// properties.level, written by the mobile client) into a BrontoLevel.
+// Anything else — unknown strings, severity names, non-strings — is
+// undefined so callers fall back to their own default.
+export function coerceLevel(value: unknown): BrontoLevel | undefined {
+  return typeof value === 'string' && (BRONTO_LEVELS as readonly string[]).includes(value)
+    ? (value as BrontoLevel)
+    : undefined;
+}
+
+// Level for a forwarded DB row (telemetry-ship). Sources opt in per spec:
+// levelFromStatus reads the row's own ok/error status column (ops_events);
+// levelFromPayload honors an explicit payload `level` written by the
+// producer (analytics_events — mobile client errors ship as warn/error so
+// they surface in status-based alerting). Everything else stays info, so a
+// payload can never elevate its level unless its source opted in.
+export function rowLevel(
+  spec: { levelFromStatus?: boolean; levelFromPayload?: boolean },
+  row: Record<string, unknown>,
+  payload: Record<string, unknown>
+): BrontoLevel {
+  if (spec.levelFromStatus) return row.status === 'error' ? 'error' : 'info';
+  if (spec.levelFromPayload) return coerceLevel(payload.level) ?? 'info';
+  return 'info';
 }
 
 // Normalize a timestamp-ish value (e.g. PostgREST's

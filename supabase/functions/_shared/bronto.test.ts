@@ -5,7 +5,7 @@
 //   deno test --allow-env supabase/functions/_shared/bronto.test.ts
 
 import { assert, assertEquals, assertFalse, assertMatch } from 'jsr:@std/assert@1';
-import { buildEvent, shipEvents, toIsoUtc } from './bronto.ts';
+import { buildEvent, coerceLevel, rowLevel, shipEvents, toIsoUtc } from './bronto.ts';
 
 // --- helpers ---------------------------------------------------------------
 
@@ -186,6 +186,58 @@ Deno.test('toIsoUtc: unparseable input falls back to the raw string', () => {
   assertEquals(toIsoUtc('not-a-date'), 'not-a-date');
   assertEquals(toIsoUtc(null), 'null');
   assertEquals(toIsoUtc(12345), new Date(12345).toISOString());
+});
+
+// --- coerceLevel -------------------------------------------------------------
+
+Deno.test('coerceLevel: passes through each valid BrontoLevel', () => {
+  assertEquals(coerceLevel('debug'), 'debug');
+  assertEquals(coerceLevel('info'), 'info');
+  assertEquals(coerceLevel('warn'), 'warn');
+  assertEquals(coerceLevel('error'), 'error');
+});
+
+Deno.test('coerceLevel: rejects unknown strings (no case folding, no severity names)', () => {
+  assertEquals(coerceLevel('ERROR'), undefined);
+  assertEquals(coerceLevel('warning'), undefined);
+  assertEquals(coerceLevel('critical'), undefined);
+  assertEquals(coerceLevel(''), undefined);
+});
+
+Deno.test('coerceLevel: rejects non-string values', () => {
+  assertEquals(coerceLevel(undefined), undefined);
+  assertEquals(coerceLevel(null), undefined);
+  assertEquals(coerceLevel(3), undefined);
+  assertEquals(coerceLevel({ level: 'error' }), undefined);
+  assertEquals(coerceLevel(['error']), undefined);
+});
+
+// --- rowLevel ----------------------------------------------------------------
+
+Deno.test('rowLevel: levelFromStatus maps row.status error/ok', () => {
+  const spec = { levelFromStatus: true };
+  assertEquals(rowLevel(spec, { status: 'error' }, {}), 'error');
+  assertEquals(rowLevel(spec, { status: 'ok' }, {}), 'info');
+  assertEquals(rowLevel(spec, {}, {}), 'info');
+});
+
+Deno.test('rowLevel: levelFromPayload honors a valid payload.level', () => {
+  const spec = { levelFromPayload: true };
+  assertEquals(rowLevel(spec, {}, { level: 'error' }), 'error');
+  assertEquals(rowLevel(spec, {}, { level: 'warn' }), 'warn');
+  assertEquals(rowLevel(spec, {}, { level: 'info' }), 'info');
+});
+
+Deno.test('rowLevel: levelFromPayload falls back to info on missing/invalid level', () => {
+  const spec = { levelFromPayload: true };
+  assertEquals(rowLevel(spec, {}, {}), 'info');
+  assertEquals(rowLevel(spec, {}, { level: 'critical' }), 'info');
+  assertEquals(rowLevel(spec, {}, { level: 3 }), 'info');
+});
+
+Deno.test('rowLevel: sources that opt into neither flag are always info', () => {
+  // A scoring_events payload must not be able to elevate its own level.
+  assertEquals(rowLevel({}, { status: 'error' }, { level: 'error' }), 'info');
 });
 
 // --- shipEvents ------------------------------------------------------------
