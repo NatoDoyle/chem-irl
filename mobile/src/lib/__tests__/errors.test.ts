@@ -8,6 +8,12 @@ jest.mock('@sentry/react-native', () => ({
   captureException: jest.fn(),
 }));
 
+// Mock the Bronto client-error recorder — its real import chain reaches
+// the supabase client, and its behavior has its own test file.
+jest.mock('../clientErrorEvents', () => ({
+  recordClientError: jest.fn(),
+}));
+
 // eslint-disable-next-line import/first
 import {
   formatError,
@@ -18,6 +24,8 @@ import {
 } from '../errors';
 // eslint-disable-next-line import/first
 import { addBreadcrumb } from '../sentry';
+// eslint-disable-next-line import/first
+import { recordClientError } from '../clientErrorEvents';
 
 describe('Error Utilities', () => {
   beforeEach(() => {
@@ -209,6 +217,16 @@ describe('Error Utilities', () => {
       const result = getErrorAlert(error, 'Login Error');
 
       expect(result.message).toBe('Invalid email or password.');
+    });
+
+    it('records the error to Bronto (recordClientError) with the alert context', () => {
+      const error = new Error('DB exploded');
+      getErrorAlert(error, 'Save Failed');
+
+      expect(recordClientError).toHaveBeenCalledWith(error, {
+        source: 'alert',
+        tags: { error_title: 'Save Failed' },
+      });
     });
   });
 });

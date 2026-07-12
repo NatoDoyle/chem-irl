@@ -8,15 +8,24 @@ jest.mock('@sentry/react-native', () => ({
   addBreadcrumb: jest.fn(),
 }));
 
+// Mock the Bronto client-error recorder — its real import chain reaches
+// the supabase client, and its behavior has its own test file.
+jest.mock('../clientErrorEvents', () => ({
+  recordClientError: jest.fn(),
+}));
+
 // eslint-disable-next-line import/first
 import * as Sentry from '@sentry/react-native';
 // eslint-disable-next-line import/first
 import { captureWithTags } from '../sentry';
 // eslint-disable-next-line import/first
+import { recordClientError } from '../clientErrorEvents';
+// eslint-disable-next-line import/first
 import { ERROR_KINDS, ERROR_LAYERS, ERROR_SEVERITIES } from '../errors';
 
 const mockedWithScope = Sentry.withScope as jest.Mock;
 const mockedCaptureException = Sentry.captureException as jest.Mock;
+const mockedRecordClientError = recordClientError as jest.Mock;
 
 interface MockScope {
   setTags: jest.Mock;
@@ -125,5 +134,24 @@ describe('captureWithTags', () => {
     captureWithTags(undefined, { layer: ERROR_LAYERS.Mobile });
     expect(mockedWithScope).not.toHaveBeenCalled();
     expect(mockedCaptureException).not.toHaveBeenCalled();
+    expect(mockedRecordClientError).not.toHaveBeenCalled();
+  });
+
+  it('records the error to Bronto (recordClientError) with the capture context', () => {
+    const err = new Error('boom');
+    captureWithTags(err, {
+      layer: ERROR_LAYERS.Edge,
+      kind: ERROR_KINDS.RpcServerError,
+      severity: ERROR_SEVERITIES.High,
+      tags: { screen: 'Propose', rpc: 'propose_meet' },
+    });
+
+    expect(mockedRecordClientError).toHaveBeenCalledWith(err, {
+      source: 'capture',
+      severity: 'high',
+      kind: 'rpc.server_error',
+      layer: 'edge',
+      tags: { screen: 'Propose', rpc: 'propose_meet' },
+    });
   });
 });
