@@ -36,7 +36,7 @@ PII scrubber before leaving the process.
 | `layer` | `edge` \| `db` \| `mobile` \| `ci` | The primary discriminator. |
 | `fn` | edge function name | Edge events only (incl. telemetry-ship's own events). |
 | `event` | see §3 | `request_start`/`request_complete`/`request_failed` + per-function outcome events; forwarded rows use the row's own event name. |
-| `level` / `status` | `debug\|info\|warn\|error` / `ok\|warn\|error` | `status` derives from `level`. |
+| `level` / `status` | `debug\|info\|warn\|error` / `ok\|warn\|error` | `status` derives from `level`. Forwarded `analytics_events` rows may carry an explicit `level` in `properties` (the mobile client writes it for `client_error`); telemetry-ship honors it (`rowLevel`), invalid/missing → `info`. Other forwarded sources cannot elevate their own level. |
 | `request_id` | UUID | Correlates all events of one edge request (same id in `supabase functions logs`). |
 | `user_id` | UUID | Pseudonymous; stamped at flush so pre-auth events carry it too. |
 | `source` + `source_id` | table name + row PK | Forwarded DB rows only — the **at-least-once dedupe key**. |
@@ -82,13 +82,25 @@ outcome events:
 
 ### `layer: mobile` — analytics_events, forwarded (≤ ~2 min lag)
 
-The app keeps writing to the `analytics_events` table (no client
-changes; `mobile/src/lib/analytics.ts` taxonomy: onboarding steps,
-like_sent, match_created, proposal_*, message_sent, iris_*,
-verification_*, report_submitted, …). `telemetry-ship` forwards rows with
-`platform` (ios/android), scrubbed `properties`, and
-`source: analytics_events`. Full history was backfilled by the epoch
-cursors on first rollout.
+The app writes to the `analytics_events` table
+(`mobile/src/lib/analytics.ts` taxonomy: onboarding steps, like_sent,
+match_created, proposal_*, message_sent, iris_*, verification_*,
+report_submitted, …). `telemetry-ship` forwards rows with `platform`
+(ios/android), scrubbed `properties`, and `source: analytics_events`.
+Full history was backfilled by the epoch cursors on first rollout.
+
+**`client_error`** (added 2026-07-11): handled errors and render crashes
+are recorded by `mobile/src/lib/clientErrorEvents.ts` (hooked into both
+capture chokepoints, `captureWithTags` and `getErrorAlert`) with
+`properties: {level, severity, error_name, error_message (scrubbed +
+truncated), source: capture|alert, error_layer, kind?, screen?/rpc?/…}`.
+Severity→level mapping: critical/high → `error` (alerts next appwatch
+run), medium → `warn` (noise-floor ≥10), low → `info`. Bounded: 60s
+per-signature dedupe + a per-session cap; dev builds log to console only;
+recording is fail-open and never throws into the error path. Limits:
+pre-auth errors are not recorded (analytics is authenticated-only by
+Decision D1), and native hard crashes (process death) never reach JS —
+accepted pre-launch gap, would need a client crash SDK.
 
 ### `layer: db` — scoring_events + ops_events, forwarded
 
@@ -202,6 +214,7 @@ same read path the CMO/CSO agents use. Useful starting filters:
 - `event:platform_forward forward_status:error` — Solutions-platform / support-agent forward degradation (note: the top-level `status` on these events is the level-derived `warn`; the reserved `status` field can't be set from extras by design)
 - `event:nudge_mark_failed` — double-send hazard, act before re-running the nudge
 - `event:ci_run status:error` — red CI on main
+- `layer:mobile event:client_error` — mobile JS errors (group by `error_name` + `screen`; `status:error` = high/critical severity)
 - `layer:db event:expire_matches` — cron sweep history with counts
 - `request_id:<uuid>` — the full story of one request across events
 
@@ -211,11 +224,11 @@ same read path the CMO/CSO agents use. Useful starting filters:
   `20260609182327_lock_proposals_update.sql`); once confirmed in
   `cron.job`, wrap as `run_expire_proposals_v1()` mirroring PR-E's
   pattern so it reports to `ops_events` too.
-- **Mobile error events**: the mobile Sentry seam (`captureWithTags`)
-  could additionally record scrubbed error events into
-  `analytics_events` so Bronto sees client errors, not just Sentry.
-  Deliberately out of scope for the initial rollout (user decision:
-  no client changes).
+- ~~**Mobile error events**~~ **DONE 2026-07-11**: both mobile error
+  chokepoints now record scrubbed `client_error` rows into
+  `analytics_events` (see §3, layer: mobile); telemetry-ship maps their
+  `properties.level` onto the event level so appwatch alerting sees them.
+  Remaining accepted gap: native hard crashes (no client SDK).
 - **Web client funnel events** (`waitlist_form_started` etc.) remain a
   silent no-op seam (`web/src/lib/analytics.ts`) by decision — edge
   functions cover conversions; Vercel Analytics covers pageviews.
@@ -226,9 +239,11 @@ same read path the CMO/CSO agents use. Useful starting filters:
   in production, and warns above a noise floor. Fail-open, but a query
   failure emits a "watch FAILED" line instead of silence. See
   [OPENCLAW_CMO_VPS.md](./OPENCLAW_CMO_VPS.md) §5.
-- **Edge Sentry (`SENTRY_DSN_EDGE`)** is still unset — no Sentry project
-  exists for any layer. Until one is created, this appwatch check is the
-  app's only error alerting.
+- **No Sentry — by decision (2026-07-10).** Bronto is the app's sole
+  telemetry/observability platform. The Sentry code paths in
+  mobile/web/edge are inert (no DSN was ever configured anywhere) and
+  fail-open; do not provision a Sentry project or wire a DSN. The
+  appwatch check above is the app's error alerting.
 
 ## 10. Privacy
 
