@@ -93,7 +93,9 @@ Full history was backfilled by the epoch cursors on first rollout.
 are recorded by `mobile/src/lib/clientErrorEvents.ts` (hooked into both
 capture chokepoints, `captureWithTags` and `getErrorAlert`) with
 `properties: {level, severity, error_name, error_message (scrubbed +
-truncated), source: capture|alert, error_layer, kind?, screen?/rpc?/…}`.
+truncated), recorded_via: capture|alert, error_layer, kind?,
+screen?/rpc?/…}` (not `source` — the shipper reserves source/source_id
+for the forwarded-row dedupe key and overwrites it).
 Severity→level mapping: critical/high → `error` (alerts next appwatch
 run), medium → `warn` (noise-floor ≥10), low → `info`. Bounded: 60s
 per-signature dedupe + a per-session cap; dev builds log to console only;

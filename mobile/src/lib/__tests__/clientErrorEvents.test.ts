@@ -41,9 +41,17 @@ describe('recordClientError', () => {
         error_message: 'boom',
         severity: 'medium',
         level: 'warn',
-        source: 'capture',
+        recorded_via: 'capture',
       })
     );
+  });
+
+  it('never emits a `source` property — telemetry-ship reserves it for the dedupe key', () => {
+    recordClientError(new Error('x'), { source: 'capture' });
+
+    const props = trackEvent.mock.calls[0][1] as Record<string, unknown>;
+    expect(props).not.toHaveProperty('source');
+    expect(props.recorded_via).toBe('capture');
   });
 
   it('maps severity onto level: critical/high → error, medium → warn, low → info', () => {
@@ -72,7 +80,7 @@ describe('recordClientError', () => {
       source: 'capture',
       kind: 'rpc.server_error',
       layer: 'edge',
-      tags: { screen: 'Discover', level: 'spoofed', source: 'spoofed' },
+      tags: { screen: 'Discover', level: 'spoofed', recorded_via: 'spoofed' },
     });
 
     expect(trackEvent).toHaveBeenCalledWith(
@@ -82,7 +90,7 @@ describe('recordClientError', () => {
         kind: 'rpc.server_error',
         error_layer: 'edge',
         level: 'warn',
-        source: 'capture',
+        recorded_via: 'capture',
       })
     );
   });
