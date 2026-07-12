@@ -14,6 +14,7 @@ import {
 } from './errors';
 import { scrubSentryPayload } from './sentry-scrubber';
 import { runbookUrl } from './runbook-url';
+import { recordClientError } from './clientErrorEvents';
 
 // Lazy import Sentry to avoid requiring it when not configured
 // eslint-disable-next-line @typescript-eslint/no-require-imports
@@ -100,7 +101,20 @@ function buildFingerprint(error: unknown, options: CaptureOptions): string[] {
 }
 
 export function captureWithTags(error: unknown, options: CaptureOptions): void {
-  if (!SentryModule || error == null) return;
+  if (error == null) return;
+
+  // Bronto is the telemetry platform of record (decision 2026-07-10) —
+  // record the error even when the Sentry SDK is absent (it has no DSN
+  // and sends nothing). Fail-open, deduped, session-capped.
+  recordClientError(error, {
+    source: 'capture',
+    severity: options.severity,
+    kind: options.kind,
+    layer: options.layer,
+    tags: options.tags,
+  });
+
+  if (!SentryModule) return;
 
   const tags: Record<string, string> = {
     layer: options.layer,

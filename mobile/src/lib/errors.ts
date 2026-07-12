@@ -3,6 +3,7 @@
  */
 
 import { addBreadcrumb } from './sentry';
+import { recordClientError } from './clientErrorEvents';
 
 // Lazy import Sentry to avoid requiring it when not configured
 // eslint-disable-next-line @typescript-eslint/no-require-imports
@@ -96,6 +97,13 @@ export function getErrorAlert(
   // Add breadcrumb for error
   addBreadcrumb(`Error: ${title}`, 'error', 'error', {
     errorMessage: error instanceof Error ? error.message : String(error),
+  });
+
+  // Bronto is the telemetry platform of record (decision 2026-07-10) —
+  // record a scrubbed client_error row (default severity: medium).
+  recordClientError(error, {
+    source: 'alert',
+    tags: { error_title: title },
   });
 
   // Capture error in Sentry if available

@@ -64,7 +64,10 @@ export type AnalyticsEvent =
   // Safety: block / unblock / report
   | 'user_blocked'
   | 'user_unblocked'
-  | 'report_submitted';
+  | 'report_submitted'
+  // Client errors → Bronto (recorded by lib/clientErrorEvents.ts only;
+  // properties carry level/severity/error_name/error_message + context).
+  | 'client_error';
 
 export interface AnalyticsProperties {
   [key: string]: string | number | boolean | null | undefined;
