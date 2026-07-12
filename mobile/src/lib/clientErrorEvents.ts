@@ -87,7 +87,9 @@ export function recordClientError(error: unknown, context: ClientErrorContext): 
       severity,
       error_name: name,
       error_message: message,
-      source: context.source,
+      // Not `source`: telemetry-ship reserves source/source_id for the
+      // forwarded-row dedupe key and would silently clobber it in Bronto.
+      recorded_via: context.source,
       ...(context.kind ? { kind: context.kind } : {}),
       ...(context.layer ? { error_layer: context.layer } : {}),
     });
