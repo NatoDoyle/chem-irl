@@ -319,7 +319,7 @@ This is also the point at which the waitlist counter component becomes a public 
 
 **Phase A end-to-end (Week 8):**
 
-1. From a clean browser session, open `https://chem-irl.com/download`. Confirm form has all fields and the live counter shows the real number, not 2,000+.
+1. From a clean browser session, open `https://chemirl.app/download`. Confirm form has all fields and the live counter shows the real number, not 2,000+.
 2. Submit a real email (use a Gmail alias) with `?ref=` from another seeded code. Confirm:
    - Browser routes to `/waitlist/success?code=…`
    - Position number renders within 1s
