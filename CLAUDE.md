@@ -312,6 +312,14 @@ Read only the docs relevant to the task:
 - `agent_docs/validation.md` — lint, type-check, test, and format checks
 - `agent_docs/supabase_safety.md` — migrations, RLS, RPC/versioning, schema cache notes
 
+## Manual-work tracking (master task file)
+
+Owner-only manual work — anything needing Nathan's logins/2FA (App Store Connect, Play Console, Supabase/Vercel/Stripe/Resend dashboards), a payment method, legal identity/filings, or a business decision — is tracked in ONE file outside this repo: `../MASTER MANUAL TASKS - Chem IRL & Solutions.md` (in the parent "Dating App" folder; it covers both this app and the Solutions platform).
+
+- When work here surfaces a new manual step for Nathan (a secret only he can mint, a store-console/dashboard action, a decision), append it to that file's matching section — why / how (steps) / done-when — in the same session; don't leave it only in a PR description or chat reply.
+- When manual work completes or is verified done, update the entry in place (move it to the file's "Already done" section) instead of starting a new list.
+- The file is not under git — edit it directly with Write/Edit (no worktree needed).
+
 ## Validation
 
 Run or propose only the validations relevant to the files changed. Prefer root-cause fixes over bypassing checks.
