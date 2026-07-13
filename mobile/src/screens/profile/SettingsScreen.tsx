@@ -19,7 +19,7 @@ import Constants from 'expo-constants';
 import AnimatedPressable from '../../components/ui/AnimatedPressable';
 import { BRAND, BRAND_COLORS } from '../../config/brand';
 import { supabase } from '../../lib/supabase/client';
-import { addBreadcrumb, clearUserContext } from '../../lib/sentry';
+import { addBreadcrumb } from '../../lib/sentry';
 import { getEntitlement } from '../../lib/subscription';
 import { IAPUnavailableInExpoGoError, restorePurchases } from '../../lib/iap';
 import { deleteMyAccount } from '../../lib/account';
@@ -73,7 +73,6 @@ export default function SettingsScreen() {
 
   const handleSignOut = async () => {
     addBreadcrumb('User signing out', 'auth', 'info');
-    clearUserContext();
     await supabase.auth.signOut();
   };
 

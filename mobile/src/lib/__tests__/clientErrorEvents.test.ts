@@ -14,13 +14,16 @@ type ClientErrorEventsModule = typeof import('../clientErrorEvents');
 
 describe('recordClientError', () => {
   let recordClientError: ClientErrorEventsModule['recordClientError'];
+  let recordBreadcrumb: ClientErrorEventsModule['recordBreadcrumb'];
   let trackEvent: jest.Mock;
   let nowSpy: jest.SpyInstance;
 
   beforeEach(() => {
     jest.resetModules();
     // eslint-disable-next-line @typescript-eslint/no-require-imports
-    recordClientError = require('../clientErrorEvents').recordClientError;
+    const mod = require('../clientErrorEvents') as ClientErrorEventsModule;
+    recordClientError = mod.recordClientError;
+    recordBreadcrumb = mod.recordBreadcrumb;
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     trackEvent = require('../analytics').trackEvent as jest.Mock;
     trackEvent.mockClear();
@@ -142,5 +145,59 @@ describe('recordClientError', () => {
     });
 
     expect(() => recordClientError(new Error('x'), { source: 'capture' })).not.toThrow();
+  });
+
+  it('attaches runbook_url when kind is provided, omits it otherwise', () => {
+    recordClientError(new Error('x'), { source: 'capture', kind: 'rpc.server_error' });
+    expect(trackEvent).toHaveBeenCalledWith(
+      'client_error',
+      expect.objectContaining({
+        runbook_url:
+          'https://github.com/NatoDoyle/chem-irl/blob/main/docs/runbooks/rpc.server_error.md',
+      })
+    );
+
+    trackEvent.mockClear();
+    recordClientError(new Error('y'), { source: 'capture' });
+    expect(trackEvent.mock.calls[0][1]).not.toHaveProperty('runbook_url');
+  });
+
+  it('attaches extra_head as scrubbed, truncated JSON when extra is provided', () => {
+    recordClientError(new Error('x'), {
+      source: 'capture',
+      extra: {
+        componentStack: 'at App > Boundary',
+        email: 'leak@example.com',
+        pad: 'y'.repeat(500),
+      },
+    });
+
+    const props = trackEvent.mock.calls[0][1] as Record<string, string>;
+    expect(props.extra_head).toContain('componentStack');
+    expect(props.extra_head).not.toContain('leak@example.com');
+    expect(props.extra_head.length).toBeLessThanOrEqual(300);
+
+    trackEvent.mockClear();
+    recordClientError(new Error('y'), { source: 'capture' });
+    expect(trackEvent.mock.calls[0][1]).not.toHaveProperty('extra_head');
+  });
+
+  it('attaches the breadcrumb trail (scrubbed, last 8 only) when crumbs exist', () => {
+    recordBreadcrumb('sent to leak@example.com', 'mail');
+    for (let i = 1; i <= 10; i++) recordBreadcrumb(`step ${i}`, 'nav');
+    recordClientError(new Error('x'), { source: 'capture' });
+
+    const props = trackEvent.mock.calls[0][1] as Record<string, string>;
+    expect(props.breadcrumbs).toContain('nav:step 10');
+    expect(props.breadcrumbs).toContain('nav:step 3');
+    expect(props.breadcrumbs).not.toContain('nav:step 2');
+    expect(props.breadcrumbs).not.toContain('leak@example.com');
+  });
+
+  it('omits breadcrumbs when none were recorded; recordBreadcrumb never throws', () => {
+    recordClientError(new Error('x'), { source: 'capture' });
+    expect(trackEvent.mock.calls[0][1]).not.toHaveProperty('breadcrumbs');
+
+    expect(() => recordBreadcrumb(undefined as unknown as string)).not.toThrow();
   });
 });
