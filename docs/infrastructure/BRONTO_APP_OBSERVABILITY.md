@@ -111,7 +111,9 @@ accepted pre-launch gap, would need a client crash SDK.
   in-query (~20 rows per discovery-feed call, pure volume noise).
 - `ops_events` — one ok/error row per pg_cron job run via the
   `run_*_v1()` wrappers: `expire_matches {expired_count}`,
-  `materialize_scores {message}`, `stale_match_events {stale_count}`.
+  `materialize_scores {message}`, `stale_match_events {stale_count}`,
+  `expire_proposals {expired_count, message}` (scheduled at :30 by
+  `20260713130135` — it had never actually been running; see §9).
   `status: error` rows carry `SQLERRM`. NOTE: wrapper failures are
   visible HERE, not in `cron.job_run_details` (recorded-and-swallowed by
   design — a re-raise would roll back the error row).
@@ -222,10 +224,14 @@ same read path the CMO/CSO agents use. Useful starting filters:
 
 ## 9. Known follow-ups (optional)
 
-- **`expire_proposals` sweep** exists outside migrations (referenced in
-  `20260609182327_lock_proposals_update.sql`); once confirmed in
-  `cron.job`, wrap as `run_expire_proposals_v1()` mirroring PR-E's
-  pattern so it reports to `ops_events` too.
+- ~~**`expire_proposals` sweep**~~ **RESOLVED 2026-07-13**: checked
+  `cron.job` — no proposals job existed at all (pg_cron itself was first
+  enabled 2026-07-09, so the "existing hourly cron" the 2026-03
+  migrations assumed never ran; expired proposals were never flipped and
+  `proposal_expired` events never fired — confirm-expired stayed blocked
+  by `confirm_proposal()`'s own `expires_at` check). `20260713130135`
+  adds `run_expire_proposals_v1()` on `30 * * * *` reporting to
+  `ops_events`.
 - ~~**Mobile error events**~~ **DONE 2026-07-11**: both mobile error
   chokepoints now record scrubbed `client_error` rows into
   `analytics_events` (see §3, layer: mobile); telemetry-ship maps their
