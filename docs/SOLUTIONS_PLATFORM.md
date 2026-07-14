@@ -1,6 +1,6 @@
 # Chem IRL Solutions — platform-first rule, boundary, and integration points
 
-_Last updated: 2026-07-09._ What the Chem IRL Solutions platform is, the
+_Last updated: 2026-07-13._ What the Chem IRL Solutions platform is, the
 platform-first build rule, where the repo/runtime boundary sits, and every
 place this repo touches it.
 
@@ -102,6 +102,12 @@ Notes:
   [OPENCLAW_CSO.md](./infrastructure/OPENCLAW_CSO.md)) — Chem IRL's instance
   is seat #1 of the platform's marketing/outbound seat offering;
   control-plane registration waits on the platform's seat registry.
+  Since 2026-07-10 the platform ships a multi-tenant **Lead Engine** module
+  (platform PRs #39/#41; its `docs/suite/LEAD_ENGINE.md`): at cutover the
+  CSO's source→enrich→qualify→draft half becomes a platform API consumer
+  (adapter staged platform-side as `docs/suite/examples/cso-platform-adapter.py`),
+  while the send half stays on the seat, draft-only. Arming is owner-only
+  (workspace `cis_` key — tracked in the master manual-tasks file).
 
 ## Migrating existing app-local capabilities
 

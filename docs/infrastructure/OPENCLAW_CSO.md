@@ -34,6 +34,14 @@ is the sales half.
 nurtured → in-voice drafts → dry-run send). The one thing not live is the actual LinkedIn *send* — it
 stays dry-run until the founder arms it with their own session + proxy (§5).
 
+> **Platform cutover (staged 2026-07-13):** the Solutions platform now ships a multi-tenant
+> **Lead Engine** (platform repo `docs/suite/LEAD_ENGINE.md`; platform PRs #39/#41) that does this
+> seat's source → enrich → qualify → draft half as a workspace-scoped service. A drop-in consumer is
+> staged platform-side (`docs/suite/examples/cso-platform-adapter.py`, installs as
+> `cso/platform_leads.py`); it is env-gated on `LEADS_API_KEY` and **inert until the founder mints the
+> workspace `cis_` key** (master manual-tasks file). The send half in this doc is unchanged either
+> way — until armed, everything below runs as-is.
+
 ## 2. What it does & why
 
 Alex's sales job is partnership + founder outreach for the Dublin launch: date-night **venues**,
