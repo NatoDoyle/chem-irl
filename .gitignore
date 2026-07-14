@@ -31,6 +31,10 @@ yarn-error.log*
 # env files
 .env*
 
+# store-submission secrets & assets (see docs/operations/STORE_SUBMISSION_PACK.md)
+mobile/secrets/
+scripts/seed-photos/
+
 # vercel
 .vercel
 
