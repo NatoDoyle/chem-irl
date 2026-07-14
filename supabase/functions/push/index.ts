@@ -20,9 +20,10 @@ const processedEvents = new Map<string, number>();
 const DEDUP_TTL_MS = 60000; // 1 minute TTL for deduplication cache
 
 // Note: the inner try/catch re-throws to the observability wrapper so it can
-// log + capture to Sentry + return the standard 500 with request_id. The body
-// is otherwise unchanged from before; PR-C-rollout will dedent and remove
-// the now-pointless try/catch in a separate cleanup commit.
+// log + ship the classified Bronto request_failed event + return the standard
+// 500 with request_id. The body is otherwise unchanged from before;
+// PR-C-rollout will dedent and remove the now-pointless try/catch in a
+// separate cleanup commit.
 const handler: EdgeHandler = async (req, _ctx) => {
   try {
     // SECURITY: Verify webhook secret before processing
@@ -300,9 +301,9 @@ const handler: EdgeHandler = async (req, _ctx) => {
       }
     );
   } catch (error) {
-    // Re-throw to the observability wrapper for structured log + Sentry
-    // capture + standard 500 response with request_id. The wrapper's tags
-    // already include layer:edge + fn:push.
+    // Re-throw to the observability wrapper for the structured log + Bronto
+    // request_failed event + standard 500 response with request_id. The
+    // wrapper's events already carry layer:edge + fn:push.
     throw error;
   }
 };

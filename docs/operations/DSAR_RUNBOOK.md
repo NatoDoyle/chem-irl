@@ -68,9 +68,10 @@ Plus photos: list `profiles/<user_id>/**` in the `profiles` storage
 bucket and include signed URLs (time-limited) or the files themselves.
 
 **Third-party disclosures to mention in the response**: Supabase (EU
-hosting), Resend (transactional email), Sentry (crash reports — PII
-scrubbed), Apple/Google (payments), Anthropic (Iris conversations; ~30
-day API retention unless ZDR).
+hosting), Resend (transactional email), Bronto (operational telemetry —
+PII scrubbed at source, pseudonymous IDs; see DPIA §2.7), Apple/Google
+(payments), Anthropic (Iris conversations; ~30 day API retention unless
+ZDR).
 
 **Do NOT include in exports**: other users' data (their messages to the
 requester are *their* personal data too — include the requester's sent

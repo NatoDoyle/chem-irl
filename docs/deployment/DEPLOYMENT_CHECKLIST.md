@@ -218,7 +218,7 @@ If payments are implemented:
 
 * [ ] Vercel Analytics active
 * [ ] PostHog tracking events (if enabled)
-* [ ] Error monitoring (Sentry) active (if enabled)
+* [ ] Bronto events flowing (dataset `chem-irl-app`; appwatch daily alert)
 * [ ] Database logs accessible
 * [ ] Postmark delivery logs checked (if enabled)
 

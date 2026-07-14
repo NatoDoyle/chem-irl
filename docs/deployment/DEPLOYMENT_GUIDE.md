@@ -265,8 +265,9 @@ After successful deployment and testing:
 
 1. **Website**: Set up custom domain in Vercel
 2. **Mobile**: Submit to app stores
-3. **Analytics**: Set up PostHog/Sentry
-4. **Monitoring**: Configure error tracking
+3. **Analytics/observability**: Bronto is live (dataset `chem-irl-app`,
+   see `docs/infrastructure/BRONTO_APP_OBSERVABILITY.md`)
+4. **Monitoring**: daily appwatch Telegram alert is live (same doc, §9)
 
 ---
 

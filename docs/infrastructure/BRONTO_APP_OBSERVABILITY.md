@@ -9,8 +9,9 @@ The marketing/sales agents' streams (`chem-irl-cmo`, `chem-irl-cso`) are
 separate services documented in [OPENCLAW_CMO_VPS.md](./OPENCLAW_CMO_VPS.md)
 and [OPENCLAW_CSO.md](./OPENCLAW_CSO.md); the ingest conventions are shared.
 
-**Bronto is additive.** Sentry stays the crash/alerting tool on all three
-layers; Bronto is the queryable "what happened, when, how, where" stream.
+**Bronto is the sole telemetry platform** (decision 2026-07-10; the inert
+Sentry code was removed 2026-07-13) — both the queryable "what happened,
+when, how, where" stream and the error/alerting sink (via appwatch, §9).
 Everything here is **strictly fail-open**: with `BRONTO_API_KEY` unset,
 every producer is a silent no-op, and a Bronto outage can never break a
 request, job, or workflow.
@@ -248,10 +249,13 @@ same read path the CMO/CSO agents use. Useful starting filters:
   failure emits a "watch FAILED" line instead of silence. See
   [OPENCLAW_CMO_VPS.md](./OPENCLAW_CMO_VPS.md) §5.
 - **No Sentry — by decision (2026-07-10).** Bronto is the app's sole
-  telemetry/observability platform. The Sentry code paths in
-  mobile/web/edge are inert (no DSN was ever configured anywhere) and
-  fail-open; do not provision a Sentry project or wire a DSN. The
-  appwatch check above is the app's error alerting.
+  telemetry/observability platform. The inert Sentry code (no DSN was
+  ever configured anywhere) was **removed from mobile/web/edge
+  2026-07-13**; don't re-introduce a crash vendor without an explicit
+  owner decision. `sentry-scrubber.ts` and `SENTRY_ENV` keep their
+  historical names — the scrubber is the Bronto PII gate and the env var
+  drives the `env` field. The appwatch check above is the app's error
+  alerting.
 
 ## 10. Privacy
 
