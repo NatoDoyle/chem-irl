@@ -3,11 +3,6 @@ jest.mock('../sentry', () => ({
   addBreadcrumb: jest.fn(),
 }));
 
-// Mock @sentry/react-native to prevent lazy require from loading it
-jest.mock('@sentry/react-native', () => ({
-  captureException: jest.fn(),
-}));
-
 // Mock the Bronto client-error recorder — its real import chain reaches
 // the supabase client, and its behavior has its own test file.
 jest.mock('../clientErrorEvents', () => ({

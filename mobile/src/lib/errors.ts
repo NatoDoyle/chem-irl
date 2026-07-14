@@ -5,16 +5,6 @@
 import { addBreadcrumb } from './sentry';
 import { recordClientError } from './clientErrorEvents';
 
-// Lazy import Sentry to avoid requiring it when not configured
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-let SentryModule: typeof import('@sentry/react-native') | null = null;
-try {
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  SentryModule = require('@sentry/react-native');
-} catch {
-  // Sentry not installed or not available
-}
-
 /**
  * Format error message for user display
  */
@@ -106,20 +96,14 @@ export function getErrorAlert(
     tags: { error_title: title },
   });
 
-  // Capture error in Sentry if available
-  if (SentryModule && error) {
-    SentryModule.captureException(error, {
-      tags: { errorTitle: title },
-    });
-  }
-
   return {
     title,
     message: getUserErrorMessage(error),
   };
 }
 
-// === Additive taxonomy for Sentry event tagging (PR-A) ============
+// === Error taxonomy (kinds / severities / layers) ==================
+// Drives client_error tagging in Bronto (see clientErrorEvents.ts).
 // Defines the shape PR-B will populate from raw errors. Existing helpers
 // above (formatError, getUserErrorMessage, isRecoverableError,
 // isSessionExpiredError, getErrorAlert) keep their current signatures and

@@ -1,9 +1,9 @@
 // Account lifecycle helpers. Currently just deletion; sign-out is inlined
 // in SettingsScreen because it has no extra steps beyond
-// supabase.auth.signOut + clearUserContext.
+// supabase.auth.signOut.
 
 import { supabase } from './supabase/client';
-import { addBreadcrumb, clearUserContext } from './sentry';
+import { addBreadcrumb } from './sentry';
 import { trackEvent } from './analytics';
 
 /**
@@ -14,8 +14,8 @@ import { trackEvent } from './analytics';
  * matches, messages, subscriptions, iris_*, photo_verification_checks),
  * and explicitly clears the two token tables that don't cascade.
  *
- * On success, clears local auth/sentry state and signs the user out — the
- * root navigator's auth listener will then route to AuthNavigator.
+ * On success, signs the user out — the root navigator's auth listener
+ * will then route to AuthNavigator.
  *
  * Throws on edge-function failure (caller should surface via getErrorAlert).
  */
@@ -37,6 +37,5 @@ export async function deleteMyAccount(): Promise<void> {
   }
 
   trackEvent('account_deleted');
-  clearUserContext();
   await supabase.auth.signOut();
 }

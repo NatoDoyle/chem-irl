@@ -42,23 +42,6 @@ function checkEnv(): EnvCheckResult {
     }
   }
 
-  // Check Sentry configuration if DSN is provided
-  const sentryDsn = process.env.EXPO_PUBLIC_SENTRY_DSN;
-  if (sentryDsn) {
-    const environment = process.env.EXPO_PUBLIC_ENVIRONMENT;
-    if (!environment || environment.trim() === '') {
-      warnings.push(
-        'EXPO_PUBLIC_SENTRY_DSN is set but EXPO_PUBLIC_ENVIRONMENT is not set. Sentry will use default environment.'
-      );
-    } else if (environment === 'development') {
-      warnings.push(
-        'EXPO_PUBLIC_ENVIRONMENT is set to "development". Sentry error logging is disabled in development.'
-      );
-    } else if (environment === 'production') {
-      // Production with Sentry - this is good, no warning needed
-    }
-  }
-
   // Production builds: config that fails silently at runtime if absent.
   const appEnv = process.env.EXPO_PUBLIC_ENVIRONMENT;
   if (appEnv === 'production') {
@@ -69,11 +52,6 @@ function checkEnv(): EnvCheckResult {
     if (!projectId || projectId.trim() === '') {
       errors.push(
         'Missing required env var for production: EXPO_PUBLIC_PROJECT_ID (EAS project id — must match extra.eas.projectId in app.json; push notifications silently fail without it)'
-      );
-    }
-    if (!sentryDsn || sentryDsn.trim() === '') {
-      warnings.push(
-        'EXPO_PUBLIC_SENTRY_DSN is not set. Production crash reporting will be disabled.'
       );
     }
   }

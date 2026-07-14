@@ -22,7 +22,7 @@ import OnboardingNavigator from './src/navigation/OnboardingNavigator';
 import MainNavigator from './src/navigation/MainNavigator';
 import { isSessionExpiredError, getErrorAlert, isRecoverableError } from './src/lib/errors';
 import { resolveProfileState } from './src/lib/profile';
-import { addBreadcrumb, setUserContext, clearUserContext } from './src/lib/sentry';
+import { addBreadcrumb } from './src/lib/sentry';
 import { identifyUser, resetUser } from './src/lib/analytics';
 import { BRAND_COLORS, MIDNIGHT, TYPOGRAPHY } from './src/config/brand';
 import { useFontsReady } from './src/lib/fonts';
@@ -190,7 +190,6 @@ export default function App() {
 
       // Handle signed-out / no-session
       if (event === 'SIGNED_OUT' || !session) {
-        clearUserContext();
         resetUser();
         unregisterDeviceToken().catch((err) => {
           console.error('Error unregistering device token:', err);
@@ -208,7 +207,6 @@ export default function App() {
 
       if (session) {
         if (session.user) {
-          setUserContext(session.user.id, session.user.email || undefined);
           identifyUser(session.user.id, {
             email: session.user.email || undefined,
           });

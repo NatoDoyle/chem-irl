@@ -1,149 +1,35 @@
-// Mock @sentry/react-native so the lazy require inside sentry.ts gets a
-// jest-controlled module. captureWithTags goes through SentryModule.withScope
-// → scope.setTags / setExtras / setFingerprint → SentryModule.captureException.
-jest.mock('@sentry/react-native', () => ({
-  withScope: jest.fn(),
-  captureException: jest.fn(),
-  setUser: jest.fn(),
-  addBreadcrumb: jest.fn(),
-}));
-
-// Mock the Bronto client-error recorder — its real import chain reaches
-// the supabase client, and its behavior has its own test file.
+// captureWithTags + addBreadcrumb are the app-wide error/breadcrumb
+// surface (historical filename from the Sentry era; the SDK was removed
+// 2026-07-13). Both delegate entirely to clientErrorEvents — the Bronto
+// path — which is mocked here; its own behavior has its own test file.
 jest.mock('../clientErrorEvents', () => ({
   recordClientError: jest.fn(),
+  recordBreadcrumb: jest.fn(),
 }));
 
 // eslint-disable-next-line import/first
-import * as Sentry from '@sentry/react-native';
+import { addBreadcrumb, captureWithTags } from '../sentry';
 // eslint-disable-next-line import/first
-import { captureWithTags } from '../sentry';
-// eslint-disable-next-line import/first
-import { recordClientError } from '../clientErrorEvents';
+import { recordBreadcrumb, recordClientError } from '../clientErrorEvents';
 // eslint-disable-next-line import/first
 import { ERROR_KINDS, ERROR_LAYERS, ERROR_SEVERITIES } from '../errors';
 
-const mockedWithScope = Sentry.withScope as jest.Mock;
-const mockedCaptureException = Sentry.captureException as jest.Mock;
 const mockedRecordClientError = recordClientError as jest.Mock;
-
-interface MockScope {
-  setTags: jest.Mock;
-  setExtras: jest.Mock;
-  setFingerprint: jest.Mock;
-}
+const mockedRecordBreadcrumb = recordBreadcrumb as jest.Mock;
 
 describe('captureWithTags', () => {
-  let scope: MockScope;
-
   beforeEach(() => {
     jest.clearAllMocks();
-    scope = {
-      setTags: jest.fn(),
-      setExtras: jest.fn(),
-      setFingerprint: jest.fn(),
-    };
-    mockedWithScope.mockImplementation((cb: (s: MockScope) => void) => cb(scope));
   });
 
-  it('attaches layer + severity + kind as tags and calls captureException', () => {
-    const err = new Error('boom');
-    captureWithTags(err, {
-      layer: ERROR_LAYERS.Mobile,
-      kind: ERROR_KINDS.RpcInvalidInput,
-      severity: ERROR_SEVERITIES.High,
-      tags: { rpc: 'propose_meet', screen: 'Propose' },
-    });
-    expect(mockedWithScope).toHaveBeenCalledTimes(1);
-    expect(mockedCaptureException).toHaveBeenCalledWith(err);
-    expect(scope.setTags).toHaveBeenCalledWith({
-      layer: 'mobile',
-      severity: 'high',
-      kind: 'rpc.invalid_input',
-      rpc: 'propose_meet',
-      screen: 'Propose',
-    });
-  });
-
-  it("defaults severity to 'medium' when omitted", () => {
-    captureWithTags(new Error('x'), { layer: ERROR_LAYERS.Mobile });
-    expect(scope.setTags).toHaveBeenCalledWith(expect.objectContaining({ severity: 'medium' }));
-  });
-
-  it('attaches a runbook_url derived from kind', () => {
-    captureWithTags(new Error('x'), {
-      layer: ERROR_LAYERS.Mobile,
-      kind: ERROR_KINDS.AuthSessionExpired,
-    });
-    const extras = scope.setExtras.mock.calls[0][0] as Record<string, unknown>;
-    expect(extras.runbook_url).toMatch(/auth\.session_expired\.md$/);
-  });
-
-  it('does NOT attach runbook_url when kind is omitted', () => {
-    captureWithTags(new Error('x'), { layer: ERROR_LAYERS.Mobile });
-    const extras = scope.setExtras.mock.calls[0][0] as Record<string, unknown>;
-    expect(extras.runbook_url).toBeUndefined();
-  });
-
-  it('scrubs PII out of the extra payload (drops email, keeps user_id)', () => {
-    captureWithTags(new Error('x'), {
-      layer: ERROR_LAYERS.Mobile,
-      extra: { email: 'leak@example.com', user_id: 'u-1', note: 'private' },
-    });
-    const extras = scope.setExtras.mock.calls[0][0] as Record<string, unknown>;
-    expect(extras.email).toBeUndefined();
-    expect(extras.note).toBeUndefined();
-    expect(extras.user_id).toBe('u-1');
-  });
-
-  it('builds a stable fingerprint from layer + screen + rpc + kind', () => {
-    captureWithTags(new Error('x'), {
-      layer: ERROR_LAYERS.Mobile,
-      kind: ERROR_KINDS.RpcServerError,
-      tags: { screen: 'Discover', rpc: 'like' },
-    });
-    expect(scope.setFingerprint).toHaveBeenCalledWith([
-      'mobile',
-      'Discover',
-      'like',
-      'rpc.server_error',
-    ]);
-  });
-
-  it('falls back to error.name in the fingerprint when kind is omitted', () => {
-    class CustomError extends Error {
-      override name = 'CustomError';
-    }
-    captureWithTags(new CustomError('x'), {
-      layer: ERROR_LAYERS.Mobile,
-      tags: { screen: 'Discover' },
-    });
-    expect(scope.setFingerprint).toHaveBeenCalledWith(['mobile', 'Discover', 'CustomError']);
-  });
-
-  it("falls back where = 'unknown' when no screen/fn/job tag is provided", () => {
-    captureWithTags(new Error('x'), {
-      layer: ERROR_LAYERS.Mobile,
-      kind: ERROR_KINDS.NetworkOffline,
-    });
-    expect(scope.setFingerprint).toHaveBeenCalledWith(['mobile', 'unknown', 'network.offline']);
-  });
-
-  it('no-ops when error is null or undefined', () => {
-    captureWithTags(null, { layer: ERROR_LAYERS.Mobile });
-    captureWithTags(undefined, { layer: ERROR_LAYERS.Mobile });
-    expect(mockedWithScope).not.toHaveBeenCalled();
-    expect(mockedCaptureException).not.toHaveBeenCalled();
-    expect(mockedRecordClientError).not.toHaveBeenCalled();
-  });
-
-  it('records the error to Bronto (recordClientError) with the capture context', () => {
+  it('records the error to Bronto with the full capture context', () => {
     const err = new Error('boom');
     captureWithTags(err, {
       layer: ERROR_LAYERS.Edge,
       kind: ERROR_KINDS.RpcServerError,
       severity: ERROR_SEVERITIES.High,
       tags: { screen: 'Propose', rpc: 'propose_meet' },
+      extra: { step: 'confirm' },
     });
 
     expect(mockedRecordClientError).toHaveBeenCalledWith(err, {
@@ -152,6 +38,39 @@ describe('captureWithTags', () => {
       kind: 'rpc.server_error',
       layer: 'edge',
       tags: { screen: 'Propose', rpc: 'propose_meet' },
+      extra: { step: 'confirm' },
     });
+  });
+
+  it('defaults severity/kind/tags/extra to undefined without inventing values', () => {
+    captureWithTags(new Error('x'), { layer: ERROR_LAYERS.Mobile });
+
+    expect(mockedRecordClientError).toHaveBeenCalledWith(expect.any(Error), {
+      source: 'capture',
+      severity: undefined,
+      kind: undefined,
+      layer: 'mobile',
+      tags: undefined,
+      extra: undefined,
+    });
+  });
+
+  it('no-ops when error is null or undefined', () => {
+    captureWithTags(null, { layer: ERROR_LAYERS.Mobile });
+    captureWithTags(undefined, { layer: ERROR_LAYERS.Mobile });
+
+    expect(mockedRecordClientError).not.toHaveBeenCalled();
+  });
+});
+
+describe('addBreadcrumb', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it('feeds the client_error breadcrumb trail with message + category', () => {
+    addBreadcrumb('Auth state changed: SIGNED_IN', 'auth', 'info');
+
+    expect(mockedRecordBreadcrumb).toHaveBeenCalledWith('Auth state changed: SIGNED_IN', 'auth');
   });
 });

@@ -19,10 +19,6 @@ jest.mock('../sentry', () => ({
   addBreadcrumb: jest.fn(),
 }));
 
-jest.mock('@sentry/react-native', () => ({
-  captureException: jest.fn(),
-}));
-
 // eslint-disable-next-line import/first
 import { isSessionExpiredError, isRecoverableError } from '../errors';
 

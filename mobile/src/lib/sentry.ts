@@ -1,8 +1,19 @@
 /**
- * Sentry utilities for adding breadcrumbs and context
+ * Error-capture surface for the mobile app (Bronto-backed).
  *
- * Provides helper functions to add breadcrumbs and user context to Sentry.
- * All functions safely handle the case where Sentry is not available.
+ * Historical filename: this module once fed the Sentry SDK, which was
+ * removed 2026-07-13 — it never had a DSN and never sent a single event
+ * (Bronto is the sole telemetry platform, decision 2026-07-10). The
+ * module keeps its name and public surface so the 15+ call sites stay
+ * untouched:
+ *
+ *   - addBreadcrumb() feeds the in-memory trail that clientErrorEvents
+ *     attaches to the next client_error ("how it happened" context).
+ *   - captureWithTags() records a scrubbed client_error analytics row,
+ *     forwarded to Bronto by telemetry-ship within ~2 minutes.
+ *
+ * Renaming this file (and sentry-scrubber.ts) is a wider import churn —
+ * do it only as an explicitly requested cleanup.
  */
 
 import {
@@ -12,132 +23,50 @@ import {
   type ErrorLayer,
   type ErrorSeverity,
 } from './errors';
-import { scrubSentryPayload } from './sentry-scrubber';
-import { runbookUrl } from './runbook-url';
-import { recordClientError } from './clientErrorEvents';
-
-// Lazy import Sentry to avoid requiring it when not configured
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-let SentryModule: typeof import('@sentry/react-native') | null = null;
-try {
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  SentryModule = require('@sentry/react-native');
-} catch {
-  // Sentry not installed or not available
-}
+import { recordBreadcrumb, recordClientError } from './clientErrorEvents';
 
 /**
- * Add a breadcrumb to Sentry for debugging
+ * Record a breadcrumb into the client_error trail. The signature is kept
+ * from the Sentry era; `level` and `data` are accepted for call-site
+ * compatibility but not recorded — the trail is a compact
+ * `category:message` ring (and `data` never left the device before
+ * either, since the SDK was inert).
  */
 export function addBreadcrumb(
   message: string,
   category?: string,
-  level: 'debug' | 'info' | 'warning' | 'error' = 'info',
-  data?: Record<string, any>
+  _level: 'debug' | 'info' | 'warning' | 'error' = 'info',
+  _data?: Record<string, unknown>
 ): void {
-  if (SentryModule) {
-    SentryModule.addBreadcrumb({
-      message,
-      category: category || 'user',
-      level,
-      data,
-      timestamp: Date.now() / 1000,
-    });
-  }
+  recordBreadcrumb(message, category);
 }
-
-/**
- * Set user context in Sentry
- */
-export function setUserContext(userId: string, email?: string): void {
-  if (SentryModule) {
-    SentryModule.setUser({
-      id: userId,
-      email,
-    });
-  }
-}
-
-/**
- * Clear user context in Sentry
- */
-export function clearUserContext(): void {
-  if (SentryModule) {
-    SentryModule.setUser(null);
-  }
-}
-
-// === Tagged + scrubbed capture (PR-B) =============================
-// Builds on the PR-A primitives. Use this instead of calling
-// SentryModule.captureException directly so every event lands with:
-//   - layer + severity + kind tags
-//   - call-site tags (screen, rpc, action, fn, job)
-//   - a stable fingerprint so duplicates collapse into one issue
-//   - a runbook URL the dashboard links to
-//   - an `extra` payload run through scrubSentryPayload so PII (chat
-//     bodies, emails, photo URLs) never leaves the device.
 
 export interface CaptureOptions {
   layer: ErrorLayer;
   // Optional but strongly encouraged: identifies the failure class
-  // (e.g. ERROR_KINDS.RpcInvalidInput). Drives the fingerprint and the
-  // runbook URL.
+  // (e.g. ERROR_KINDS.RpcInvalidInput). Drives the runbook_url on the
+  // Bronto event.
   kind?: ErrorKind;
-  // Defaults to 'medium'. Sentry alert rules in PR-E key off this.
+  // Defaults to 'medium' (Bronto level: warn). high/critical map to
+  // level error, which the daily appwatch alert pages on.
   severity?: ErrorSeverity;
   // Call-site tags. Reserved keys: screen, fn, job, rpc, action.
   tags?: Record<string, string>;
-  // Free-form structured context. PII-scrubbed before send.
+  // Free-form structured context (stored as scrubbed, truncated
+  // extra_head — e.g. the error boundary's componentStack).
   extra?: Record<string, unknown>;
-}
-
-function buildFingerprint(error: unknown, options: CaptureOptions): string[] {
-  const where = options.tags?.screen ?? options.tags?.fn ?? options.tags?.job ?? 'unknown';
-  const action = options.tags?.rpc ?? options.tags?.action ?? null;
-  const what = options.kind ?? (error instanceof Error ? error.name : 'unknown');
-  return [options.layer, where, action, what].filter(
-    (x): x is string => typeof x === 'string' && x.length > 0
-  );
 }
 
 export function captureWithTags(error: unknown, options: CaptureOptions): void {
   if (error == null) return;
 
-  // Bronto is the telemetry platform of record (decision 2026-07-10) —
-  // record the error even when the Sentry SDK is absent (it has no DSN
-  // and sends nothing). Fail-open, deduped, session-capped.
   recordClientError(error, {
     source: 'capture',
     severity: options.severity,
     kind: options.kind,
     layer: options.layer,
     tags: options.tags,
-  });
-
-  if (!SentryModule) return;
-
-  const tags: Record<string, string> = {
-    layer: options.layer,
-    severity: options.severity ?? ERROR_SEVERITIES.Medium,
-    ...(options.kind ? { kind: options.kind } : {}),
-    ...(options.tags ?? {}),
-  };
-
-  const scrubbedExtra = options.extra
-    ? (scrubSentryPayload(options.extra) as Record<string, unknown>)
-    : {};
-  if (options.kind) {
-    scrubbedExtra.runbook_url = runbookUrl(options.kind);
-  }
-
-  const fingerprint = buildFingerprint(error, options);
-
-  const Sentry = SentryModule;
-  Sentry.withScope((scope) => {
-    scope.setTags(tags);
-    scope.setExtras(scrubbedExtra);
-    scope.setFingerprint(fingerprint);
-    Sentry.captureException(error);
+    extra: options.extra,
   });
 }
 
