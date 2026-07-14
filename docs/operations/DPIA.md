@@ -39,7 +39,7 @@ At least three triggers apply:
 | Lifestyle | drinking, smoking, drugs, diet, activity, family_plans, pets, height, languages, interests, love_language, personality, astrology, job, education, bio, prompts | drugs/health-adjacent — assess |
 | Communications | messages, availability, proposals, confirms | content data |
 | Behavioural | likes, match outcomes, response latency, scoring signals, surveys | profiling inputs |
-| Device/technical | push tokens, device_id, IP hash (waitlist), Sentry crash context (PII-scrubbed) | not special |
+| Device/technical | push tokens, device_id, IP hash (waitlist), client-error telemetry (error class + PII-scrubbed message, no stack traces — §2.7) | not special |
 | Commercial | token balance/ledger, subscription status, purchase idempotency keys | not special |
 | Safety | reports, enforcements, durable ban hashes | criminal-adjacent — handle carefully |
 | AI (Iris, opt-in) | conversation transcripts + derived profile | may contain any of the above |
@@ -60,8 +60,8 @@ At least three triggers apply:
 
 ### 2.3 Recipients / processors (see Art. 30 ROPA, §8)
 
-Supabase (hosting, eu-west-1), Resend (email, EU SES), Sentry (crash —
-PII scrubbed at source), Apple/Google (payment + receipt verification),
+Supabase (hosting, eu-west-1), Resend (email, EU SES),
+Apple/Google (payment + receipt verification),
 Anthropic (Iris, and the photo-moderation fallback path — ~30-day API
 retention unless ZDR), Expo (push relay), Bronto (bronto.io — operational
 telemetry/log ingest for app observability: pseudonymous UUIDs +
@@ -81,12 +81,25 @@ accounts — see GAP-3.
 
 ### 2.5 International transfers
 
-Primary processing is EU (Supabase eu-west-1). US processors (Sentry,
-Apple, Google, Anthropic, possibly Expo/Resend infra) require a transfer
-mechanism (SCCs / adequacy). Bronto telemetry ingests at an EU endpoint
-(ingestion.eu.bronto.io); confirm Bronto's storage region, retention
-default, and DPA alongside the rest — see GAP-4. Confirm each
-processor's DPA + transfer basis before launch — see GAP-4.
+Primary processing is EU (Supabase eu-west-1). US processors (Apple,
+Google, Anthropic, possibly Expo/Resend infra) require a transfer
+mechanism (SCCs / adequacy). Confirm each processor's DPA + transfer
+basis before launch — see GAP-4.
+
+**Bronto (telemetry) — desk review 2026-07-14 (⚠️ unresolved):** we send
+to an EU ingest endpoint (`ingestion.eu.bronto.io`), but Bronto's
+*public* legal terms make **no EU-residency, retention, or DPA
+commitment**. Their ToS states the properties are "controlled and
+offered by Brontobytes from its facilities in the United States of
+America"; the privacy policy says data "may be stored and processed in
+any country in which we and our affiliates maintain facilities" and
+contemplates transfers to the US, with no subprocessor list, no DPA
+reference, and no retention schedule (their docs only market "flexible
+retention"). **The EU ingest hostname is therefore not, by itself,
+evidence of EU storage.** Until a DPA + written retention/region
+commitment is obtained (legal@bronto.io), treat Bronto as a **US
+processor requiring SCCs** for the pseudonymous telemetry in §2.7 — see
+GAP-4.
 
 ### 2.6 First-party forwards to the Chem IRL Solutions platform (2026-07-06; as-built review 2026-07-13)
 
@@ -185,15 +198,25 @@ email/phone patterns, masks photo-URL keys); request paths are logged
 without query strings.
 
 **Design properties:** strictly fail-open (a Bronto outage cannot affect
-any user flow); ingest endpoint is EU (`ingestion.eu.bronto.io`).
+any user flow); ingest endpoint is EU (`ingestion.eu.bronto.io`) — but
+see the §2.5 finding: the hostname is *not* proof of EU storage, and
+Bronto publishes no retention, region, or DPA commitment.
 
-**Deletion note:** `analytics_events` rows cascade-delete with the
-account, but Bronto-side copies of already-shipped events (pseudonymous
-UUID + event metadata) persist until Bronto's retention expires — the
-erasure cascade does not reach Bronto. Record Bronto's retention
-period + DPA under GAP-4 and reflect telemetry in the privacy policy
-alongside GAP-6. (Bronto is the sole telemetry processor — decision
-2026-07-10: no Sentry.)
+**Deletion note (⚠️ live gap):** `analytics_events` rows cascade-delete
+with the account, but Bronto-side copies of already-shipped events
+(pseudonymous UUID + event metadata) persist **for an unknown period** —
+the erasure cascade does not reach Bronto, and Bronto's retention is
+undocumented, so an Art. 17 erasure request **cannot currently be
+honoured end-to-end** for telemetry. Two mitigations are available and
+neither is yet done: (a) obtain a DPA + retention commitment and a
+deletion API/contact from Bronto (GAP-4); or (b) stop sending `user_id`
+to Bronto (ship a per-install salted hash, or drop the field), which
+makes the telemetry non-identifiable and removes the erasure obligation
+at the cost of per-user correlation. **Recommendation: (b) unless
+per-user telemetry correlation earns its keep** — the pipeline's value
+(errors, cron outcomes, funnel counts) is almost entirely aggregate.
+(Bronto is the sole telemetry processor — decision 2026-07-10: no
+Sentry; the inert Sentry code was removed 2026-07-13.)
 
 ## 3. Necessity & proportionality
 
@@ -223,8 +246,9 @@ alongside GAP-6. (Bronto is the sole telemetry processor — decision
 AES-256 session-token encryption (LargeSecureStore); hashed IPs and ban
 identifiers; server-side photo moderation; mandatory 18+ gate (client +
 DB CHECK + completion trigger); approximate-only location; EU hosting;
-Sentry PII scrubbing; in-app erasure; durable bans that survive deletion
-without retaining PII; fail-closed payment verification.
+telemetry PII-scrubbed at source (shared scrubber, §2.7); in-app
+erasure; durable bans that survive deletion without retaining PII;
+fail-closed payment verification.
 
 **Gaps / required actions:**
 
@@ -239,11 +263,27 @@ without retaining PII; fail-closed payment verification.
 - **GAP-3:** define + implement an inactive-account retention limit
   (auto-erase or notify after N months idle).
 - **GAP-4:** complete the processor DPA + transfer-mechanism register
-  (SCCs) for every US sub-processor.
+  (SCCs) for every US sub-processor. **Bronto is the sharpest edge here
+  (desk review 2026-07-14, see §2.5):** it publishes *no* DPA, *no*
+  retention schedule, *no* subprocessor list and *no* EU-residency
+  commitment, while its ToS names US facilities — yet it currently
+  receives pseudonymous `user_id`s that survive account deletion (§2.7).
+  Actions, either of which closes it: **(a)** email legal@bronto.io for a
+  DPA + SCCs + written retention/storage-region terms and a deletion
+  contact; or **(b) preferred — remove the identifier**: stop sending
+  `user_id` to Bronto (drop it, or salt-and-hash per install) so the
+  telemetry is no longer personal data and neither SCCs nor Art. 17
+  reach-through apply. (b) is a small code change to
+  `_shared/bronto.ts` + `telemetry-ship`; (a) depends on a vendor reply.
 - **GAP-5 (R2):** age assurance is self-declared DOB. Assess whether the
   DPC/risk profile warrants stronger age verification.
-- **GAP-6 (R5):** prepare a plain-language explanation of the scoring/
-  ranking logic for the privacy policy (transparency, Art. 13–14).
+- **GAP-6 (R5):** ~~prepare~~ **drafted 2026-07-14** — a plain-language
+  explanation of the ranking logic (the exact live weights: 60 % action
+  speed, 30 % how others respond to you, 10 % reliability; 60-day rolling
+  window; no ranking on orientation/photos/demographics) is now in the
+  public privacy policy §6 "How matching decides who you see", together
+  with the §7 diagnostics/telemetry disclosure. **Both still need the
+  lawyer pass** (master task file §3.8) before they can be called closed.
 - **GAP-7 (R7):** confirm Anthropic ZDR status for the Iris API key;
   document Iris retention in the privacy policy.
 - **GAP-8 (R6):** Solutions-platform forwards (§2.6). **Documented
@@ -303,13 +343,12 @@ Controller-side record. Keep current as processing changes.
 | Safety & moderation | Abuse/safety | Reporters, accused | reports, enforcements, ban hashes | Supabase | EU | bans indefinite (hashed); cases until account deletion | RLS, hashing |
 | Payments | Token/sub purchases | Paying users | purchase ids, entitlement | Supabase, Apple, Google | US (SCCs TBD) | replay-protection retention | service-role only RPC |
 | Notifications | Engagement | Opted-in users | push token, device_id | Supabase, Expo | US (confirm) | until disabled/deletion | webhook secret |
-| Crash reporting | Reliability | All app users | scrubbed crash context | Sentry | US (SCCs TBD) | Sentry default | PII scrubbed pre-send |
 | AI concierge (Iris) | Optional bio help | Opted-in users | transcripts, derived profile | Anthropic | US (confirm ZDR) | ~30d API unless ZDR; app rows until iris-forget | opt-in, JWT |
 | Waitlist | Pre-launch growth | Prospects | email, UTM, IP hash, consents | Supabase, Resend | EU | until erasure | RLS, hashed IP, rate-limit |
 | Transactional email | Confirmations | Users/prospects | email, name | Resend | EU (SES) | per Resend | DKIM/SPF |
 | Photo moderation & verification (§2.6) | Safety: pre-publish photo checks, selfie match | App users | photo bytes (transient at platform + AI — zero-retention; never persisted platform-side), verification verdicts | Supabase; Chem IRL Solutions platform (Vercel + Supabase eu-west-1) → TensorX Ltd (AI, EU processor, zero-retention/no-training); Anthropic (US) fallback | Supabase (both projects) + Tensorix EU — verified 2026-07-13; Vercel function region unpinned — likely US transit (GAP-8); Anthropic fallback US (SCCs — GAP-4) | app-side verdict audit rows until account deletion (cascade); platform keeps a metering row (op/decision only, no image, indefinite); image bytes transient everywhere | JWT + path-ownership check, 30/hr rate limit, hashed workspace API key, fail-open backend switch, no user identifiers cross the boundary |
 | Support intake forwarding (§2.6) | Support/inquiry handling with AI-drafted, human-reviewed replies | Users + site visitors (submissions with an email) | email, display name, subject, full message body, submission UUID, whitelisted metadata (IP hash + user agent NOT forwarded) | Supabase; Chem IRL Solutions platform (threads/messages/drafts, RLS to workspace members) → TensorX Ltd (AI drafting + embeddings, EU processor, zero-retention) | Supabase (both projects) + Tensorix EU — verified 2026-07-13; Vercel function region unpinned — likely US transit (GAP-8) | app row = system of record, until handled/erasure; **platform copy currently indefinite — no TTL or deletion path; DSAR runbook does not reach it (GAP-8)** | CORS allowlist, honeypot, IP-hash rate limit, env-gated fail-open forward, hashed workspace API key, drafts human-reviewed (no auto-send) |
-| App observability/telemetry (§2.7) | Reliability, ops visibility, abuse detection | App users, site visitors (request metadata), operators | pseudonymous user_id UUIDs, event names, counts/flags, scrubbed payloads | Bronto (bronto.io) | EU ingest; confirm storage region + DPA (GAP-4) | Bronto retention (confirm — GAP-4); survives account deletion (§2.7) | PII scrubbed at source, fail-open, service-role-only pipeline |
+| App observability/telemetry (§2.7) — incl. client-error diagnostics | Reliability, ops visibility, abuse detection | App users, site visitors (request metadata), operators | pseudonymous user_id UUIDs, event names, counts/flags, scrubbed payloads, error class + scrubbed error message | Bronto (bronto.io / Brontobytes) | **EU ingest hostname only — vendor names US facilities and publishes no residency/DPA commitment; treat as US + SCCs pending (GAP-4)** | **Undocumented by vendor** — survives account deletion (§2.7 deletion gap) | PII scrubbed at source, fail-open, service-role-only pipeline |
 
 ## 9. Related documents
 
