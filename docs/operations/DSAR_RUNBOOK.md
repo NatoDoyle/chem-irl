@@ -37,6 +37,17 @@ completed date) — a simple ledger satisfies the accountability principle.
   `iap_transactions` (hashed-free but PII-light purchase idempotency
   keys) to prevent replaying consumed purchases onto new accounts.
   Disclose this retention in erasure confirmations.
+- **⚠️ Support submissions — TWO stores (GAP-8, as-built 2026-07-13)**:
+  a /support submission lives in the app's `support_submissions` row
+  AND, when forwarded, as a thread/message/draft on the Chem IRL
+  Solutions platform (its Supabase project, RLS-scoped to workspace
+  members) with **no TTL or deletion path yet**. Until a platform
+  erasure step ships (DPIA GAP-8 item 4), fulfilling erasure for a
+  support-form requester requires manually deleting BOTH: the app row
+  (`DELETE FROM support_submissions WHERE email = ...`) and the
+  platform-side thread (service-role SQL on the platform project:
+  delete the `threads` row matching the submission's `external_id` —
+  messages/drafts cascade).
 
 ## Access / portability (Art. 15 / 20) — manual export
 

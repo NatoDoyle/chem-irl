@@ -88,7 +88,7 @@ mechanism (SCCs / adequacy). Bronto telemetry ingests at an EU endpoint
 default, and DPA alongside the rest — see GAP-4. Confirm each
 processor's DPA + transfer basis before launch — see GAP-4.
 
-### 2.6 First-party forwards to the Chem IRL Solutions platform (2026-07-06)
+### 2.6 First-party forwards to the Chem IRL Solutions platform (2026-07-06; as-built review 2026-07-13)
 
 Two Supabase edge functions can forward data to the Chem IRL Solutions
 platform (`solutions.chemirl.app`) — the company's own B2B platform, with
@@ -96,27 +96,68 @@ the dating app as its first tenant. Both paths are env-gated (active only
 while the corresponding function secrets are set; enabled in production
 since 2026-07-04) and **fail open**: if the platform call errors or times
 out, the function falls back to its original behaviour and the user flow
-is unaffected.
+is unaffected. Both recipients are operated by the same controller today
+(see the entity note at the end of this section).
 
-1. **Photo moderation** — `moderate-photo` POSTs photo bytes (base64) to
-   the platform's `/api/v1/moderate` (gate: `PHOTO_PLATFORM_URL/KEY`).
-   The platform returns the safety/match verdict; its AI subprocessor for
-   photo verdicts is currently Tensorix (the platform repo's docs are the
-   authoritative subprocessor list). Fallback path = the function's
-   direct Anthropic call. Verdicts are audited in
-   `photo_verification_checks` either way; the app never learns which
-   backend ran.
-2. **Support intake** — `support-submit` forwards stored submissions
-   (email, display name, subject, message body, kind + whitelisted
-   metadata) to the platform's `/api/v1/intake`
-   (gate: `SUPPORT_AGENT_INTAKE_URL/KEY`), where replies are AI-drafted
-   into a human review queue. The submission row in Supabase remains the
-   system of record; a forwarding failure never loses the submission.
+1. **Photo moderation** — `moderate-photo` POSTs **base64 photo bytes +
+   media type only** to the platform's `/api/v1/moderate` (gate:
+   `PHOTO_PLATFORM_URL/KEY`; auth: hashed workspace API key). No user ID,
+   storage path, or other identifier crosses the boundary — the image is
+   anonymous bytes to the platform. Platform-side processing is
+   **transient**: the image is passed to the AI subprocessor in a single
+   inference call and is not written to any platform database row,
+   storage bucket, or cache; the only persisted record is a
+   `usage_events` metering row (op + decision + cost — no image, no
+   identifier; retained indefinitely). The AI subprocessor is **TensorX
+   Ltd (Tensorix)**, Ireland — EU-only inference (Dublin/Helsinki),
+   contractual zero-retention and no-training (ToS §3.3–3.4), acting as
+   processor; note its ToS **prohibits special-category (Art. 9) data
+   without a prior written agreement**, which is not yet in place
+   (GAP-8). Fallback paths (any platform failure, or platform
+   misconfiguration) go to Anthropic (US, ~30-day API retention unless
+   ZDR). Verdicts are audited app-side in `photo_verification_checks`
+   (cascade-deleted with the account) with backend provenance recorded;
+   the app flow is identical whichever backend ran. The match check is
+   LLM-vision identity-*consistency* checking, explicitly not biometric
+   identification or liveness detection (relevant to §6).
+2. **Support intake** — `support-submit` stores every submission in
+   `support_submissions` (system of record; a forwarding failure never
+   loses the submission), then — only for submissions that include an
+   email — forwards **email, display name, subject, full message body,
+   submission UUID, kind + per-kind whitelisted metadata** to the
+   platform's `/api/v1/intake` (gate: `SUPPORT_AGENT_INTAKE_URL/KEY`).
+   The hashed IP and user agent stored app-side are **not** forwarded.
+   On the platform the submission is **persisted** as a support thread +
+   message (email, name, subject, body, metadata) readable only by Chem
+   IRL workspace members under RLS; the message content (subject, body,
+   recent thread history — which can include the sender's email) is sent
+   to the AI subprocessor (TensorX Ltd, as above; zero-retention/EU) to
+   draft a reply into a human review queue — intake replies are never
+   auto-sent. **Platform-side retention is currently indefinite: no TTL,
+   scheduled purge, or dashboard deletion exists for threads/messages,
+   and the DSAR erasure runbook does not yet reach these copies**
+   (GAP-8 remediation item).
 
-Both recipients are operated by the same controller today. If the
-Solutions platform is ever spun into a separate legal entity, these
-forwards become controller→processor (or joint-controller) arrangements
-needing a DPA and privacy-policy disclosure — see GAP-8.
+**Regions:** both Supabase projects — the app's and the platform's — are
+eu-west-1, Ireland (verified via the Supabase Management API,
+2026-07-13), and Tensorix inference is EU-only, but the platform's
+Vercel functions are **not region-pinned in code** — absent a dashboard
+setting they run in Vercel's US default region, so forwarded photo bytes
+and support text transit US compute in between EU endpoints. Confirm/pin
+the Vercel region (GAP-8).
+
+**Logging:** neither forward places photo bytes, message bodies, or
+emails in app-side telemetry (events carry pseudonymous user_id +
+outcome flags only, per §2.7). Platform-side failure logging on the
+photo path uses an unredacted `console.error`; hardening item under
+GAP-8.
+
+**Entity note:** both systems are operated by the same controller
+today. CHEM IRL SOLUTIONS LTD incorporation is in progress; once the
+platform sits in a separate legal entity these forwards become
+controller→processor arrangements requiring a DPA (including an Art. 9
+addendum for the photo flow), sub-processor flow-down to TensorX, and
+privacy-policy disclosure — see GAP-8 and GAP-4.
 
 ### 2.7 App telemetry to Bronto (2026-07-09)
 
@@ -205,13 +246,35 @@ without retaining PII; fail-closed payment verification.
   ranking logic for the privacy policy (transparency, Art. 13–14).
 - **GAP-7 (R7):** confirm Anthropic ZDR status for the Iris API key;
   document Iris retention in the privacy policy.
-- **GAP-8 (R6):** Solutions-platform forwards (§2.6): confirm
-  platform-side retention of forwarded photo bytes and support
-  submissions, hosting regions (Vercel + the platform's Supabase
-  project), and the Art. 9 written-agreement status of the platform's AI
-  subprocessor for photo verdicts; reflect both flows in the privacy
-  policy, and fold the platform into the GAP-4 processor/transfer
-  register if it becomes a separate legal entity.
+- **GAP-8 (R6):** Solutions-platform forwards (§2.6). **Documented
+  as-built (2026-07-13):** forwarded photo bytes are transient at the
+  platform (no persistence; metering row only) and the AI subprocessor
+  is TensorX Ltd (EU-only inference, contractual zero-retention +
+  no-training, GDPR processor); forwarded support submissions ARE
+  persisted platform-side (threads/messages/drafts, RLS-scoped to
+  workspace members) with **no retention limit or deletion path**; both
+  Supabase projects are eu-west-1 (verified via Management API); no user
+  identifiers cross the photo boundary and IP/user-agent never cross the
+  intake boundary. **Still open:**
+  1. *(legal — blocking for the photo flow's Art. 9 posture)* Obtain the
+     prior **written agreement with TensorX Ltd for special-category
+     data** its ToS requires — dating-app photos and support texts can
+     reveal Art. 9 data, and the platform's own partner terms demand the
+     same addendum of tenants.
+  2. *(legal — on incorporation)* Once CHEM IRL SOLUTIONS LTD exists,
+     execute a **controller→processor DPA** between the app entity and
+     the platform entity covering both forwards (with TensorX flow-down
+     as sub-processor), and fold the platform into the GAP-4
+     processor/transfer register.
+  3. *(ops — dashboard)* **Confirm the platform's Vercel function region
+     and pin it to an EU region** (no pinning exists in code; default is
+     US) so EU→EU data stops transiting US compute.
+  4. *(engineering)* Define **retention/erasure for platform-side intake
+     threads** (TTL or purge job) and add a platform-erasure step to
+     DSAR_RUNBOOK.md; harden the platform photo route's failure logging
+     to use the redacting logger.
+  5. *(docs)* Reflect both flows in the public privacy policy
+     (chemirl.app/privacy), alongside GAP-6.
 
 ## 6. Biometrics note
 
@@ -244,8 +307,8 @@ Controller-side record. Keep current as processing changes.
 | AI concierge (Iris) | Optional bio help | Opted-in users | transcripts, derived profile | Anthropic | US (confirm ZDR) | ~30d API unless ZDR; app rows until iris-forget | opt-in, JWT |
 | Waitlist | Pre-launch growth | Prospects | email, UTM, IP hash, consents | Supabase, Resend | EU | until erasure | RLS, hashed IP, rate-limit |
 | Transactional email | Confirmations | Users/prospects | email, name | Resend | EU (SES) | per Resend | DKIM/SPF |
-| Photo moderation & verification (§2.6) | Safety: pre-publish photo checks, selfie match | App users | photo bytes (transient), verification verdicts | Supabase, Chem IRL Solutions platform (→ its AI subprocessor) or Anthropic (fallback) | EU + confirm platform/AI regions (GAP-8) | verdict audit rows; forwarded bytes transient (confirm platform retention — GAP-8) | JWT + path-ownership check, 30/hr rate limit, fail-open backend switch |
-| Support intake forwarding (§2.6) | Support/inquiry handling | Users + site visitors | email, name, subject, message, whitelisted metadata | Supabase, Chem IRL Solutions platform | confirm (GAP-8) | Supabase row is system of record, until handled/erasure | CORS allowlist, honeypot, IP-hash rate limit, env-gated forward |
+| Photo moderation & verification (§2.6) | Safety: pre-publish photo checks, selfie match | App users | photo bytes (transient at platform + AI — zero-retention; never persisted platform-side), verification verdicts | Supabase; Chem IRL Solutions platform (Vercel + Supabase eu-west-1) → TensorX Ltd (AI, EU processor, zero-retention/no-training); Anthropic (US) fallback | Supabase (both projects) + Tensorix EU — verified 2026-07-13; Vercel function region unpinned — likely US transit (GAP-8); Anthropic fallback US (SCCs — GAP-4) | app-side verdict audit rows until account deletion (cascade); platform keeps a metering row (op/decision only, no image, indefinite); image bytes transient everywhere | JWT + path-ownership check, 30/hr rate limit, hashed workspace API key, fail-open backend switch, no user identifiers cross the boundary |
+| Support intake forwarding (§2.6) | Support/inquiry handling with AI-drafted, human-reviewed replies | Users + site visitors (submissions with an email) | email, display name, subject, full message body, submission UUID, whitelisted metadata (IP hash + user agent NOT forwarded) | Supabase; Chem IRL Solutions platform (threads/messages/drafts, RLS to workspace members) → TensorX Ltd (AI drafting + embeddings, EU processor, zero-retention) | Supabase (both projects) + Tensorix EU — verified 2026-07-13; Vercel function region unpinned — likely US transit (GAP-8) | app row = system of record, until handled/erasure; **platform copy currently indefinite — no TTL or deletion path; DSAR runbook does not reach it (GAP-8)** | CORS allowlist, honeypot, IP-hash rate limit, env-gated fail-open forward, hashed workspace API key, drafts human-reviewed (no auto-send) |
 | App observability/telemetry (§2.7) | Reliability, ops visibility, abuse detection | App users, site visitors (request metadata), operators | pseudonymous user_id UUIDs, event names, counts/flags, scrubbed payloads | Bronto (bronto.io) | EU ingest; confirm storage region + DPA (GAP-4) | Bronto retention (confirm — GAP-4); survives account deletion (§2.7) | PII scrubbed at source, fail-open, service-role-only pipeline |
 
 ## 9. Related documents
