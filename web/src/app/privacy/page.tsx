@@ -31,7 +31,7 @@ export default function PrivacyPage() {
         <h1 className="text-4xl font-bold text-ink-900 mb-2">
           Privacy Policy
         </h1>
-        <p className="text-ink-500 mb-12">Last updated: March 2026</p>
+        <p className="text-ink-500 mb-12">Last updated: July 2026</p>
 
         <div className="space-y-10">
           <div>
@@ -70,6 +70,23 @@ export default function PrivacyPage() {
               <p>
                 With your permission, we collect your location to show you
                 nearby users and suggest venues.
+              </p>
+              <h3 className="text-lg font-semibold text-ink-900 pt-2">
+                Diagnostics and Error Reports
+              </h3>
+              <p>
+                To keep the app working we record technical events &mdash;
+                which screen or server function ran, whether it succeeded,
+                how long it took, and, when something breaks, the error type
+                and message. Error messages are stripped of personal
+                information <em>on your device</em> before they are sent:
+                message contents, email addresses, phone numbers and photo
+                links are removed or replaced with a one-way hash. We do not
+                collect stack traces or device identifiers, and we do not use
+                any advertising or third-party tracking SDK. These events are
+                linked to your account&rsquo;s internal ID (a random UUID, not
+                your name or email) so we can tell one user&rsquo;s failure
+                from another&rsquo;s.
               </p>
               <h3 className="text-lg font-semibold text-ink-900 pt-2">
                 Support Submissions
@@ -129,8 +146,16 @@ export default function PrivacyPage() {
                   visible to other users as part of the service.
                 </li>
                 <li>
-                  <strong>Service providers:</strong> We use third-party
-                  services for hosting, analytics, and notifications.
+                  <strong>Service providers:</strong> We use a small number of
+                  processors to run the service: <strong>Supabase</strong>{' '}
+                  (database and file hosting, EU region),{' '}
+                  <strong>Resend</strong> (transactional email),{' '}
+                  <strong>Expo</strong> (push-notification delivery),{' '}
+                  <strong>Bronto</strong> (the diagnostics and error events
+                  described above), and <strong>Apple</strong> and{' '}
+                  <strong>Google</strong> (in-app purchases and receipt
+                  verification). They act on our instructions and may not use
+                  your data for their own purposes.
                 </li>
                 <li>
                   <strong>AI sub-processor (Iris feature, opt-in):</strong> If
@@ -172,7 +197,18 @@ export default function PrivacyPage() {
               <p>
                 We retain your information for as long as your account is
                 active. You can request deletion of your account and data at any
-                time through the app settings.
+                time through the app settings. Deleting your account removes
+                your profile, photos, messages, matches and activity history
+                from our database immediately.
+              </p>
+              <p>
+                Two things deliberately outlive an account, and neither
+                contains information that identifies you: a one-way hash used
+                to enforce bans (so someone removed for abuse cannot simply
+                sign up again), and diagnostic events already sent to our
+                error-monitoring provider, which are keyed to a random
+                internal ID and expire on that provider&rsquo;s retention
+                schedule.
               </p>
             </div>
           </div>
@@ -199,7 +235,57 @@ export default function PrivacyPage() {
 
           <div>
             <h2 className="text-2xl font-bold text-ink-900 mb-4">
-              6. Security
+              6. How Matching Decides Who You See
+            </h2>
+            <div className="space-y-3 text-ink-700">
+              <p>
+                {BRAND.name} ranks the profiles in your feed, and you are
+                ranked in other people&rsquo;s. You have a right to know how,
+                so here it is in plain terms. Three scores are computed from
+                your behaviour over the <strong>last 60 days</strong> and
+                combined into one number:
+              </p>
+              <ul className="list-disc pl-6 space-y-2">
+                <li>
+                  <strong>Follow-through (60% of the weight)</strong> &mdash;
+                  how quickly you propose a time after matching, how quickly
+                  you answer someone else&rsquo;s proposal, and whether you
+                  actually show up. Letting proposals expire or letting a
+                  match go stale counts against you.
+                </li>
+                <li>
+                  <strong>How others respond to you (30%)</strong> &mdash; the
+                  share of people who like your profile after seeing it, plus
+                  post-date &ldquo;would meet again&rdquo; feedback.
+                </li>
+                <li>
+                  <strong>Reliability (10%)</strong> &mdash; a follow-through
+                  and safety record: dates attended and positive feedback
+                  raise it; cancellations and upheld reports lower it.
+                </li>
+              </ul>
+              <p>
+                Everyone starts at a neutral score, and because the window
+                rolls, a bad fortnight fades. We rank on{' '}
+                <strong>behaviour only</strong>. We do not rank you on your
+                sexual orientation, gender, race, photos, age or any other
+                personal characteristic, and{' '}
+                <strong>
+                  paying for Chem+ or tokens does not buy you a better
+                  position
+                </strong>{' '}
+                &mdash; it never enters the calculation. This ranking is not
+                automated decision-making with legal or similarly significant
+                effects under Article 22: it changes the order profiles appear
+                in, nothing else. If you think your score is wrong, contact us
+                and a human will look at it.
+              </p>
+            </div>
+          </div>
+
+          <div>
+            <h2 className="text-2xl font-bold text-ink-900 mb-4">
+              7. Security
             </h2>
             <div className="space-y-3 text-ink-700">
               <p>
@@ -212,7 +298,7 @@ export default function PrivacyPage() {
 
           <div>
             <h2 className="text-2xl font-bold text-ink-900 mb-4">
-              7. Contact Us
+              8. Contact Us
             </h2>
             <div className="space-y-3 text-ink-700">
               <p>
