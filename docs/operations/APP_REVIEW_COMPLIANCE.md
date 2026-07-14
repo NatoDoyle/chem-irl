@@ -41,8 +41,10 @@ Immediate, no support-ticket detour — exactly what the guideline wants.
 - **Privacy nutrition labels** (fill at submission): collected and
   linked to identity — email, name, DOB, photos, approximate location
   (lat/lng for discovery), messages, purchases. No third-party
-  advertising/tracking SDKs as of today (analytics decision D1 pending —
-  update labels if PostHog lands).
+  advertising/tracking SDKs — analytics is Supabase-native plus
+  first-party Bronto telemetry (decision 2026-07-10; D1 closed). Exact
+  label selections:
+  [STORE_SUBMISSION_PACK.md](./STORE_SUBMISSION_PACK.md) §4.
 - iOS privacy manifest: verify the aggregated `PrivacyInfo.xcprivacy` in
   the first EAS production build artifact (roadmap T1.8).
 
@@ -54,15 +56,21 @@ codes. **Before TestFlight Beta App Review (T1.7):**
 1. Use the dedicated review account **`reviewy@chemirl.app`** (note the
    spelling — `reviewy`, with a y; distinct from the `safety@chemirl.app`
    moderator account). It must do a one-time OTP sign-in to exist.
-2. Configure a **fixed test OTP** for it in Supabase Auth (test
-   addresses with predefined codes), so the printed code always works.
+2. Give it a code that always works. Supabase's built-in test-OTP
+   feature is SMS-only (no fixed **email** OTP), so this needs the
+   decision in [STORE_SUBMISSION_PACK.md](./STORE_SUBMISSION_PACK.md)
+   §5.1 (recommended: verify-screen bypass + admin-set password).
 3. Complete its profile fully (photos, completed onboarding) so the
    reviewer lands in a working Discover feed — seed at least a handful
-   of plausible Dublin profiles for it to see.
+   of plausible Dublin profiles for it to see
+   (`scripts/seed-review-demo.mjs` does both once the account exists).
 4. Reviewer Notes must include: the email, the fixed code, and the
    walkthrough below.
 
 ## Reviewer Notes — walkthrough script (draft)
+
+> Superseded by the paste-ready version in
+> [STORE_SUBMISSION_PACK.md](./STORE_SUBMISSION_PACK.md) §5.3.
 
 > Chem IRL is an 18+ dating app for Dublin. Sign in with the review
 > credentials above (the verification code is fixed for this account).
@@ -80,5 +88,8 @@ codes. **Before TestFlight Beta App Review (T1.7):**
 - T1.1/T1.2: ASC app record, Paid Apps agreement, IAP SKUs.
 - T1.7: fixed-OTP review account + seeded demo content.
 - T1.8: confirm privacy manifest in the build artifact.
-- D1: analytics decision → privacy labels updated accordingly.
-- Screenshots/description/keywords (T2.1).
+- ~~D1: analytics decision~~ — closed 2026-07-10 (Supabase-native +
+  Bronto, no third-party SDK); labels in the pack reflect it.
+- Screenshots/description/keywords (T2.1) — all copy is drafted in
+  [STORE_SUBMISSION_PACK.md](./STORE_SUBMISSION_PACK.md); capturing and
+  pasting remain.
