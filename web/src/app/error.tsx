@@ -1,7 +1,5 @@
 'use client';
 
-import { useEffect } from 'react';
-import * as Sentry from '@sentry/react';
 import Link from 'next/link';
 
 // Next.js App Router convention: error.tsx renders when an unhandled
@@ -9,22 +7,17 @@ import Link from 'next/link';
 // be a Client Component because it receives a `reset` callback. Lives
 // inside the root layout, so Nav + Footer still render around it.
 //
-// App Router boundaries swallow errors before they reach window.onerror,
-// so we forward them to Sentry explicitly. Sentry.init is a no-op until
-// SentryInit fires from the root layout, so capture is silent until
-// NEXT_PUBLIC_SENTRY_DSN is configured.
+// No error reporting here by decision: the marketing site has no
+// client-side telemetry (Bronto covers the edge functions that carry
+// every conversion; Vercel Analytics covers pageviews). The inert
+// Sentry capture was removed 2026-07-13.
 
 export default function GlobalError({
-  error,
   reset,
 }: {
   error: Error & { digest?: string };
   reset: () => void;
 }) {
-  useEffect(() => {
-    Sentry.captureException(error);
-  }, [error]);
-
   return (
     <section className="pt-32 pb-16 px-4">
       <div className="max-w-2xl mx-auto text-center">
