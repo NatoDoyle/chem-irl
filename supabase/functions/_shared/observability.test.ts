@@ -7,7 +7,7 @@
 //   deno test --allow-env supabase/functions/_shared/observability.test.ts
 
 import { assert, assertEquals, assertFalse } from 'jsr:@std/assert@1';
-import { type EdgeHandler, logEvent, withObservability } from './observability.ts';
+import { EdgeError, type EdgeHandler, logEvent, withObservability } from './observability.ts';
 
 // --- helpers (mirrors bronto.test.ts) ---------------------------------------
 
@@ -73,7 +73,6 @@ const TEST_ENV = {
   BRONTO_INGEST_URL: null,
   BRONTO_SERVICE: null,
   SENTRY_ENV: null,
-  SENTRY_DSN_EDGE: null,
 } as const;
 
 // --- tests -------------------------------------------------------------------
@@ -168,6 +167,70 @@ Deno.test('withObservability: thrown error still flushes (request_failed) and re
       assertEquals(failed.level, 'error');
       assertEquals(failed.status, 'error');
       assertEquals(failed.error_message, 'boom');
+    });
+  } finally {
+    stub.restore();
+  }
+});
+
+Deno.test('withObservability: EdgeError classification lands on request_failed', async () => {
+  const stub = stubFetch();
+  try {
+    await withEnv(TEST_ENV, async () => {
+      const handler: EdgeHandler = () =>
+        Promise.reject(
+          new EdgeError({
+            kind: 'iap.receipt_invalid',
+            message: 'bad receipt',
+            severity: 'medium',
+            status: 422,
+            tags: { step: 'verify' },
+            extra: { platform_hint: 'ios' },
+          })
+        );
+      const wrapped = withObservability(handler, { name: 'test-fn' });
+      const res = await wrapped(new Request('https://x.test/test-fn', { method: 'POST' }));
+      assertEquals(res.status, 422);
+
+      await waitFor(() => stub.calls.length === 1);
+      const events = parseBatch(stub.calls[0].body);
+      const failed = events.find((e) => e.event === 'request_failed');
+      assert(failed, 'request_failed event missing from batch');
+      assertEquals(failed.kind, 'iap.receipt_invalid');
+      assertEquals(failed.severity, 'medium');
+      assertEquals(failed.http_status, 422);
+      assertEquals(failed.step, 'verify');
+      assertEquals(failed.platform_hint, 'ios');
+      assert(
+        String(failed.runbook_url).endsWith('/docs/runbooks/iap.receipt_invalid.md'),
+        `unexpected runbook_url: ${failed.runbook_url}`
+      );
+      // Reserved event fields must win over EdgeError tags/extra.
+      assertEquals(failed.level, 'error');
+      assertEquals(failed.status, 'error');
+    });
+  } finally {
+    stub.restore();
+  }
+});
+
+Deno.test('withObservability: plain Error defaults to severity high, no kind', async () => {
+  const stub = stubFetch();
+  try {
+    await withEnv(TEST_ENV, async () => {
+      const handler: EdgeHandler = () => Promise.reject(new Error('boom'));
+      const wrapped = withObservability(handler, { name: 'test-fn' });
+      const res = await wrapped(new Request('https://x.test/test-fn', { method: 'POST' }));
+      assertEquals(res.status, 500);
+
+      await waitFor(() => stub.calls.length === 1);
+      const events = parseBatch(stub.calls[0].body);
+      const failed = events.find((e) => e.event === 'request_failed');
+      assert(failed, 'request_failed event missing from batch');
+      assertEquals(failed.severity, 'high');
+      assertEquals(failed.http_status, 500);
+      assertFalse('kind' in failed);
+      assertFalse('runbook_url' in failed);
     });
   } finally {
     stub.restore();

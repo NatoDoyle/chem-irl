@@ -2,17 +2,17 @@
 //
 // Goal: every edge-function failure produces (a) a structured JSON log line
 // in `supabase functions logs` greppable by `request_id` / `fn` / `user_id`,
-// and (b) a Sentry event tagged with layer / fn / kind / severity, scrubbed
-// of PII, fingerprinted for stable grouping, and linked to the on-disk
-// runbook for that kind.
+// and (b) a Bronto request_failed event tagged with kind / severity /
+// http_status, scrubbed of PII and linked to the on-disk runbook for that
+// kind. (Bronto is the sole telemetry platform — the inert Sentry seam was
+// removed 2026-07-13; it never had a DSN.)
 //
 // Wraps a handler and:
 //   - generates a per-request UUID
-//   - logs request_start / request_complete / request_failed
+//   - logs request_start / request_complete / request_failed and mirrors
+//     every line into one background Bronto POST per request
 //   - catches unhandled errors and returns a generic 500 to the client
 //     (with the request_id so support can correlate)
-//   - reports errors to Sentry if SENTRY_DSN_EDGE is set (lazy init —
-//     functions that never throw never load the SDK)
 //
 // Usage (one-line replacement of the existing `serve(handler)` shape):
 //
@@ -28,16 +28,15 @@
 //   serve(withObservability(handler, { name: 'validate-receipt' }));
 //
 // Handlers that want to raise classified errors can throw `EdgeError`
-// to control the response status, the Sentry `kind` tag, and the
-// runbook URL. Plain `Error` works too — it lands as `severity:high`,
-// `status:500`, no kind tag.
+// to control the response status, the Bronto `kind`/`severity` fields,
+// and the runbook URL. Plain `Error` works too — it lands as
+// `severity:high`, `http_status:500`, no kind.
 
-import { scrubSentryPayload } from './sentry-scrubber.ts';
 import { runbookUrl } from './runbook-url.ts';
 import { buildEvent, shipEvents } from './bronto.ts';
 
-// Severity matches mobile/src/lib/errors.ts ERROR_SEVERITIES so Sentry
-// alert rules (defined once in PR-E) can fire across both layers.
+// Severity matches mobile/src/lib/errors.ts ERROR_SEVERITIES so error
+// events group consistently across layers in Bronto.
 export type EdgeSeverity = 'critical' | 'high' | 'medium' | 'low';
 
 // Errors raised from inside a handler can carry classification by throwing
@@ -112,25 +111,28 @@ export function withObservability(
       return response;
     } catch (err) {
       const duration_ms = Math.round(performance.now() - start);
+      const isEdge = err instanceof EdgeError;
+      const status = isEdge ? err.status : 500;
+
+      // The full classification rides on request_failed so Bronto (and
+      // appwatch alerting) see kind/severity/runbook without any second
+      // sink. EdgeError tags/extra spread first — computed keys must win
+      // (reserved-key rule; and `status`/`level` are owned by buildEvent).
       logEvent('error', 'request_failed', ctx, {
+        ...(isEdge ? err.tags : {}),
+        ...(isEdge ? err.extra : {}),
         duration_ms,
         error_message: err instanceof Error ? err.message : String(err),
         error_name: err instanceof Error ? err.name : 'Unknown',
-      });
-
-      // Fire-and-forget Sentry capture. Don't await — we don't want a
-      // slow Sentry endpoint to delay the client's 500 response.
-      captureToSentry(err, ctx).catch((sentryErr) => {
-        logEvent('error', 'sentry_capture_failed', ctx, {
-          sentry_error: sentryErr instanceof Error ? sentryErr.message : String(sentryErr),
-        });
+        severity: isEdge ? err.severity : 'high',
+        http_status: status,
+        ...(isEdge ? { kind: err.kind, runbook_url: runbookUrl(err.kind) } : {}),
       });
 
       flushToBronto(ctx, req);
 
-      const status = err instanceof EdgeError ? err.status : 500;
       const responseBody: Record<string, unknown> = {
-        error: err instanceof EdgeError ? err.kind : 'internal_error',
+        error: isEdge ? err.kind : 'internal_error',
         request_id: ctx.request_id,
       };
       return new Response(JSON.stringify(responseBody), {
@@ -215,101 +217,4 @@ export function logEvent(
       extra,
     })
   );
-}
-
-// --- Lazy Sentry init -----------------------------------------------------
-// First failure of an instance pays the dynamic-import cost; subsequent
-// failures hit the cached module. Functions that never throw never load it.
-
-// deno-lint-ignore no-explicit-any
-let sentryRef: any = null;
-let sentryStatus: 'unknown' | 'ready' | 'unavailable' = 'unknown';
-
-async function getSentry(): Promise<unknown> {
-  if (sentryStatus === 'ready') return sentryRef;
-  if (sentryStatus === 'unavailable') return null;
-
-  const dsn = Deno.env.get('SENTRY_DSN_EDGE');
-  if (!dsn) {
-    sentryStatus = 'unavailable';
-    return null;
-  }
-
-  try {
-    // Dynamic import keeps cold-start fast for healthy requests.
-    const Sentry = await import('https://esm.sh/@sentry/deno@8.40.0');
-    Sentry.init({
-      dsn,
-      environment: Deno.env.get('SENTRY_ENV') ?? 'production',
-      release: Deno.env.get('SENTRY_RELEASE') ?? undefined,
-      // Edge tracing is OFF — Supabase already exposes per-fn latency
-      // metrics. Re-enable here only if you need cross-service traces.
-      tracesSampleRate: 0,
-      // deno-lint-ignore no-explicit-any
-      beforeSend: (event: any) => scrubSentryPayload(event),
-      // deno-lint-ignore no-explicit-any
-      beforeBreadcrumb: (b: any) => scrubSentryPayload(b),
-    });
-    sentryRef = Sentry;
-    sentryStatus = 'ready';
-    return Sentry;
-  } catch (err) {
-    // Don't loop forever if @sentry/deno is unreachable.
-    sentryStatus = 'unavailable';
-    console.error(
-      JSON.stringify({
-        ts: new Date().toISOString(),
-        level: 'error',
-        msg: 'sentry_init_failed',
-        error_message: err instanceof Error ? err.message : String(err),
-      })
-    );
-    return null;
-  }
-}
-
-async function captureToSentry(err: unknown, ctx: ObservabilityContext): Promise<void> {
-  const Sentry = (await getSentry()) as
-    | {
-        // deno-lint-ignore no-explicit-any
-        withScope: (cb: (scope: any) => void) => void;
-        captureException: (err: unknown) => void;
-      }
-    | null;
-  if (!Sentry) return;
-
-  const isEdge = err instanceof EdgeError;
-
-  const tags: Record<string, string> = {
-    layer: 'edge',
-    fn: ctx.fn,
-    severity: isEdge ? err.severity : 'high',
-    ...(isEdge ? { kind: err.kind } : {}),
-    ...ctx.tags,
-    ...(isEdge ? err.tags : {}),
-  };
-
-  const baseExtra: Record<string, unknown> = {
-    request_id: ctx.request_id,
-    ...(ctx.user_id ? { user_id: ctx.user_id } : {}),
-    ...(isEdge ? err.extra : {}),
-  };
-
-  const scrubbed = scrubSentryPayload(baseExtra) as Record<string, unknown>;
-  if (isEdge) {
-    scrubbed.runbook_url = runbookUrl(err.kind);
-  }
-
-  const fingerprint = [
-    'edge',
-    ctx.fn,
-    isEdge ? err.kind : err instanceof Error ? err.name : 'unknown',
-  ];
-
-  Sentry.withScope((scope) => {
-    scope.setTags(tags);
-    scope.setExtras(scrubbed);
-    scope.setFingerprint(fingerprint);
-    Sentry.captureException(err);
-  });
 }

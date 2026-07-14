@@ -71,9 +71,10 @@ const RATE_LIMIT_WINDOW_SECONDS = 300;
 type Json = Record<string, unknown>;
 
 // Note: the inner try/catch around the dispatch re-throws to the
-// observability wrapper so it can log + capture to Sentry + return the
-// standard 500 with request_id. PR-C-rollout will dedent and remove the
-// now-pointless try/catch in a separate cleanup commit.
+// observability wrapper so it can log + ship the classified Bronto
+// request_failed event + return the standard 500 with request_id.
+// PR-C-rollout will dedent and remove the now-pointless try/catch in a
+// separate cleanup commit.
 const handler: EdgeHandler = async (req, ctx) => {
   if (req.method !== 'POST') {
     return jsonResponse({ error: 'method_not_allowed' }, 405);
@@ -148,9 +149,9 @@ const handler: EdgeHandler = async (req, ctx) => {
     // Default to 'turn' for forward-compat.
     return await handleTurn({ body, admin, userId: user.id, anthropicKey });
   } catch (err) {
-    // Re-throw to the observability wrapper for structured log + Sentry
-    // capture + standard 500 response with request_id. The wrapper's tags
-    // already include layer:edge + fn:iris-chat.
+    // Re-throw to the observability wrapper for the structured log + Bronto
+    // request_failed event + standard 500 response with request_id. The
+    // wrapper's events already carry layer:edge + fn:iris-chat.
     throw err;
   }
 };

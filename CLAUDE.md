@@ -115,7 +115,7 @@ The web build emits a static export (`output: 'export'`) and runs `pagefind` aga
 ### Mobile app structure (`mobile/src/`)
 - **`navigation/`** — Three navigators: `AuthNavigator` (login/signup), `OnboardingNavigator` (profile setup), `MainNavigator` (main app with bottom tabs)
 - **`screens/`** — Organized by feature: `auth/`, `onboarding/`, `discover/`, `matches/`, `profile/`, `iris/` (Iris AI concierge — post-signup Chem+ pitch, bio-interview, chat modal), `debug/`
-- **`lib/`** — Shared utilities and service modules (auth, analytics, notifications, image compression, offline queue, Supabase client, Sentry, IAP via `iap.ts` + `tokens.ts`, availability/timezone helpers, error normalization). The app has a paid token economy — see `iap.ts`, `tokens.ts`, `components/TokenPurchaseModal.tsx`, and the `validate-receipt` edge function. The Iris AI-concierge client lives in `lib/iris/` (edge-function client, persona, pitch-seen flag; screens/modal in `screens/iris/`), and the 18+ age-gate helpers in `lib/age.ts`.
+- **`lib/`** — Shared utilities and service modules (auth, analytics, notifications, image compression, offline queue, Supabase client, error capture — `sentry.ts`/`clientErrorEvents.ts` feed Bronto `client_error` events, IAP via `iap.ts` + `tokens.ts`, availability/timezone helpers, error normalization). The app has a paid token economy — see `iap.ts`, `tokens.ts`, `components/TokenPurchaseModal.tsx`, and the `validate-receipt` edge function. The Iris AI-concierge client lives in `lib/iris/` (edge-function client, persona, pitch-seen flag; screens/modal in `screens/iris/`), and the 18+ age-gate helpers in `lib/age.ts`.
 - **`lib/supabase/client.ts`** — Single Supabase client instance, imported throughout the app. Uses a custom `LargeSecureStore` that encrypts session tokens with AES-256 (key in SecureStore, ciphertext in AsyncStorage) to work around Expo SecureStore's 2048-byte value limit.
 - **`config/brand.ts`** — Brand colors (aquamarine palette), design tokens, and user-facing copy
 - **`contexts/`** — React contexts (e.g., `ProfileRefreshContext`)
@@ -154,7 +154,7 @@ Since 2026-07-06 the main business is **Chem IRL Solutions** (`NatoDoyle/chem-ir
 ### Web app structure (`web/src/`)
 - **`app/`** — Next.js 16 App Router routes: landing, `download/`, `how-it-works/`, `waitlist/`, `blog/` (MDX), plus `about/`, `privacy/`, `safety/`, `support/`, `solutions/`, `terms/`. Static export only — no API routes.
 - **`content/`** — MDX blog posts; rendered via `next-mdx-remote` + `gray-matter` + `rehype-pretty-code`.
-- **`components/`** — Marketing components (`Nav`, `Footer`, `WaitlistForm`, `PhoneMockup`, `SentryInit`, `blog/*`).
+- **`components/`** — Marketing components (`Nav`, `Footer`, `WaitlistForm`, `PhoneMockup`, `UtmCapture`, `blog/*`).
 - Waitlist flow: form posts to the `waitlist-signup` edge function → confirmation email → `waitlist-confirm` GET link → optional `waitlist-forget` for GDPR erasure. Blog sidebar uses `waitlist-blog-subscribe`. Support and Solutions-inquiry forms post to the `support-submit` edge function.
 
 ### Edge functions (`supabase/functions/`)
@@ -179,7 +179,7 @@ Two Jest configurations:
 - `jest.native.config.js` — React Native component tests (jest-expo preset)
 
 ### Environment
-Mobile app uses `EXPO_PUBLIC_*` env vars loaded via Expo. See `mobile/.env.example` for required variables (Supabase URL/key, Sentry DSN).
+Mobile app uses `EXPO_PUBLIC_*` env vars loaded via Expo. See `mobile/.env.example` for required variables (Supabase URL/key).
 
 ## Core working principles
 
