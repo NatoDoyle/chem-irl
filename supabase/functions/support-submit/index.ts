@@ -20,6 +20,11 @@
 // reply into its human-review queue. Disabled unless BOTH
 // SUPPORT_AGENT_INTAKE_URL and SUPPORT_AGENT_INTAKE_KEY are set; strictly
 // fail-open (a forward failure never changes the user-facing response).
+//
+// Solutions partnership inquiries (kind=contact, metadata.topic=partnership)
+// are additionally upserted as a Person into the Unify GTM workspace so
+// inbound partner interest triggers alerting/sequencing there (DPIA §2.8).
+// Disabled unless UNIFY_API_KEY is set; same strict fail-open contract.
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
@@ -242,6 +247,15 @@ const handler: EdgeHandler = async (req, ctx) => {
         body: bodyText,
         metadata,
       });
+      if (kind === 'contact' && metadata.topic === 'partnership') {
+        await forwardSolutionsInquiryToUnify(ctx, {
+          submissionId,
+          email,
+          displayName,
+          subject,
+          body: bodyText,
+        });
+      }
     }
 
     // Kind + flags only — never subject/body/email (scrubber drops them
@@ -328,6 +342,80 @@ async function forwardToSupportAgent(
     console.error('support-agent forward errored (failing open):', err);
     logEvent('warn', 'platform_forward', ctx, {
       target: 'support_agent',
+      forward_status: 'error',
+      error_message: err instanceof Error ? err.message : String(err),
+      submission_id: args.submissionId,
+    });
+  }
+}
+
+// --- Unify CRM forwarding ----------------------------------------------------
+
+// Solutions inquiries additionally upsert a Person into the Unify GTM
+// workspace (Data API; idempotent on email) so a Play there can alert and
+// enroll follow-up. Third-party processor — documented in DPIA §2.8 / GAP-9.
+// Disabled unless UNIFY_API_KEY is set; strictly fail-open (the
+// support_submissions row stays the system of record and a forward failure
+// never changes the user-facing response). 4s timeout; failures only log.
+const UNIFY_PERSON_UPSERT_URL =
+  'https://api.unifygtm.com/data/v1/objects/person/records/upsert';
+
+interface UnifyForwardArgs {
+  submissionId: string | null;
+  email: string;
+  displayName: string | null;
+  subject: string;
+  body: string;
+}
+
+async function forwardSolutionsInquiryToUnify(
+  ctx: ObservabilityContext,
+  args: UnifyForwardArgs,
+): Promise<void> {
+  const apiKey = Deno.env.get('UNIFY_API_KEY');
+  if (!apiKey) return; // forwarding disabled
+
+  try {
+    const res = await fetch(UNIFY_PERSON_UPSERT_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Api-Key': apiKey,
+      },
+      body: JSON.stringify({
+        match: { email: args.email },
+        create_or_update_if_empty: {
+          email: args.email,
+          ...(args.displayName ? { name: args.displayName } : {}),
+          chem_source: 'solutions_inquiry',
+          inquiry_subject: args.subject,
+          inquiry_message: args.body,
+          submission_id: args.submissionId,
+        },
+      }),
+      signal: AbortSignal.timeout(4000),
+    });
+    if (!res.ok) {
+      console.error(
+        `unify forward failed with status ${res.status} (submission ${args.submissionId ?? 'unknown'})`,
+      );
+      logEvent('warn', 'platform_forward', ctx, {
+        target: 'unify',
+        forward_status: 'error',
+        http_status: res.status,
+        submission_id: args.submissionId,
+      });
+      return;
+    }
+    logEvent('info', 'platform_forward', ctx, {
+      target: 'unify',
+      forward_status: 'ok',
+      submission_id: args.submissionId,
+    });
+  } catch (err) {
+    console.error('unify forward errored (failing open):', err);
+    logEvent('warn', 'platform_forward', ctx, {
+      target: 'unify',
       forward_status: 'error',
       error_message: err instanceof Error ? err.message : String(err),
       submission_id: args.submissionId,
