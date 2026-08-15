@@ -4,7 +4,8 @@
 processes special-category data (sexual orientation) and does large-scale
 profiling with location, so a DPIA is **mandatory** under GDPR Art. 35.
 This draft is grounded in the system as built (2026-06-17; §2.6, GAP-8
-and ROPA addendum 2026-07-06; §2.7 telemetry addendum 2026-07-09) so a reviewer
+and ROPA addendum 2026-07-06; §2.7 telemetry addendum 2026-07-09; §2.8
+Unify addendum 2026-08-15) so a reviewer
 starts from facts, not a blank page. Sign-off by a qualified data
 protection adviser is required before public launch.
 
@@ -67,7 +68,9 @@ retention unless ZDR), Expo (push relay), Bronto (bronto.io — operational
 telemetry/log ingest for app observability: pseudonymous UUIDs +
 PII-scrubbed event payloads only, EU ingest endpoint, see §2.7), and the
 first-party **Chem IRL Solutions platform** (solutions.chemirl.app —
-photo moderation + support intake forwarding, see §2.6).
+photo moderation + support intake forwarding, see §2.6), and Unify
+(unifygtm.com — B2B GTM/CRM; Solutions-inquiry contact details only,
+env-gated, see §2.8).
 No data sold; no third-party advertising/tracking SDK as of this draft.
 
 ### 2.4 Retention
@@ -195,6 +198,33 @@ period + DPA under GAP-4 and reflect telemetry in the privacy policy
 alongside GAP-6. (Bronto is the sole telemetry processor — decision
 2026-07-10: no Sentry.)
 
+### 2.8 Solutions-inquiry forwarding to Unify (2026-08-15)
+
+Solutions partnership inquiries (marketing-site /solutions form →
+`support-submit`, `kind=contact` with `metadata.topic=partnership`) are
+additionally upserted as a Person record into **Unify** (unifygtm.com),
+the company's B2B GTM/CRM tool, so inbound partner interest can trigger
+alerting and follow-up sequencing. Unify is a **third-party processor**
+— deliberately documented here rather than in §2.6, which covers
+first-party platform forwards only.
+
+- **What crosses:** email, display name, inquiry subject, full message
+  body, submission UUID, and a `chem_source=solutions_inquiry` marker.
+  IP hash and user agent are never forwarded. No dating-app user data
+  is in scope — this path exists only for the B2B inquiry form; the
+  other three submission kinds (bug/feature/tip) and non-partnership
+  contact topics never touch Unify.
+- **Gate + failure mode:** disabled unless the `UNIFY_API_KEY` function
+  secret is set (unset = zero behavior change); strictly fail-open with
+  a 4s timeout; the `support_submissions` row remains the system of
+  record and a forward failure never loses the submission.
+- **Lawful basis:** Art. 6(1)(f) legitimate interest — responding to a
+  business-partnership inquiry the person initiated, in their
+  professional capacity.
+- **Open items:** see GAP-9 (DPA/transfers, retention, DSAR reach,
+  privacy-policy disclosure) before the gate stays enabled for real
+  visitors.
+
 ## 3. Necessity & proportionality
 
 - **Data minimisation:** lifestyle fields are optional; location is stored
@@ -275,6 +305,12 @@ without retaining PII; fail-closed payment verification.
      to use the redacting logger.
   5. *(docs)* Reflect both flows in the public privacy policy
      (chemirl.app/privacy), alongside GAP-6.
+- **GAP-9 (R6):** Unify forwarding (§2.8). Before the `UNIFY_API_KEY`
+  gate stays enabled for real visitors (owner-only test submissions are
+  fine): confirm Unify's DPA + transfer mechanism (US processor) and
+  retention behaviour; add a Unify-erasure step to DSAR_RUNBOOK.md
+  (Unify Person records are not reached by any existing deletion path);
+  disclose the processor in the privacy policy alongside GAP-6.
 
 ## 6. Biometrics note
 
@@ -310,6 +346,7 @@ Controller-side record. Keep current as processing changes.
 | Photo moderation & verification (§2.6) | Safety: pre-publish photo checks, selfie match | App users | photo bytes (transient at platform + AI — zero-retention; never persisted platform-side), verification verdicts | Supabase; Chem IRL Solutions platform (Vercel + Supabase eu-west-1) → TensorX Ltd (AI, EU processor, zero-retention/no-training); Anthropic (US) fallback | Supabase (both projects) + Tensorix EU — verified 2026-07-13; Vercel function region unpinned — likely US transit (GAP-8); Anthropic fallback US (SCCs — GAP-4) | app-side verdict audit rows until account deletion (cascade); platform keeps a metering row (op/decision only, no image, indefinite); image bytes transient everywhere | JWT + path-ownership check, 30/hr rate limit, hashed workspace API key, fail-open backend switch, no user identifiers cross the boundary |
 | Support intake forwarding (§2.6) | Support/inquiry handling with AI-drafted, human-reviewed replies | Users + site visitors (submissions with an email) | email, display name, subject, full message body, submission UUID, whitelisted metadata (IP hash + user agent NOT forwarded) | Supabase; Chem IRL Solutions platform (threads/messages/drafts, RLS to workspace members) → TensorX Ltd (AI drafting + embeddings, EU processor, zero-retention) | Supabase (both projects) + Tensorix EU — verified 2026-07-13; Vercel function region unpinned — likely US transit (GAP-8) | app row = system of record, until handled/erasure; **platform copy currently indefinite — no TTL or deletion path; DSAR runbook does not reach it (GAP-8)** | CORS allowlist, honeypot, IP-hash rate limit, env-gated fail-open forward, hashed workspace API key, drafts human-reviewed (no auto-send) |
 | App observability/telemetry (§2.7) | Reliability, ops visibility, abuse detection | App users, site visitors (request metadata), operators | pseudonymous user_id UUIDs, event names, counts/flags, scrubbed payloads | Bronto (bronto.io) | EU ingest; confirm storage region + DPA (GAP-4) | Bronto retention (confirm — GAP-4); survives account deletion (§2.7) | PII scrubbed at source, fail-open, service-role-only pipeline |
+| Solutions-inquiry CRM forwarding (§2.8) | B2B partnership pipeline (alerting + follow-up sequencing) | Site visitors submitting the /solutions inquiry form (business representatives) | email, display name, subject, full message body, submission UUID (IP hash + user agent NOT forwarded) | Supabase; Unify (unifygtm.com) | US (DPA/SCCs to confirm — GAP-9) | app row = system of record; Unify retention to confirm (GAP-9) | env-gated (`UNIFY_API_KEY` unset = off), fail-open 4s timeout, CORS allowlist, honeypot, IP-hash rate limit, partnership-topic-only scope |
 
 ## 9. Related documents
 
