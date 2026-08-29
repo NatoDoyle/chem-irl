@@ -1,5 +1,9 @@
 # Cloudflare Setup for Chem IRL
 
+> The canonical subdomain map (what each host is for, and the rule for when to add
+> one) lives in [`DOMAIN_ARCHITECTURE.md`](./DOMAIN_ARCHITECTURE.md). This file is
+> the DNS-records companion.
+
 ## DNS Configuration
 
 ### Required DNS Records
@@ -14,23 +18,33 @@ TTL: Auto
 
 Type: A
 Name: @
-Target: 76.76.19.61
+Target: 216.198.79.1
 Proxy status: Proxied ✅
 TTL: Auto
 ```
 
-### Optional Records
+### Other hosts
 ```
+# Live — Chem IRL Solutions platform (separate Vercel project)
 Type: CNAME
-Name: api
-Target: chem-irl-abc123.vercel.app
+Name: solutions
+Target: <solutions platform's Vercel CNAME>
 Proxy status: Proxied ✅
 
+# Reserved — future web app / product surface (its own Vercel project)
 Type: CNAME
 Name: app
-Target: chem-irl-abc123.vercel.app
+Target: <app's Vercel CNAME, when built>
 Proxy status: Proxied ✅
+
+# Email sending subdomain — add the exact DKIM/SPF/return-path records
+# Resend emits for mail.chemirl.app. See DOMAIN_ARCHITECTURE.md.
+#   Name: mail (+ resend._domainkey.mail, send.mail, etc.)
 ```
+
+`api.` is intentionally not used (the app calls Supabase directly), and the blog
+stays `chemirl.app/blog` rather than a `blog.` subdomain — see
+[`DOMAIN_ARCHITECTURE.md`](./DOMAIN_ARCHITECTURE.md).
 
 ## Page Rules (Recommended)
 
